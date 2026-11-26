@@ -1223,6 +1223,9 @@ class PlaybackService : MediaLibraryService() {
     private data class YouTubeAudioAttempt(
         val owner: LibrespotPlayer,
         val entryId: Long,
+        val key: SpotifyTrackKey,
+        val videoId: String,
+        val retried: Boolean = false,
     )
 
     private var youtubeLookup: Job? = null
@@ -1277,7 +1280,7 @@ class PlaybackService : MediaLibraryService() {
             handingOver = true
             try {
                 swapPlayer(PlayerKind.SPOTIFY_YOUTUBE_AUDIO, restore = false)
-                youtubeAttempt = YouTubeAudioAttempt(owner, entryId)
+                youtubeAttempt = YouTubeAudioAttempt(owner, entryId, key, match.videoId)
                 player.setMediaItem(
                     original.buildUpon().setUri("${YouTubePlayerFactory.SPOTIFY_AUDIO_PREFIX}${match.videoId}").build(),
                     position,
@@ -1301,6 +1304,49 @@ class PlaybackService : MediaLibraryService() {
             android.util.Log.w(TAG, "YouTube Music match lookup failed", error)
             null
         }
+
+    private suspend fun retryYouTubeAudio(
+        fallback: androidx.media3.common.Player,
+        failed: YouTubeAudioAttempt,
+    ) {
+        if (player !== fallback || youtubeAttempt !== failed || parkedSpotify !== failed.owner) return
+        if (failed.retried) {
+            leaveYouTubeAudio(fallback)
+            return
+        }
+
+        val retrying = failed.copy(retried = true)
+        youtubeAttempt = retrying
+        val match = try {
+            ytAudio.suppress(failed.videoId, failed.key.id)
+            findYouTubeAudio(failed.key)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            android.util.Log.w(TAG, "YouTube Music replacement lookup failed", error)
+            null
+        }
+        if (player !== fallback || youtubeAttempt !== retrying || parkedSpotify !== failed.owner) return
+        val item = fallback.currentMediaItem
+        if (match == null || item == null || failed.owner.currentQueueEntryId != failed.entryId ||
+            failed.owner.isRemotePlayback
+        ) {
+            leaveYouTubeAudio(fallback)
+            return
+        }
+
+        youtubeAttempt = retrying.copy(videoId = match.videoId)
+        try {
+            fallback.setMediaItem(
+                item.buildUpon().setUri("${YouTubePlayerFactory.SPOTIFY_AUDIO_PREFIX}${match.videoId}").build(),
+                fallback.currentPosition.coerceAtLeast(0L),
+            )
+            fallback.prepare()
+        } catch (error: RuntimeException) {
+            android.util.Log.w(TAG, "YouTube Music replacement failed", error)
+            leaveYouTubeAudio(fallback)
+        }
+    }
 
     private suspend fun leaveYouTubeAudio(fallback: androidx.media3.common.Player) {
         val attempt = youtubeAttempt ?: return
@@ -1472,9 +1518,10 @@ class PlaybackService : MediaLibraryService() {
                 )
                 if (fallback) built.addListener(object : androidx.media3.common.Player.Listener {
                     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                        val failed = youtubeAttempt ?: return
                         scope.launch {
                             yield()
-                            leaveYouTubeAudio(built)
+                            retryYouTubeAudio(built, failed)
                         }
                     }
 

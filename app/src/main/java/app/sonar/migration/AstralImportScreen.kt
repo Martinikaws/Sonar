@@ -54,7 +54,6 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 
 internal const val ASTRAL_IMPORT_ROUTE = "astral-import"
-private const val IMPORT_TITLE = "Import from Astral"
 
 private sealed interface ImportState {
     data object Idle : ImportState
@@ -88,7 +87,7 @@ internal fun AstralImportScreen(onBack: () -> Unit) {
             IconButton(onClick = onBack, enabled = !busy, modifier = Modifier.size(48.dp)) {
                 Icon(PhosphorIcons.Regular.ArrowLeft, contentDescription = stringResource(R.string.back))
             }
-            Text(IMPORT_TITLE, Modifier.semantics { heading() }, style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.astral_import_title), Modifier.semantics { heading() }, style = MaterialTheme.typography.titleLarge)
         }
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),

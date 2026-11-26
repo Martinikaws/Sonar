@@ -186,7 +186,7 @@ fun SettingsScreen(
 ) {
     val ready = state as? MainViewModel.UiState.Ready
     val context = LocalContext.current
-    val app = remember(context) {
+    val sonarApp = remember(context) {
         context.applicationContext as app.sonar.SonarApplication
     }
     /**
@@ -197,7 +197,7 @@ fun SettingsScreen(
      * service the app is not currently using, and leaving them on screen makes
      * the two sources look like one confused one.
      */
-    val spotifyActive by app.preferences.backend.collectAsStateWithLifecycle()
+    val spotifyActive by sonarApp.preferences.backend.collectAsStateWithLifecycle()
     val showSpotify = spotifyActive == BackendId.SPOTIFY
     // Spotify through the official SDK, which mixes its own audio: none of the
     // engine's crossfade, bitrate, effects or downloads reach it.
@@ -283,7 +283,7 @@ fun SettingsScreen(
             )
         }
         // Let go of the folder this replaces, so the grants do not pile up.
-        app.preferences.lyricsFolder.value.takeIf { it.isNotBlank() && it != tree.toString() }?.let { old ->
+        sonarApp.preferences.lyricsFolder.value.takeIf { it.isNotBlank() && it != tree.toString() }?.let { old ->
             runCatching {
                 context.contentResolver.releasePersistableUriPermission(
                     android.net.Uri.parse(old),
@@ -291,7 +291,7 @@ fun SettingsScreen(
                 )
             }
         }
-        app.preferences.setLyricsFolder(tree.toString())
+        sonarApp.preferences.setLyricsFolder(tree.toString())
     }
 
     // Set rather than assigned from inside, because the page being drawn is a
@@ -345,7 +345,7 @@ fun SettingsScreen(
             else -> true
         }
     }
-    val glassConfig by app.glass.config.collectAsStateWithLifecycle()
+    val glassConfig by sonarApp.glass.config.collectAsStateWithLifecycle()
     val eqRoute by AudioRoute.current.collectAsStateWithLifecycle()
     val eqCurves by Equalizer.curves.collectAsStateWithLifecycle()
     val eqNames by Equalizer.names.collectAsStateWithLifecycle()
@@ -588,25 +588,25 @@ fun SettingsScreen(
 
         // Spotify's DJ: offered and played with its voice, or kept out of sight.
         "spotify-dj" -> {
-            val enabled by app.preferences.spotifyDj.collectAsStateWithLifecycle()
+            val enabled by sonarApp.preferences.spotifyDj.collectAsStateWithLifecycle()
             Section(stringResource(R.string.spotify_dj)) {
                 DownloadSwitch(
                     label = stringResource(R.string.spotify_dj_title),
                     icon = PhosphorIcons.Regular.MicrophoneStage,
                     checked = enabled,
                     backdrop = backdrop,
-                    onChange = app.preferences::setSpotifyDj,
+                    onChange = sonarApp.preferences::setSpotifyDj,
                 )
             }
         }
 
         "connected-device-label" -> {
-            val enabled by app.preferences.showConnectedDevice.collectAsStateWithLifecycle()
+            val enabled by sonarApp.preferences.showConnectedDevice.collectAsStateWithLifecycle()
             Section(stringResource(R.string.connected_device_label)) {
                 DownloadSwitch(
                     label = stringResource(R.string.connected_device_label),
                     checked = enabled,
-                    onChange = app.preferences::setShowConnectedDevice,
+                    onChange = sonarApp.preferences::setShowConnectedDevice,
                     backdrop = backdrop,
                 )
             }
@@ -1149,8 +1149,8 @@ private const val PAGE_FADE_MS = 140
 @Composable
 private fun StorageChart() {
     val context = LocalContext.current
-    val app = remember(context) { context.applicationContext as app.sonar.SonarApplication }
-    val files by app.downloads.files.collectAsStateWithLifecycle()
+    val sonarApp = remember(context) { context.applicationContext as app.sonar.SonarApplication }
+    val files by sonarApp.downloads.files.collectAsStateWithLifecycle()
 
     // Measured off the disk rather than from the index: a Canvas is video, and
     // the caches have nothing to be counted from but their own directories.
@@ -1482,13 +1482,13 @@ private fun SourceMoveButton(icon: ImageVector, description: String, enabled: Bo
 @Composable
 private fun YouTubeAccountSection(onSignIn: () -> Unit, onChannelChange: () -> Unit) {
     val context = LocalContext.current
-    val app = remember(context) {
+    val sonarApp = remember(context) {
         context.applicationContext as app.sonar.SonarApplication
     }
-    val backend by app.preferences.backend.collectAsStateWithLifecycle()
+    val backend by sonarApp.preferences.backend.collectAsStateWithLifecycle()
     if (backend != BackendId.YOUTUBE_MUSIC) return
 
-    val account = remember(app) { app.youtubeAccount }
+    val account = remember(sonarApp) { sonarApp.youtubeAccount }
     val name by account.accountName.collectAsStateWithLifecycle()
     val expired by account.expired.collectAsStateWithLifecycle()
     val pageId by account.pageId.collectAsStateWithLifecycle()
@@ -1576,7 +1576,7 @@ private fun YouTubeAccountSection(onSignIn: () -> Unit, onChannelChange: () -> U
                 label = stringResource(R.string.youtube_sign_out),
                 selected = false,
             ) {
-                scope.launch { app.youtubeBackend.logOut() }
+                scope.launch { sonarApp.youtubeBackend.logOut() }
             }
         }
     }
@@ -2079,11 +2079,11 @@ private fun DownloadsSection(
     spotify: Boolean = true,
 ) {
     val context = LocalContext.current
-    val app = remember(context) {
+    val sonarApp = remember(context) {
         context.applicationContext as app.sonar.SonarApplication
     }
-    val store = app.downloads
-    val settings = app.downloadSettings
+    val store = sonarApp.downloads
+    val settings = sonarApp.downloadSettings
 
     val files by store.files.collectAsStateWithLifecycle()
     val failures by store.failures.collectAsStateWithLifecycle()
@@ -2157,7 +2157,7 @@ private fun DownloadsSection(
                 settings.setDownloadLikedSongs(enable)
                 if (enable) {
                     scope.launch {
-                        val tracks = app.likedStore.likedTracks.value
+                        val tracks = sonarApp.likedStore.likedTracks.value
                         if (tracks.isNotEmpty()) {
                             val likedTracksList = tracks.map { uri ->
                                 store.trackOf(uri) ?: MvCatalogTrack(
@@ -2167,7 +2167,7 @@ private fun DownloadsSection(
                                 )
                             }
                             store.setOwner(MvDownloadStore.LIKED, likedTracksList, label = null)
-                            MvDownloadService.start(app)
+                            MvDownloadService.start(context)
                         }
                     }
                 } else {

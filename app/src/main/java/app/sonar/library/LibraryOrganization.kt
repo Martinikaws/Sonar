@@ -82,7 +82,7 @@ data class LibraryOrganization(
     }
 
     companion object {
-        const val ROOT = "root"
+        private const val ROOT = "root"
     }
 }
 

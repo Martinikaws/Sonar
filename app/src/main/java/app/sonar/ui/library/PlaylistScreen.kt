@@ -1,5 +1,10 @@
 package app.sonar.ui.library
 
+import app.sonar.library.HiddenPlaylistTracksControl
+import app.sonar.library.PlaylistTrackSort
+import app.sonar.library.PlaylistTrackSortItems
+import app.sonar.library.visiblePlaylistTrackIndexes
+import app.sonar.library.visiblePlaylistTracks
 import app.sonar.ui.components.glassMenuTrigger
 import androidx.compose.ui.text.withLink
 import androidx.annotation.StringRes
@@ -230,6 +235,8 @@ fun PlaylistScreen(
      * that far up.
      */
     onTrackMenu: (CatalogTrack) -> Unit,
+    hiddenUris: Set<String> = emptySet(),
+    onRestoreHiddenTrack: (String) -> Unit = {},
     onOpenItem: (app.sonar.data.SearchItem) -> Unit = {},
     /** Follows or unfollows the artist this page is about. */
     onToggleFollow: () -> Unit = {},
@@ -376,15 +383,15 @@ fun PlaylistScreen(
 
     // Derived, not stored: keeping a second list in state would leave the two
     // able to disagree after a reload.
-    val visible = remember(state.tracks, query, shownSort, shownDescending) {
-        state.tracks
-            .filter { it.matches(query) }
-            .sortedWith(shownSort.comparator())
-            // Reversed after sorting rather than by a second comparator: the
-            // playlist's own order has no comparator to invert, and turning it
-            // upside down is exactly what "descending" means there too.
-            .let { if (shownDescending) it.reversed() else it }
+    val playbackTracks = remember(state.tracks, query, shownSort, shownDescending) {
+        state.tracks.visiblePlaylistTracks(PlaylistTrackSort.fromPreference(shownSort.name), shownDescending) {
+            it.matches(query)
+        }
     }
+    val visibleIndexes = remember(playbackTracks, hiddenUris) {
+        playbackTracks.visiblePlaylistTrackIndexes(hiddenUris)
+    }
+    val visible = remember(playbackTracks, visibleIndexes) { visibleIndexes.map { playbackTracks[it] } }
 
     // Taken from *this* screen's cover, not from whatever is playing. The two
     // are usually different things, and colouring an album page after an
@@ -715,8 +722,8 @@ fun PlaylistScreen(
                 topPadding = topPadding,
                 searching = searching,
                 onBack = onBack,
-                onPlay = { visible.takeIf { it.isNotEmpty() }?.let { onPlayInOrder(it, asContext) } },
-                onShuffle = { visible.takeIf { it.isNotEmpty() }?.let(onShuffle) },
+                onPlay = { playbackTracks.takeIf { it.isNotEmpty() }?.let { onPlayInOrder(it, asContext) } },
+                onShuffle = { playbackTracks.takeIf { it.isNotEmpty() }?.let(onShuffle) },
                 onToggleSearch = {
                     searching = !searching
                     if (!searching) query = ""
@@ -766,9 +773,9 @@ fun PlaylistScreen(
             onBack = onBack,
             mixOn = mixed,
             onPlay = {
-                visible.takeIf { it.isNotEmpty() }?.let { onPlayInOrder(it, asContext) }
+                playbackTracks.takeIf { it.isNotEmpty() }?.let { onPlayInOrder(it, asContext) }
             },
-            onShuffle = { visible.takeIf { it.isNotEmpty() }?.let(onShuffle) },
+            onShuffle = { playbackTracks.takeIf { it.isNotEmpty() }?.let(onShuffle) },
             onToggleSearch = {
                 searching = !searching
                 if (!searching) query = ""
@@ -911,6 +918,11 @@ fun PlaylistScreen(
                         },
                     )
                 }
+                if (hiddenUris.isNotEmpty()) {
+                    item(contentType = "hiddenTracks") {
+                        HiddenPlaylistTracksControl(state.tracks, hiddenUris, onRestoreHiddenTrack)
+                    }
+                }
             }
 
             if (audioPermissionNeeded) item(key = "localAudioPermission", contentType = "status") {
@@ -1002,7 +1014,7 @@ fun PlaylistScreen(
                                 episode = track,
                                 isCurrent = current,
                                 playing = nowPlaying,
-                                onClick = { if (current) onTogglePlay() else onPlay(visible, index, asContext) },
+                                onClick = { if (current) onTogglePlay() else onPlay(playbackTracks, visibleIndexes[index], asContext) },
                                 onMenu = { onTrackMenu(track) },
                                 showName = state.kind != MainViewModel.DetailKind.SHOW,
                                 unavailable = offline && trackDownload(track) != app.sonar.data.DownloadState.Done,
@@ -1038,7 +1050,7 @@ fun PlaylistScreen(
                             progress = track.takeIf { it.isEpisode && !it.played && it.resumeMs > 0 && it.durationMs > 0 }
                                 ?.let { (it.resumeMs.toFloat() / it.durationMs).coerceIn(0f, 1f) },
                             isCurrent = track.uri == nowPlayingUri,
-                            onClick = { onPlay(visible, index, asContext) },
+                            onClick = { onPlay(playbackTracks, visibleIndexes[index], asContext) },
                             onMenu = { onTrackMenu(track) },
                             download = trackDownload(track),
                             // The phone's own files play offline like anything
@@ -1060,7 +1072,9 @@ fun PlaylistScreen(
                     // automatic one where none was. An item of its own, so it
                     // sits under the row rather than over it, and is not part
                     // of the row's swipe.
-                    if (mixed && query.isBlank() && index < visible.lastIndex) {
+                    if (mixed && query.isBlank() &&
+                        visibleIndexes.getOrNull(index + 1) == visibleIndexes[index] + 1
+                    ) {
                         // By the pair, not the row number: the page's list
                         // and the playlist the mix was read from need not
                         // number their rows the same.
@@ -1527,26 +1541,16 @@ fun PlaylistScreen(
             backdrop = rememberCombinedBackdrop(pageBackdrop, listBackdrop),
             onDismiss = { sortOpen = false },
         ) {
-            TrackSort.entries.forEach { option ->
-                app.sonar.ui.components.GlassMenuItem(
-                    stringResource(option.label),
-                    selected = option == sort,
-                    onClick = {
-                        sort = option
-                        onSortChange(option.name)
-                        sortOpen = false
-                    },
-                )
-            }
-            app.sonar.ui.components.GlassMenuDivider()
-
-            // Deliberately leaves the menu open: the direction is the one choice
-            // people flip back and forth to compare, and reopening for each flip
-            // makes a sort feel heavy.
-            app.sonar.ui.components.GlassMenuItem(
-                stringResource(R.string.sort_descending),
-                selected = descending,
-                onClick = {
+            PlaylistTrackSortItems(
+                selected = PlaylistTrackSort.fromPreference(sort.name),
+                descending = descending,
+                label = { stringResource(TrackSort.valueOf(it.name).label) },
+                onSort = {
+                    sort = TrackSort.valueOf(it.name)
+                    onSortChange(it.name)
+                    sortOpen = false
+                },
+                onToggleDescending = {
                     descending = !descending
                     onSortDescendingChange(descending)
                 },
@@ -3572,18 +3576,6 @@ private fun CatalogTrack.matches(query: String): Boolean {
     return name.lowercase(Locale.getDefault()).contains(needle) ||
         artist.lowercase(Locale.getDefault()).contains(needle) ||
         album.lowercase(Locale.getDefault()).contains(needle)
-}
-
-private fun TrackSort.comparator(): Comparator<CatalogTrack> = when (this) {
-    // Stable no-op: the list is already in playlist order.
-    TrackSort.ORIGINAL -> Comparator { _, _ -> 0 }
-    TrackSort.TITLE -> compareBy(String.CASE_INSENSITIVE_ORDER) { it.name }
-    TrackSort.ARTIST -> compareBy(String.CASE_INSENSITIVE_ORDER) { it.artist }
-    // Most recent first, and anything without a date last rather than first:
-    // a null here means the list came from the access point, which does not
-    // carry the field, and those belong at the end instead of on top.
-    TrackSort.ADDED -> compareByDescending(nullsFirst()) { it.addedAt }
-    TrackSort.DURATION -> compareBy { it.durationMs }
 }
 
 fun formatDuration(ms: Long): String {

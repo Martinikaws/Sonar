@@ -146,6 +146,7 @@ class SpotifyBackend(private val container: SonarApplication) : MusicBackend {
                     CatalogPlaylist(
                         uri = dto.uri,
                         name = dto.name,
+                        subtitle = dto.owner?.displayName ?: dto.owner?.id,
                         artworkUrl = dto.images.firstOrNull()?.url,
                     )
                 }

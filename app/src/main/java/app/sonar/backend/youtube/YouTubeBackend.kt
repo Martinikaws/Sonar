@@ -189,6 +189,7 @@ class YouTubeBackend(private val account: YouTubeAccount) : MusicBackend {
                     uri = "$PLAYLIST_PREFIX${item.id}",
                     name = item.title,
                     artworkUrl = item.thumbnail?.atSize(COVER_SIZE),
+                    subtitle = item.author?.name,
                 )
             }
     }

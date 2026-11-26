@@ -183,6 +183,10 @@ import app.sonar.ui.theme.rememberArtworkFootColor
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import app.sonar.library.HidePlaylistTrackItem
+import app.sonar.library.MovePlaylistToFolderItem
+import app.sonar.library.PlaylistFolderDialog
+import app.sonar.library.canOrganize
 import app.sonar.migration.ASTRAL_IMPORT_ROUTE
 import app.sonar.migration.AstralImportScreen
 import com.adamglin.PhosphorIcons
@@ -215,6 +219,7 @@ private data class NamingRequest(val playlist: CatalogPlaylist?)
 private data class TrackMenuRequest(
     val track: app.sonar.data.CatalogTrack,
     val removable: Boolean,
+    val playlistUri: String? = null,
 )
 
 object Routes {
@@ -751,6 +756,10 @@ fun SonarApp(
             }
             .take(RADIO_SEEDS)
     }
+    val organizationStore = remember(context) {
+        (context.applicationContext as app.sonar.SonarApplication).libraryOrganization
+    }
+    val organization by organizationStore.state.collectAsStateWithLifecycle()
     val playlistOrder by viewModel.playlistOrder.collectAsStateWithLifecycle()
     val pinnedPlaylists by viewModel.pinnedPlaylists.collectAsStateWithLifecycle()
     val likedTracks by viewModel.likedTracks.collectAsStateWithLifecycle()
@@ -841,6 +850,7 @@ fun SonarApp(
     /** The page whose downloads are about to be given back; see the menu. */
     var unkeeping by remember { mutableStateOf<MainViewModel.PlaylistState?>(null) }
     var playlistMenuMine by remember { mutableStateOf(true) }
+    var folderTarget by remember { mutableStateOf<CatalogPlaylist?>(null) }
     var playlistMenuSaved by remember { mutableStateOf(true) }
     var deleting by remember { mutableStateOf<CatalogPlaylist?>(null) }
     // A song somebody sent, waiting to be looked at; see SharedTrackCard.
@@ -2082,6 +2092,8 @@ fun SonarApp(
                         composable(Routes.LIBRARY) {
                             LaunchedEffect(backend, state is MainViewModel.UiState.Ready) { viewModel.syncListeningHistory() }
                             LibraryScreen(
+                                organizationStore = organizationStore,
+                                organization = organization,
                                 state = state,
                                 contentPadding = listPadding,
                                 onLogIn = viewModel::logIn,
@@ -2098,7 +2110,8 @@ fun SonarApp(
                                 onPlaylistMenu = {
                                     // Whose it is, from the library's own index;
                                     // unknown is still offered, as before.
-                                    playlistMenuMine = it.mine != false
+                                    playlistMenuMine = viewModel.canEditPlaylists && it.mine != false
+                                    playlistMenuSaved = true
                                     playlistMenu = it
                                 },
                                 artists = followedArtists,
@@ -2321,11 +2334,16 @@ fun SonarApp(
                                             // only one the account can write
                                             // to: on YouTube Music the library
                                             // also holds lists it only saved.
+                                            playlistUri = page.uri.takeIf {
+                                                page.kind == MainViewModel.DetailKind.PLAYLIST
+                                            },
                                             removable = page.kind ==
                                                 MainViewModel.DetailKind.PLAYLIST &&
                                                 viewModel.canRemoveFrom(page.uri),
                                         )
                                     },
+                                    hiddenUris = organization.hiddenTracks[page.uri].orEmpty(),
+                                    onRestoreHiddenTrack = { organizationStore.setHidden(page.uri.orEmpty(), it, false) },
                                     storedSort = (trackOrders[page.uri] ?: viewModel.defaultTrackOrder).sort,
                                     onSortChange = { viewModel.setTrackSort(page.uri, it) },
                                     onToggleMix = viewModel::toggleMix,
@@ -3656,6 +3674,16 @@ fun SonarApp(
                             viewModel.togglePinned(shownPlaylist.uri)
                             playlistMenu = null
                         }
+                        if (organization.folders.isNotEmpty() &&
+                            shownPlaylist.canOrganize(pinnedPlaylists) &&
+                            (state as? MainViewModel.UiState.Ready)?.playlists
+                                ?.any { it.uri == shownPlaylist.uri } == true
+                        ) {
+                            MovePlaylistToFolderItem {
+                                folderTarget = shownPlaylist
+                                playlistMenu = null
+                            }
+                        }
                         // The whole record, or the whole list, into a
                         // playlist: what the open page holds, in its order.
                         if (playlist.uri == shownPlaylist.uri && playlist.tracks.isNotEmpty() &&
@@ -3778,6 +3806,15 @@ fun SonarApp(
                     }
                 }
 
+                folderTarget?.let { target ->
+                    PlaylistFolderDialog(
+                        folders = organization.folders,
+                        currentFolderId = organization.membership[target.uri],
+                        onMove = { organizationStore.moveToFolder(target.uri, it) },
+                        onDismiss = { folderTarget = null },
+                    )
+                }
+
                 app.sonar.ui.components.ConfirmDialog(
                     target = unkeeping,
                     title = { stringResource(R.string.remove_download) },
@@ -3880,6 +3917,12 @@ fun SonarApp(
                     onDismiss = { trackMenu = null },
                 ) {
                     if (menu != null) {
+                        menu.playlistUri?.let { playlistUri ->
+                            HidePlaylistTrackItem {
+                                organizationStore.setHidden(playlistUri, menu.track.uri, true)
+                                trackMenu = null
+                            }
+                        }
                         TrackSheetAction(stringResource(R.string.play), PhosphorIcons.Fill.Play) {
                             trackMenu = null
                             onPlay(listOf(menu.track), 0, null, false, "", 0L)

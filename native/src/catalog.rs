@@ -76,11 +76,17 @@ pub fn rootlist() -> EngineResult<String> {
                         // Whose it is, from the index itself: the Web API answers 404
                         // for Spotify's own lists to an application in development
                         // mode, which left saved editorial playlists looking editable.
-                        let mine = meta
+                        let owner = meta
                             .map(|meta| meta.owner_username())
-                            .filter(|owner| !owner.is_empty())
-                            .map(|owner| owner == me);
-                        json!({ "uri": item.uri(), "name": name, "artworkUrl": artwork, "mine": mine })
+                            .filter(|owner| !owner.is_empty());
+                        let mine = owner.map(|owner| owner == me);
+                        json!({
+                            "uri": item.uri(),
+                            "name": name,
+                            "artworkUrl": artwork,
+                            "mine": mine,
+                            "subtitle": owner,
+                        })
                     }),
             );
             from += got;
