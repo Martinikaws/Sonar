@@ -71,6 +71,11 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.res.stringArrayResource
+import app.sonar.lyricsx.LyricsToolsButton
+import app.sonar.lyricsx.TrackLyricsOffsets
+import app.sonar.lyricsx.lyricSeekPosition
+import app.sonar.lyricsx.lyricsPosition
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -3013,11 +3018,21 @@ private fun LyricsStage(
     // pressed seeks to where it is heard rather than where it is shown.
     val output = rememberAudioOutput()
     val offsets by preferences.lyricsOffsets.collectAsStateWithLifecycle()
-    val delayMs by androidx.compose.runtime.rememberUpdatedState((offsets[output.key] ?: 0).toLong())
-    val heardMs = remember(positionMs) {
-        androidx.compose.runtime.derivedStateOf { (positionMs.value - delayMs).coerceAtLeast(0L) }
+    val delayMs by rememberUpdatedState((offsets[output.key] ?: 0).toLong())
+    val trackOffsets = remember(context) { TrackLyricsOffsets(context) }
+    val trackUri = query?.uri
+    var trackOffsetMs by remember(trackOffsets, trackUri) {
+        androidx.compose.runtime.mutableStateOf(trackUri?.let { trackOffsets[it] } ?: 0L)
     }
-    val seekHeard: (Long) -> Unit = { onSeek((it + delayMs).coerceAtLeast(0L)) }
+    val activeTrackOffset by rememberUpdatedState(if (lyrics?.synced == true) trackOffsetMs else 0L)
+    val heardMs = remember(positionMs) {
+        androidx.compose.runtime.derivedStateOf {
+            lyricsPosition(positionMs.value, delayMs, activeTrackOffset)
+        }
+    }
+    val seekHeard: (Long) -> Unit = {
+        onSeek(lyricSeekPosition(it, delayMs, activeTrackOffset))
+    }
 
     // Off when a song starts: turning it on is asking to read this one.
     var translated by androidx.compose.runtime.saveable.rememberSaveable(lyrics) {
@@ -3177,6 +3192,17 @@ private fun LyricsStage(
         }
 
         if (query != null && !loading && !optionsOpen) {
+            LyricsToolsButton(
+                query = query,
+                lyrics = lyrics,
+                positionMs = positionMs,
+                heardMs = heardMs,
+                outputDelayMs = delayMs,
+                trackOffsetMs = trackOffsetMs,
+                onOffset = { trackOffsetMs = trackOffsets.set(query.uri, it) },
+                labels = stringArrayResource(R.array.lyrics_tools_labels),
+                modifier = Modifier.align(Alignment.BottomStart).padding(6.dp),
+            )
             LyricsSourceChip(
                 source = lyrics?.source,
                 backdrop = backdrop,

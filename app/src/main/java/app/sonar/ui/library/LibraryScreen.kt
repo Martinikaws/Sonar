@@ -4,6 +4,14 @@ import app.sonar.ui.components.glassMenuTrigger
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.annotation.StringRes
+import app.sonar.library.LibraryOrganization
+import app.sonar.library.LibraryOrganizationControls
+import app.sonar.library.LibraryOrganizationStore
+import app.sonar.library.LibrarySort
+import app.sonar.library.atLibraryLevel
+import app.sonar.library.canOrganize
+import app.sonar.library.inCreatorOrder
+import app.sonar.library.inCustomLibraryOrder
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.togetherWith
@@ -100,6 +108,8 @@ private enum class Order(val key: String, @StringRes val label: Int) {
     RECENT("recent", R.string.recently_opened),
     NAME("name", R.string.name),
     ADDED("added", R.string.spotify_order),
+    CUSTOM(LibrarySort.CUSTOM.key, R.string.library_sort_custom),
+    CREATOR(LibrarySort.CREATOR.key, R.string.library_sort_creator),
 }
 
 /**
@@ -141,6 +151,8 @@ fun LibraryScreen(
     playlistOrder: List<String>,
     /** URIs the listener pinned to the top; see PinnedPlaylistStore. */
     pinned: List<String> = emptyList(),
+    organizationStore: LibraryOrganizationStore,
+    organization: LibraryOrganization,
     /** False when the source cannot be written to; see MusicBackend. */
     canEdit: Boolean = false,
     onCreatePlaylist: () -> Unit = {},
@@ -216,6 +228,9 @@ fun LibraryScreen(
                 mutableStateOf(Order.entries.firstOrNull { it.key == view.order } ?: Order.RECENT)
             }
             var filter by remember { mutableStateOf(Filter.ALL) }
+            var openFolderId by remember { mutableStateOf<String?>(null) }
+            val folder = organization.folders.firstOrNull { it.id == openFolderId }
+            val folderId = folder?.id
             var sortOpen by remember { mutableStateOf(false) }
             var recapOpen by remember { mutableStateOf(false) }
             // Recorded so the menu has the tiles behind it to blur, rather than
@@ -259,12 +274,38 @@ fun LibraryScreen(
             // chips: the same act as the field inside a record, narrowing what
             // is already here rather than fetching anything.
             var query by remember { mutableStateOf("") }
-            val matching = remember(shown, query) {
-                if (query.isBlank()) shown
-                else shown.filter { it.name.contains(query.trim(), ignoreCase = true) }
+            val movableUris = remember(state.playlists, pinned) {
+                state.playlists.filter { it.canOrganize(pinned) }.mapTo(mutableSetOf()) { it.uri }
+            }
+            val matching = remember(shown, query, organization, folderId, movableUris) {
+                val atLevel = shown.atLibraryLevel(organization, folderId, movableUris)
+                if (query.isBlank()) atLevel
+                else atLevel.filter { it.name.contains(query.trim(), ignoreCase = true) }
+            }
+            val customOrder = organization.customOrder(folderId)
+            val movableAtLevel = remember(state.playlists, organization, folderId, movableUris) {
+                state.playlists
+                    .filter { it.uri in movableUris && organization.atLevel(it.uri, folderId) }
+                    .distinctBy { it.uri }
+                    .inCustomLibraryOrder(customOrder) { it.uri }
+            }
+            val organizationControls: @Composable () -> Unit = {
+                LibraryOrganizationControls(
+                    organization = organization,
+                    store = organizationStore,
+                    folder = folder,
+                    query = query,
+                    movablePlaylists = movableAtLevel,
+                    onOpenFolder = {
+                        openFolderId = it
+                        filter = Filter.PLAYLISTS
+                        query = ""
+                    },
+                    onChooseCustom = { onOrderChosen(Order.CUSTOM) },
+                )
             }
 
-            val playlists = remember(matching, playlistOrder, pinned, order, descending) {
+            val playlists = remember(matching, playlistOrder, pinned, order, descending, customOrder) {
                 when (order) {
                     Order.RECENT -> matching.sortedByRecentlyOpened(playlistOrder)
                     Order.NAME -> matching.sortedWith(
@@ -273,11 +314,13 @@ fun LibraryScreen(
                     // The order the account added them, which is what the
                     // rootlist arrives in.
                     Order.ADDED -> matching
+                    Order.CUSTOM -> matching.inCustomLibraryOrder(customOrder) { it.uri }
+                    Order.CREATOR -> matching.inCreatorOrder { it.subtitle.orEmpty() }
                 }
                     // The direction belongs to the sort rather than beside it:
                     // reversing "recently opened" is "least recently", and a
                     // separate control for that would be a second sort.
-                    .let { if (descending) it.reversed() else it }
+                    .let { if (descending && order != Order.CUSTOM) it.reversed() else it }
                     // The phone's own music and what is kept on it outrank
                     // the sort: they are not playlists competing for a place
                     // but fixed shelves of the library, and one nobody has
@@ -350,7 +393,10 @@ fun LibraryScreen(
                             view.grid = it == Layout.GRID
                         },
                         onOrder = { onOrderChosen(it) },
-                        onFilter = { filter = it },
+                        onFilter = {
+                            filter = it
+                            if (it != Filter.PLAYLISTS) openFolderId = null
+                        },
                         sort = { sortButton(Modifier.padding(end = 20.dp)) },
                         canEdit = canEdit,
                         onCreatePlaylist = onCreatePlaylist,
@@ -413,6 +459,12 @@ fun LibraryScreen(
                             }
                         }
 
+                        if (filter == Filter.ALL || filter == Filter.PLAYLISTS) {
+                            item(span = { GridItemSpan(maxLineSpan) }, key = "organization") {
+                                organizationControls()
+                            }
+                        }
+
                         if (artists.isNotEmpty() && filter == Filter.ALL) {
                             item(span = { GridItemSpan(maxLineSpan) }, key = "artists") {
                                 ArtistShelf(artists, onOpenArtist)
@@ -424,7 +476,7 @@ fun LibraryScreen(
                                 playlist,
                                 pinned = playlist.uri in pinned,
                                 onClick = { open(playlist, artists, onOpenPlaylist, onOpenArtist) },
-                                onLongClick = if (canEdit) {
+                                onLongClick = if (canEdit || playlist.uri in movableUris) {
                                     { onPlaylistMenu(playlist) }
                                 } else {
                                     null
@@ -472,6 +524,10 @@ fun LibraryScreen(
                             }
                         }
 
+                        if (filter == Filter.ALL || filter == Filter.PLAYLISTS) {
+                            item(key = "organization") { organizationControls() }
+                        }
+
                         if (artists.isNotEmpty() && filter == Filter.ALL) {
                             item(key = "artists") { ArtistShelf(artists, onOpenArtist) }
                         }
@@ -481,7 +537,7 @@ fun LibraryScreen(
                                 playlist,
                                 pinned = playlist.uri in pinned,
                                 onClick = { open(playlist, artists, onOpenPlaylist, onOpenArtist) },
-                                onLongClick = if (canEdit) {
+                                onLongClick = if (canEdit || playlist.uri in movableUris) {
                                     { onPlaylistMenu(playlist) }
                                 } else {
                                     null
@@ -516,19 +572,17 @@ fun LibraryScreen(
                         },
                     )
                 }
-                app.sonar.ui.components.GlassMenuDivider()
-
-                // Deliberately leaves the menu open: the direction is the one
-                // choice people flip back and forth to compare, and reopening
-                // for each flip makes a sort feel heavy.
-                app.sonar.ui.components.GlassMenuItem(
-                    stringResource(R.string.sort_descending),
-                    selected = descending,
-                    onClick = {
-                        descending = !descending
-                        view.descending = descending
-                    },
-                )
+                if (order != Order.CUSTOM) {
+                    app.sonar.ui.components.GlassMenuDivider()
+                    app.sonar.ui.components.GlassMenuItem(
+                        stringResource(R.string.sort_descending),
+                        selected = descending,
+                        onClick = {
+                            descending = !descending
+                            view.descending = descending
+                        },
+                    )
+                }
             }
             }
             }

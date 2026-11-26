@@ -1,6 +1,9 @@
 package app.sonar.ui.settings
 
+import app.sonar.R
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SettingsSearchTest {
@@ -10,6 +13,9 @@ class SettingsSearchTest {
         3 to "Thème sombre",
         4 to "Pure black",
         5 to "A curve for each pair of headphones",
+        7 to "Wi-Fi only",
+        SettingsGroup.SOUND.title to "Sound settings",
+        SettingsGroup.SOUND.summary to "Playback options",
     )
     private val text: (Int) -> String = { words[it].orEmpty() }
 
@@ -18,14 +24,15 @@ class SettingsSearchTest {
     private val equalizer = SettingsEntry(
         "equalizer", 6, 5, emptyList(), SettingsGroup.SOUND, SettingsAction.Open(SettingsPage.Equalizer),
     )
-    private val all = listOf(crossfade, theme, equalizer)
+    private val wifi = SettingsEntry("wifi", 7, null, emptyList(), SettingsGroup.SOUND)
+    private val all = listOf(crossfade, theme, equalizer, wifi)
 
     private fun ids(query: String) = matchSettings(all, query, text).map { it.id }
 
     @Test
     fun blankQueryFindsEverything() {
-        assertEquals(listOf("crossfade", "theme", "equalizer"), ids(""))
-        assertEquals(listOf("crossfade", "theme", "equalizer"), ids("   "))
+        assertEquals(listOf("crossfade", "theme", "equalizer", "wifi"), ids(""))
+        assertEquals(listOf("crossfade", "theme", "equalizer", "wifi"), ids(" ... "))
     }
 
     @Test
@@ -46,6 +53,42 @@ class SettingsSearchTest {
     @Test
     fun noMatchIsEmpty() {
         assertEquals(emptyList<String>(), ids("bluetooth"))
+    }
+
+    @Test
+    fun punctuationSplitsWordsAndMatchesOnlyPrefixes() {
+        assertEquals(listOf("wifi"), ids("Wi Fi"))
+        assertEquals(listOf("wifi"), ids("Wi–Fi, on"))
+        assertEquals(emptyList<String>(), ids("fade"))
+    }
+
+    @Test
+    fun groupTitleMatchesWholeGroupOnItsOwn() {
+        assertEquals(listOf("equalizer", "wifi"), ids("sound sett"))
+        assertEquals(emptyList<String>(), ids("sound headphones"))
+        assertEquals(emptyList<String>(), ids("playback options"))
+    }
+
+    @Test
+    fun glassKeywordsFollowControlVisibility() {
+        fun keywords(supported: Boolean, liquid: Boolean, ios27: Boolean, tinted: Boolean) =
+            glassSearchKeywords(supported, liquid, ios27, tinted, emptyList())
+
+        assertTrue(keywords(false, true, true, true).isEmpty())
+        assertFalse(R.string.glass_dispersion in keywords(true, false, true, false))
+        assertTrue(R.string.glass_dispersion in keywords(true, true, false, false))
+        assertFalse(R.string.glass_frost in keywords(true, true, false, false))
+        assertTrue(R.string.glass_frost in keywords(true, true, true, false))
+        assertFalse(R.string.glass_tint_strength in keywords(true, true, true, false))
+        assertTrue(R.string.glass_tint_strength in keywords(true, false, false, true))
+    }
+
+    @Test
+    fun subpageMatchesLocalizedKeyword() {
+        val found = matchSettings(SETTINGS_INDEX, "préamp") {
+            if (it == R.string.eq_preamp) "Préamplification" else ""
+        }
+        assertEquals(listOf("equalizer"), found.map { it.id })
     }
 
     @Test

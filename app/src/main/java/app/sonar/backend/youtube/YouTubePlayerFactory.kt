@@ -12,6 +12,8 @@ import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import app.sonar.backend.PlaybackHost
+import app.sonar.audiosource.SpotifyTrackKey
+import app.sonar.audiosource.YtAudioForSpotify
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.localization.Localization
@@ -34,14 +36,44 @@ object YouTubePlayerFactory {
      */
     const val SPOTIFY_AUDIO_PREFIX = "sonar-ytaudio:"
 
-    /**
-     * @param onTerminalError told, in place of the skip, when an item under
-     *   [SPOTIFY_AUDIO_PREFIX] cannot be played, so the caller can try the
-     *   next source. Null keeps the player as it always was.
-     */
+    internal fun spotifyTrackKey(item: androidx.media3.common.MediaItem): SpotifyTrackKey? {
+        if (!item.mediaId.startsWith("spotify:track:")) return null
+        val metadata = item.mediaMetadata
+        val title = metadata.title?.toString()?.takeIf { it.isNotBlank() } ?: return null
+        val duration = metadata.durationMs?.takeIf { it > 0 } ?: return null
+        val artists = metadata.extras?.getStringArrayList(app.sonar.ui.EXTRA_ARTIST_NAMES)
+            ?.takeIf { it.isNotEmpty() } ?: metadata.artist?.toString().orEmpty().split(", ")
+        if (artists.none { it.isNotBlank() }) return null
+        return SpotifyTrackKey(
+            id = item.mediaId.substringAfterLast(':'),
+            title = title,
+            artists = artists,
+            durationMs = duration,
+        )
+    }
+
+    internal suspend fun catalogSpotifyTrackKey(uri: String): SpotifyTrackKey? {
+        val track = try {
+            app.sonar.data.Catalog.tracks(listOf(uri)).firstOrNull()
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            android.util.Log.w("SonarYT", "Spotify metadata unavailable for source selection", error)
+            null
+        } ?: return null
+        return SpotifyTrackKey(
+            id = uri.substringAfterLast(':'),
+            title = track.name,
+            artists = track.artists.map { it.name }.ifEmpty { track.artist.split(", ") },
+            durationMs = track.durationMs,
+        )
+    }
+
     fun create(
         host: PlaybackHost,
-        onTerminalError: ((androidx.media3.common.MediaItem) -> Unit)? = null,
+        spotifyMatcher: YtAudioForSpotify? = null,
+        spotifyFallback: Boolean = false,
+        spotifyUnavailable: Boolean = false,
     ): Player {
         fun loadControl() = androidx.media3.exoplayer.DefaultLoadControl.Builder()
             .setBufferDurationsMs(
@@ -69,12 +101,16 @@ object YouTubePlayerFactory {
                     DefaultHttpDataSource.Factory(),
                 ),
             ),
-            YouTubeStreamResolver(host.context.applicationContext),
+            YouTubeStreamResolver(host.context.applicationContext, spotifyMatcher),
         )
 
         fun buildPlayer(handleFocus: Boolean, slot: MixerSlot) =
             ExoPlayer.Builder(host.context, renderers(host, MixerOutputProvider(host.context, mixer, slot)))
-            .setMediaSourceFactory(VideoAwareSourceFactory(DefaultMediaSourceFactory(dataSources), dataSources))
+            .setMediaSourceFactory(
+                VideoAwareSourceFactory(
+                    DefaultMediaSourceFactory(dataSources), dataSources, spotifyMatcher != null || spotifyUnavailable,
+                ),
+            )
             .setLoadControl(loadControl())
             .setHandleAudioBecomingNoisy(true)
             // Ducks and pauses for whatever else wants the speaker. The Spotify
@@ -99,13 +135,18 @@ object YouTubePlayerFactory {
                     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                         // A signed-in address that failed is not handed out again.
                         SignedInStreams.forget()
-                        val current = exo.currentMediaItem
-                        val giveUp = if (onTerminalError != null && current != null &&
-                            current.localConfiguration?.uri?.toString()?.startsWith(SPOTIFY_AUDIO_PREFIX) == true
-                        ) {
-                            { onTerminalError(current) }
-                        } else {
-                            null
+                        if (spotifyFallback || spotifyUnavailable) return
+                        if (spotifyMatcher != null) {
+                            val failed = exo.currentMediaItem
+                            android.os.Handler(host.looper).post {
+                                if (exo.currentMediaItem != failed || exo.playerError !== error ||
+                                    !exo.playWhenReady || exo.repeatMode != Player.REPEAT_MODE_OFF ||
+                                    !exo.hasNextMediaItem()
+                                ) return@post
+                                exo.seekToNextMediaItem()
+                                exo.prepare()
+                            }
+                            return
                         }
                         val causes = generateSequence<Throwable>(error) { it.cause }.toList()
                         val message = when {
@@ -114,13 +155,9 @@ object YouTubePlayerFactory {
                             causes.any { it is SignedInStreams.Refused } ->
                                 app.sonar.R.string.youtube_signed_in_unplayable
                             else -> {
-                                recover(exo, error, giveUp)
+                                recover(exo, error)
                                 return
                             }
-                        }
-                        if (giveUp != null) {
-                            giveUp()
-                            return
                         }
                         android.os.Handler(android.os.Looper.getMainLooper()).post {
                             android.widget.Toast.makeText(
@@ -161,9 +198,11 @@ object YouTubePlayerFactory {
                     ?.preferences
                 // Each song found for a video in the queue renames its entry, so
                 // the player shows what it plays; see SongCounterparts.
-                CoroutineScope(SupervisorJob() + android.os.Handler(host.looper).asCoroutineDispatcher()).launch {
-                    SongCounterparts.resolved.collect { (video, song) ->
-                        if (SongCounterparts.wanted(video)) retitle(exo, video, song)
+                if (spotifyMatcher == null && !spotifyFallback && !spotifyUnavailable) {
+                    CoroutineScope(SupervisorJob() + android.os.Handler(host.looper).asCoroutineDispatcher()).launch {
+                        SongCounterparts.resolved.collect { (video, song) ->
+                            if (SongCounterparts.wanted(video)) retitle(exo, video, song)
+                        }
                     }
                 }
                 // The talking and the sketches around a music video; see SponsorBlock.
@@ -198,19 +237,15 @@ object YouTubePlayerFactory {
     private fun recover(
         exo: ExoPlayer,
         error: androidx.media3.common.PlaybackException,
-        giveUp: (() -> Unit)? = null,
     ) {
         val item = exo.currentMediaItem ?: return
         val id = item.mediaId
-        // A Spotify track's id says nothing about the video it plays from.
-        val streamUri = item.localConfiguration?.uri?.toString()
-            ?.takeIf { it.startsWith(SPOTIFY_AUDIO_PREFIX) } ?: id
         if (!exo.playWhenReady) return
         val now = android.os.SystemClock.elapsedRealtime()
         val last = recovering?.takeIf { it.first == id && now - it.second < RETRY_WINDOW_MS }
         val attempt = (last?.third ?: 0) + 1
         recovering = Triple(id, now, attempt)
-        YouTubeStreams.forget(YouTubeBackend.videoIdOfUri(streamUri))
+        YouTubeStreams.forget(YouTubeBackend.videoIdOfUri(id))
         val at = exo.currentPosition
         val index = exo.currentMediaItemIndex
         android.util.Log.w("SonarYT", "playback failed (${error.errorCodeName}), try $attempt at ${at}ms")
@@ -218,7 +253,6 @@ object YouTubePlayerFactory {
             // Moved on in the meantime: nothing of this to pick up.
             if (exo.currentMediaItem?.mediaId != id || exo.playerError == null) return@postDelayed
             if (attempt > RETRIES) {
-                if (giveUp != null) return@postDelayed giveUp()
                 if (exo.hasNextMediaItem()) exo.seekToNextMediaItem() else return@postDelayed
             } else {
                 exo.seekTo(index, at)
@@ -400,13 +434,41 @@ object YouTubePlayerFactory {
 @UnstableApi
 private class YouTubeStreamResolver(
     private val context: android.content.Context,
+    private val spotifyMatcher: YtAudioForSpotify?,
 ) : ResolvingDataSource.Resolver {
 
     /**
      * Asked without an account, and again as the account where YouTube will
      * only play the song to one; see SignedInStreams.
      */
-    override fun resolveDataSpec(dataSpec: DataSpec): DataSpec = try {
+    override fun resolveDataSpec(dataSpec: DataSpec): DataSpec =
+        resolveStream(resolveSpotifyMatch(dataSpec))
+
+    private fun resolveSpotifyMatch(dataSpec: DataSpec): DataSpec {
+        val uri = dataSpec.uri
+        if (uri.scheme != SPOTIFY_MATCH_SCHEME) return dataSpec
+        val matcher = spotifyMatcher ?: throw java.io.IOException("No enabled audio source for this track")
+        val id = uri.lastPathSegment ?: throw java.io.IOException("YouTube Music matching requires a Spotify track")
+        val key = SpotifyTrackKey(
+            id = id,
+            title = uri.getQueryParameter("title").orEmpty(),
+            artists = uri.getQueryParameters("artist"),
+            durationMs = uri.getQueryParameter("duration")?.toLongOrNull() ?: 0L,
+        )
+        // ResolvingDataSource calls this synchronously on the loading thread.
+        val match = try {
+            kotlinx.coroutines.runBlocking {
+                val completeKey = if (key.durationMs > 0) key else
+                    YouTubePlayerFactory.catalogSpotifyTrackKey("spotify:track:$id")
+                completeKey?.let { matcher.findAudio(it) }
+            }
+        } catch (error: Exception) {
+            throw java.io.IOException("YouTube Music match lookup failed", error)
+        } ?: throw java.io.IOException("No YouTube Music match for ${key.id}")
+        return dataSpec.withUri(android.net.Uri.parse("${YouTubePlayerFactory.SPOTIFY_AUDIO_PREFIX}${match.videoId}"))
+    }
+
+    private fun resolveStream(dataSpec: DataSpec): DataSpec = try {
         resolveAnonymously(dataSpec)
     } catch (error: Exception) {
         if (!SignedInStreams.needsAccount(error)) throw error
@@ -561,11 +623,24 @@ private class YouTubeStreamResolver(
 private class VideoAwareSourceFactory(
     private val base: DefaultMediaSourceFactory,
     dataSources: androidx.media3.datasource.DataSource.Factory,
+    private val matchSpotify: Boolean,
 ) : androidx.media3.exoplayer.source.MediaSource.Factory by base {
 
     private val progressive = androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(dataSources)
 
     override fun createMediaSource(mediaItem: androidx.media3.common.MediaItem): androidx.media3.exoplayer.source.MediaSource {
+        if (matchSpotify && mediaItem.mediaId.startsWith("spotify:")) {
+            val uri = android.net.Uri.Builder().scheme(SPOTIFY_MATCH_SCHEME).authority("track")
+            if (mediaItem.mediaId.startsWith("spotify:track:")) {
+                uri.appendPath(mediaItem.mediaId.substringAfterLast(':'))
+            }
+            YouTubePlayerFactory.spotifyTrackKey(mediaItem)?.let { track ->
+                uri.appendQueryParameter("title", track.title)
+                    .appendQueryParameter("duration", track.durationMs.toString())
+                track.artists.forEach { uri.appendQueryParameter("artist", it) }
+            }
+            return progressive.createMediaSource(mediaItem.buildUpon().setUri(uri.build()).build())
+        }
         val uri = mediaItem.localConfiguration?.uri?.toString() ?: return base.createMediaSource(mediaItem)
         val ours = uri.startsWith(YouTubeBackend.TRACK_PREFIX) || uri.startsWith(YouTubeBackend.VIDEO_PREFIX)
         if (!ours || !YouTubeVideoMode.wantsVideo(uri)) return base.createMediaSource(mediaItem)
@@ -578,6 +653,7 @@ private class VideoAwareSourceFactory(
 
 private const val PART_VIDEO = "video"
 private const val PART_AUDIO = "audio"
+private const val SPOTIFY_MATCH_SCHEME = "sonar-ytmatch"
 
 /** Past this a phone screen shows no difference, and the data plan does. */
 private const val MAX_VIDEO_HEIGHT = 1080

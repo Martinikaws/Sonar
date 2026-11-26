@@ -1,6 +1,7 @@
 package app.sonar
 
 import android.app.Application
+import app.sonar.library.LibraryOrganizationStore
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
@@ -214,6 +215,8 @@ class SonarApplication : Application(), ImageLoaderFactory {
         app.sonar.data.PinnedPlaylistStore(this)
     }
     /** How the library was left looking: grid or list, and the sort. */
+    val libraryOrganization by lazy { LibraryOrganizationStore(this) }
+
     val libraryView: app.sonar.data.LibraryViewStore by lazy {
         app.sonar.data.LibraryViewStore(this)
     }

@@ -1,0 +1,4 @@
+<resources>
+    <string name="library_sort_custom">Custom</string>
+    <string name="library_sort_creator">Creator</string>
+</resources>

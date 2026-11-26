@@ -183,6 +183,8 @@ import app.sonar.ui.theme.rememberArtworkFootColor
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import app.sonar.migration.ASTRAL_IMPORT_ROUTE
+import app.sonar.migration.AstralImportScreen
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.fill.ArrowCircleDown
 import com.adamglin.phosphoricons.fill.Check
@@ -1617,7 +1619,7 @@ fun SonarApp(
                 // Settings is not a place you listen from: it is a full page of
                 // its own, and the tab bar and the now-playing bar step out of
                 // the way for it instead of floating over a form.
-                val chromeHidden = route == Routes.SETTINGS
+                val chromeHidden = route == Routes.SETTINGS || route == ASTRAL_IMPORT_ROUTE
                 val chrome by animateFloatAsState(
                     if (chromeHidden) 0f else 1f,
                     tween(220),
@@ -2136,6 +2138,7 @@ fun SonarApp(
                                 onDisconnectWebApi = viewModel::disconnectWebApi,
                                 onLogOut = viewModel::logOut,
                                 onShowTutorial = { showTutorial = true },
+                                onAstralImport = { navController.navigate(ASTRAL_IMPORT_ROUTE) },
                                 language = language,
                                 onLanguage = setLanguage,
                                 onBack = { navController.popBackStack() },
@@ -2148,6 +2151,10 @@ fun SonarApp(
                                     viewModel.loadYouTubeHome(force = true)
                                 },
                             )
+                        }
+
+                        composable(ASTRAL_IMPORT_ROUTE) {
+                            AstralImportScreen(onBack = { navController.popBackStack() })
                         }
 
                         composable(Routes.PLAYLIST) {

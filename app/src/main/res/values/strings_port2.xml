@@ -1,0 +1,24 @@
+<resources>
+    <string-array name="lyrics_tools_labels">
+        <item>Lyrics tools</item>
+        <item>Track offset</item>
+        <item>Earlier</item>
+        <item>Later</item>
+        <item>Reset timing</item>
+        <item>Tap to resync</item>
+        <item>Tap a line as you hear it begin.</item>
+        <item>Share current line</item>
+        <item>Select lines to share</item>
+        <item>Share lyrics</item>
+        <item>Lyrics diagnostics</item>
+        <item>Displayed provider</item>
+        <item>No provider attempts recorded for this track.</item>
+        <item>Answered</item>
+        <item>No result</item>
+        <item>Failed</item>
+        <item>Timed out</item>
+        <item>Close</item>
+        <item>ms</item>
+        <item>Unknown</item>
+    </string-array>
+</resources>

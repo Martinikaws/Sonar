@@ -68,19 +68,27 @@ internal val SETTINGS_INDEX: List<SettingsEntry> = listOf(
     SettingsEntry("logout", R.string.log_out, null, emptyList(), SettingsGroup.ACCOUNT),
 
     SettingsEntry(
-        "webapi", R.string.web_api, null, listOf(R.string.client_id, R.string.disconnect), SettingsGroup.SETUP,
+        "webapi", R.string.web_api, null, listOf(R.string.client_id), SettingsGroup.SETUP,
         SettingsAction.Open(SettingsPage.WebApi),
     ),
     SettingsEntry("tutorial", R.string.guide, null, listOf(R.string.see_setup_again), SettingsGroup.SETUP),
+    SettingsEntry("astral-import", R.string.astral_import_title, null, emptyList(), SettingsGroup.SETUP),
 
     SettingsEntry("web-sdk-recovery", R.string.web_sdk_settings_title, null, listOf(R.string.web_sdk_settings_open), SettingsGroup.SOUND),
     SettingsEntry("backend", R.string.backend, null, listOf(R.string.backend_spotify, R.string.backend_youtube), SettingsGroup.SOUND),
     SettingsEntry(
         "engine", R.string.engine, null,
-        listOf(R.string.engine_librespot, R.string.engine_soloist, R.string.soloist_setup), SettingsGroup.SOUND,
+        listOf(
+            R.string.engine_librespot, R.string.engine_soloist, R.string.soloist_setup,
+            R.string.soloist_step_key, R.string.soloist_get_key, R.string.soloist_key,
+            R.string.soloist_step_download, R.string.soloist_step_account,
+        ),
+        SettingsGroup.SOUND,
     ),
     SettingsEntry(
-        "equalizer", R.string.equalizer, R.string.page_equalizer_summary, emptyList(), SettingsGroup.SOUND,
+        "equalizer", R.string.equalizer, R.string.page_equalizer_summary,
+        listOf(R.string.eq_curve, R.string.eq_preamp, R.string.eq_reset, R.string.eq_presets, R.string.eq_save_preset),
+        SettingsGroup.SOUND,
         SettingsAction.Open(SettingsPage.Equalizer),
     ),
     SettingsEntry("quality", R.string.quality, null, emptyList(), SettingsGroup.SOUND),
@@ -163,10 +171,34 @@ internal val SETTINGS_INDEX: List<SettingsEntry> = listOf(
     SettingsEntry("permissions", R.string.permissions_asked, null, emptyList(), SettingsGroup.PERMISSIONS),
 )
 
+internal fun glassSearchKeywords(
+    supported: Boolean,
+    liquid: Boolean,
+    ios27: Boolean,
+    tinted: Boolean,
+    profiles: List<Int>,
+): List<Int> = if (!supported) emptyList() else buildList {
+    addAll(profiles)
+    addAll(listOf(
+        R.string.glass_vibrancy, R.string.glass_tint, R.string.glass_film, R.string.glass_indicator,
+        R.string.glass_where_bar, R.string.glass_where_mini_player, R.string.glass_where_player,
+        R.string.glass_reset,
+    ))
+    if (liquid) {
+        addAll(listOf(
+            R.string.glass_ios27, R.string.glass_blur, R.string.glass_rim,
+            R.string.glass_refraction_depth, R.string.glass_refraction_amount,
+            R.string.glass_dispersion, R.string.glass_depth,
+        ))
+        if (ios27) add(R.string.glass_frost)
+    }
+    if (tinted) addAll(listOf(R.string.glass_tint_clear, R.string.glass_tint_strength))
+}
+
 /**
- * The entries a query finds: every word of it, in any order, somewhere in the
- * entry's title, subtitle, keywords or group title and summary. Case and accents are
- * ignored. A blank query finds everything.
+ * Every query word must prefix a word in the entry's title, subtitle or keywords.
+ * A match against the group title alone returns the whole available group.
+ * Case and accents are ignored. A query without words finds everything.
  *
  * [text] turns a string resource into its words, so this stays testable
  * without Android.
@@ -176,22 +208,27 @@ internal fun matchSettings(
     query: String,
     text: (Int) -> String,
 ): List<SettingsEntry> {
-    val words = foldForSearch(query).split(WHITESPACE).filter { it.isNotEmpty() }
+    val words = searchWords(query)
     if (words.isEmpty()) return entries
+    val matchingGroups = entries.map { it.group }.distinct().filter {
+        words.prefixMatch(searchWords(text(it.title)))
+    }
     return entries.filter { entry ->
-        val haystack = buildList {
+        entry.group in matchingGroups || words.prefixMatch(buildList {
             add(entry.titleRes)
             entry.subtitleRes?.let(::add)
             addAll(entry.keywords)
-            add(entry.group.title)
-            add(entry.group.summary)
-        }.joinToString(" ") { foldForSearch(text(it)) }
-        words.all { it in haystack }
+        }.flatMap { searchWords(text(it)) })
     }
 }
 
-private val WHITESPACE = Regex("\\s+")
+private fun List<String>.prefixMatch(tokens: List<String>): Boolean =
+    all { word -> tokens.any { it.startsWith(word) } }
+
+private val WORD = Regex("[\\p{L}\\p{N}]+")
 private val MARKS = Regex("\\p{M}+")
 
-internal fun foldForSearch(s: String): String =
-    Normalizer.normalize(s, Normalizer.Form.NFD).replace(MARKS, "").lowercase(Locale.ROOT)
+private fun searchWords(text: String): List<String> {
+    val folded = Normalizer.normalize(text, Normalizer.Form.NFD).replace(MARKS, "").lowercase(Locale.ROOT)
+    return WORD.findAll(folded).map { it.value }.toList()
+}

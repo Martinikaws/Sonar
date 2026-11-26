@@ -11,6 +11,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import app.sonar.lyricsx.LyricsDiagnostics
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -112,7 +113,11 @@ object LyricsLibrary {
         }
 
     /** One source's answer, marked with where it came from. */
-    suspend fun fetch(source: LyricsSource, query: LyricsQuery): Lyrics? = runCatching {
+    suspend fun fetch(
+        source: LyricsSource,
+        query: LyricsQuery,
+        timeoutMs: Long? = null,
+    ): Lyrics? = LyricsDiagnostics.session.observe(query, source, timeoutMs) {
         val (_, title, artist, duration) = query
         when (source) {
             LyricsSource.LOCAL_FILE -> LocalLyrics.lyrics(query.uri)
@@ -125,8 +130,8 @@ object LyricsLibrary {
             LyricsSource.NETEASE -> NetEase.lyrics(title, artist, duration)
             LyricsSource.KUGOU -> KuGou.lyrics(title, artist, duration)
             LyricsSource.LYRICS_OVH -> LyricsOvh.lyrics(title, artist, duration)
-        }
-    }.getOrNull()?.takeIf { it.lines.isNotEmpty() }?.copy(source = source.name)
+        }?.copy(source = source.name)
+    }
 
     /**
      * Words timed to the word, from any source, are better than words timed
@@ -166,7 +171,7 @@ object LyricsLibrary {
         // own rather than the answers for the other song.
         val key = "${query.uri}\n${same(query.title)}\n${same(query.artist)}"
         surveys.get(key) ?: sourcesFor(query.uri).associateWith { source ->
-            scope.async { withTimeoutOrNull(ASK_TIMEOUT_MS) { fetch(source, query) } }
+            scope.async { fetch(source, query, timeoutMs = ASK_TIMEOUT_MS) }
         }.also { surveys.put(key, it) }
     }
 

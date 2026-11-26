@@ -296,6 +296,27 @@ class LibrespotPlayer(
      * over: the caller may play it from another source.
      */
     var onCurrentUnavailable: ((PlayQueue.Track) -> Unit)? = null
+    var onPlaybackAttemptChanged: (() -> Unit)? = null
+
+    val currentQueueEntry: PlayQueue.Track? get() = queue.items.getOrNull(queue.currentIndex)
+    val currentQueueEntryId: Long? get() = queue.idAt(queue.currentIndex)
+    val playbackIntent: Boolean get() = wantPlay || playWhenReady
+
+    private var fallbackEndedEntry: Long? = null
+
+    fun markFallbackEnded() {
+        val entry = currentQueueEntry ?: return
+        fallbackEndedEntry = currentQueueEntryId
+        deferredSkip = false
+        skipPending = false
+        skipInFlight = false
+        sounding = false
+        wantPlay = false
+        playWhenReady = false
+        playbackState = Player.STATE_ENDED
+        positionMs = entry.durationMs.coerceAtLeast(0L)
+        invalidateState()
+    }
 
     /** The last one handed over, so a run of events asks for it once. */
     private var unknownAsked: String? = null
@@ -941,6 +962,8 @@ class LibrespotPlayer(
     }
 
     override fun handleStop(): ListenableFuture<*> {
+        onPlaybackAttemptChanged?.invoke()
+        fallbackEndedEntry = null
         engine("stop") { NativeBridge.stop() }
         wantPlay = false
         focus.abandonFocus()
@@ -965,6 +988,14 @@ class LibrespotPlayer(
             // Refusing focus means something else owns the output — starting
             // anyway would talk over it.
             if (!focus.requestFocus()) return Futures.immediateVoidFuture()
+            if (fallbackEndedEntry != null) {
+                onPlaybackAttemptChanged?.invoke()
+                fallbackEndedEntry = null
+                positionMs = 0L
+                engineStopped = true
+                loadSentAt = 0L
+                playbackState = Player.STATE_READY
+            }
             wantPlay = true
             this.playWhenReady = true
             if (playbackState == Player.STATE_IDLE) {
@@ -1090,6 +1121,14 @@ class LibrespotPlayer(
         }
 
         val target = queue.items.getOrNull(mediaItemIndex) ?: return Futures.immediateVoidFuture()
+        if (mediaItemIndex != queue.currentIndex) {
+            onPlaybackAttemptChanged?.invoke()
+            fallbackEndedEntry = null
+        } else if (fallbackEndedEntry != null && fallbackEndedEntry == currentQueueEntryId) {
+            positionMs = newPositionMs.coerceAtLeast(0L)
+            invalidateState()
+            return Futures.immediateVoidFuture()
+        }
 
         // A song chosen in the queue that Soloist plays: the queue goes over
         // to it before this engine streams any of it. Loaded here first, it
@@ -1138,6 +1177,8 @@ class LibrespotPlayer(
         startIndex: Int,
         startPositionMs: Long,
     ): ListenableFuture<*> {
+        onPlaybackAttemptChanged?.invoke()
+        fallbackEndedEntry = null
         // Choosing a track here is the listener asking for this phone, and it
         // is the only moment in the app where taking the account's playback is
         // what they meant. Everything else that reaches the engine leaves the
@@ -1763,6 +1804,11 @@ class LibrespotPlayer(
 
     private fun applyEvent(type: String, uri: String, eventPositionMs: Long) {
         if (released) return
+        val ended = fallbackEndedEntry
+        if (ended != null && currentQueueEntryId == ended &&
+            (uri.isEmpty() || uri == currentQueueEntry?.uri) &&
+            type in setOf("loading", "playing", "paused", "stopped", "position", "progress", "end_of_track", "unavailable")
+        ) return
 
         // One line per track change, and nothing for the events that arrive
         // several times a second. What a skip that nobody asked for looks like
@@ -1836,6 +1882,8 @@ class LibrespotPlayer(
                     // those ends in the engine playing something and that is
                     // the event this follows.
                     queue.currentIndex = index
+                    onPlaybackAttemptChanged?.invoke()
+                    fallbackEndedEntry = null
                     skipInFlight = false
                     sounding = type == "playing"
                     positionMs = 0
@@ -1857,6 +1905,7 @@ class LibrespotPlayer(
                 handler.removeCallbacks(stallWatch)
             }
             "playing" -> {
+                onPlaybackAttemptChanged?.invoke()
                 wantPlay = true
                 // A new track to watch, and one this side has not moved on
                 // from yet.
@@ -2004,6 +2053,7 @@ class LibrespotPlayer(
                             .setArtist(track.artist)
                             .setAlbumTitle(track.album.takeIf { it.isNotEmpty() })
                             .setArtworkUri(track.artworkUri)
+                            .setDurationMs(track.durationMs.takeIf { it > 0 })
                             // Put back, because this item is rebuilt rather than
                             // passed through: whatever is not restored here is
                             // lost to everything reading the player, which is

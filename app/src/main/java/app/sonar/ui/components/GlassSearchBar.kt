@@ -24,7 +24,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -53,6 +53,9 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
@@ -215,24 +218,24 @@ fun GlassSearchBar(
                 enter = fadeIn(tween(180)) + scaleIn(tween(180)),
                 exit = fadeOut(tween(180)) + scaleOut(tween(180)),
             ) {
-                Icon(
-                    PhosphorIcons.Fill.XCircle,
-                    contentDescription = stringResource(R.string.clear),
-                    tint = iconColor,
+                val clearLabel = stringResource(R.string.clear)
+                Box(
                     modifier = Modifier
-                        .padding(start = 8.dp)
-                        .size(18.dp)
-                        .pointerInput(Unit) {
-                            awaitEachGesture {
-                                awaitFirstDown()
-                                val up = waitForUpOrCancellation()
-                                if (up != null) {
-                                    field = TextFieldValue("")
-                                    onQuery("")
-                                }
-                            }
-                        },
-                )
+                        .size(44.dp)
+                        .clickable(interactionSource = null, indication = null, role = Role.Button) {
+                            field = TextFieldValue("")
+                            onQuery("")
+                        }
+                        .semantics { contentDescription = clearLabel },
+                    contentAlignment = Alignment.CenterEnd,
+                ) {
+                    Icon(
+                        PhosphorIcons.Fill.XCircle,
+                        contentDescription = null,
+                        tint = iconColor,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
             }
         }
         AnimatedVisibility(

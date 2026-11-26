@@ -6,6 +6,14 @@ import app.sonar.data.ContextCacheStore as MvContextCacheStore
 import app.sonar.data.DownloadQuality as MvDownloadQuality
 import app.sonar.data.DownloadStore as MvDownloadStore
 import app.sonar.data.PreferencesStore as MvPreferencesStore
+import app.sonar.data.GlassProfile
+import app.sonar.playback.AudioRoute
+import app.sonar.playback.BuiltInEqPresets
+import app.sonar.playback.Equalizer
+import app.sonar.playback.soloist.SoloistDownload
+import app.sonar.ui.glass.GlassStyle
+import app.sonar.ui.glass.isGlassSupported
+import androidx.compose.material3.Switch
 import app.sonar.download.DownloadExtras as MvDownloadExtras
 import app.sonar.download.DownloadService as MvDownloadService
 import app.sonar.download.YouTubeDownloads as MvYouTubeDownloads
@@ -174,6 +182,7 @@ fun SettingsScreen(
     onYouTubeSignIn: () -> Unit = {},
     /** After switching channel: the library and the home belong to the new one. */
     onYouTubeChannelChange: () -> Unit = {},
+    onAstralImport: () -> Unit = {},
 ) {
     val ready = state as? MainViewModel.UiState.Ready
     val context = LocalContext.current
@@ -317,6 +326,7 @@ fun SettingsScreen(
     val sdkRecoveryOffered = showSpotify &&
         (MvSpotifyWebPlayback.needed(context) || MvWebSdkRecovery.isConfigured(context))
     val soloistOffered = showSpotify && MvSoloistRuntime.isSupported(context)
+    val soloistSetup = if (soloistOffered) rememberSoloistSetup() else null
     val available: (String) -> Boolean = { id ->
         when (id) {
             "account", "webapi", "tutorial", "audio-sources", "spotify-dj", "connected-device-label", "spicy-lyrics" -> showSpotify
@@ -335,7 +345,50 @@ fun SettingsScreen(
             else -> true
         }
     }
-    val found = matchSettings(SETTINGS_INDEX.filter { available(it.id) }, query) { context.getString(it) }
+    val glassConfig by app.glass.config.collectAsStateWithLifecycle()
+    val eqRoute by AudioRoute.current.collectAsStateWithLifecycle()
+    val eqCurves by Equalizer.curves.collectAsStateWithLifecycle()
+    val eqNames by Equalizer.names.collectAsStateWithLifecycle()
+    val eqOutputs = (listOf(eqRoute.key) + eqNames.keys + eqCurves.keys).distinct()
+    val entries = SETTINGS_INDEX.filter { available(it.id) }.map { entry ->
+        when (entry.id) {
+            "glass" -> entry.copy(keywords = glassSearchKeywords(
+                supported = isGlassSupported(),
+                liquid = glassConfig.style != GlassStyle.TRANSPARENT,
+                ios27 = glassConfig.ios27,
+                tinted = glassConfig.tintHue >= 0f,
+                profiles = GlassProfile.entries.map { it.label },
+            ))
+            "webapi" -> entry.copy(keywords = entry.keywords + buildList {
+                if (webApi.connected) {
+                    addAll(listOf(R.string.application, R.string.disconnect))
+                } else {
+                    addAll(listOf(R.string.turn_on_search, R.string.copy))
+                    if (!webApi.connecting) add(R.string.connect)
+                }
+            })
+            "equalizer" -> entry.copy(keywords = entry.keywords + buildList {
+                addAll(BuiltInEqPresets.map { it.first })
+                if (eqOutputs.size > 1) add(R.string.eq_devices)
+                eqOutputs.filter { eqNames[it].isNullOrBlank() }.forEach { key ->
+                    add(when (AudioRoute.kindOf(key)) {
+                        AudioRoute.Kind.SPEAKER -> R.string.eq_speaker
+                        AudioRoute.Kind.WIRED -> R.string.eq_wired
+                        AudioRoute.Kind.BLUETOOTH -> R.string.eq_bluetooth
+                        AudioRoute.Kind.USB -> R.string.eq_usb
+                        AudioRoute.Kind.OTHER -> R.string.eq_other
+                    })
+                }
+            })
+            "engine" -> entry.copy(keywords = entry.keywords + buildList {
+                if (soloistSetup != null && soloistSetup.download !is SoloistDownload.Progress.Running) {
+                    add(if (soloistSetup.installed) R.string.soloist_check_update else R.string.soloist_download)
+                }
+            })
+            else -> entry
+        }
+    }
+    val found = matchSettings(entries, query) { context.getString(it) }
 
     // One block of the list, by its id in SETTINGS_INDEX.
     val block: @Composable (String) -> Unit = { id ->
@@ -400,6 +453,14 @@ fun SettingsScreen(
             ) { goTo(SettingsPage.WebApi) }
         }
 
+        "astral-import" -> Section(null) {
+            ActionRow(
+                label = stringResource(R.string.astral_import_title),
+                destructive = false,
+                onClick = onAstralImport,
+            )
+        }
+
         "tutorial" -> {
             Section(stringResource(R.string.guide)) {
                 ActionRow(stringResource(R.string.see_setup_again), destructive = false) {
@@ -429,11 +490,11 @@ fun SettingsScreen(
         }
 
         "engine" -> {
-            EngineSection()
+            soloistSetup?.let { EngineSection(it) }
         }
 
         "audio-sources" -> {
-            AudioSourcesSection(soloistOffered)
+            AudioSourcesSection(soloistSetup)
         }
 
         "equalizer" -> Section(null) {
@@ -1244,8 +1305,7 @@ private fun BackendSection() {
  * becomes the engine.
  */
 @Composable
-private fun EngineSection() {
-    val soloist = rememberSoloistSetup()
+private fun EngineSection(soloist: SoloistSetupUi) {
     // Soloist's three steps, a screen each, over the settings: opened by
     // choosing it while it is not set up yet, or from its row afterwards.
     var guide by remember { mutableStateOf(false) }
@@ -1306,7 +1366,7 @@ private fun EngineSection() {
         ActionRow(stringResource(R.string.soloist_setup), destructive = false, icon = PhosphorIcons.Regular.ArrowUpRight) {
             guide = true
         }
-        if (soloist.installed && soloist.download !is app.sonar.playback.soloist.SoloistDownload.Progress.Running) {
+        if (soloist.installed && soloist.download !is SoloistDownload.Progress.Running) {
             RowDivider()
             ActionRow(stringResource(R.string.soloist_check_update), destructive = false, onClick = soloist.fetch)
         }
@@ -1314,23 +1374,21 @@ private fun EngineSection() {
 }
 
 /**
- * The order the sources of a Spotify track's sound are tried in, each one
- * switchable. Spotify stays the catalogue whichever plays the sound.
+ * Source preferences for the YouTube Music fallback on Spotify tracks.
  */
 @Composable
-private fun AudioSourcesSection(soloistOffered: Boolean) {
+private fun AudioSourcesSection(soloist: SoloistSetupUi?) {
     val context = LocalContext.current
     val store = remember(context) {
         (context.applicationContext as app.sonar.SonarApplication).sourcePriority
     }
     val priority by store.priority.collectAsStateWithLifecycle()
-    val soloist = if (soloistOffered) rememberSoloistSetup() else null
     val flacReady = soloist != null && soloist.chosen && soloist.savedKey.isNotEmpty() &&
         soloist.installed && soloist.signedIn
 
     Section(stringResource(R.string.settings_group_sources)) {
         Text(
-            stringResource(R.string.audio_sources_note),
+            stringResource(R.string.audio_sources_fallback_order),
             style = MaterialTheme.typography.bodySmall,
             color = InkDim,
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
@@ -1375,7 +1433,7 @@ private fun AudioSourcesSection(soloistOffered: Boolean) {
                             )
                         }
                     }
-                    PlainToggle(checked = enabled) { store.set(priority.setEnabled(source, it)) }
+                    Switch(checked = enabled, onCheckedChange = null)
                 }
                 SourceMoveButton(
                     PhosphorIcons.Regular.CaretUp,
