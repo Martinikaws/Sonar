@@ -13,10 +13,10 @@ spec.loader.exec_module(module)
 
 def release():
     return {'tag_name': 'v2.4.5', 'name': '2.4.5', 'body': '## Fixed\nConnect and local files.',
-            'html_url': 'https://github.com/Lelonio/Square/releases/tag/v2.4.5',
+            'html_url': 'https://github.com/Martinikaws/Moonvault/releases/tag/v2.4.5',
             'draft': False, 'published_at': '2026-10-07T10:42:26Z',
-            'assets': [{'name': f'square-2.4.5-{abi}.apk', 'state': 'uploaded', 'size': 20,
-                        'browser_download_url': f'https://github.com/Lelonio/Square/releases/download/v2.4.5/square-2.4.5-{abi}.apk'} for abi in module.ABIS]}
+            'assets': [{'name': f'moonvault-2.4.5-{abi}.apk', 'state': 'uploaded', 'size': 20,
+                        'browser_download_url': f'https://github.com/Martinikaws/Moonvault/releases/download/v2.4.5/moonvault-2.4.5-{abi}.apk'} for abi in module.ABIS]}
 
 
 class ReleaseTests(unittest.TestCase):
@@ -25,10 +25,10 @@ class ReleaseTests(unittest.TestCase):
         value['body'] = '🧪 test\n' * 3000
         chunks = module.messages(value)
         self.assertTrue(all(len(c['text'].encode('utf-16-le')) // 2 <= 3500 for c in chunks))
-        self.assertEqual(''.join(c['text'] for c in chunks), f"Square 2.4.5\n\nView release on GitHub\n\n{value['body']}")
+        self.assertEqual(''.join(c['text'] for c in chunks), f"Moonvault 2.4.5\n\nView release on GitHub\n\n{value['body']}")
 
     def test_markdown_formats_headings_lists_links_and_code(self):
-        text, entities = module.formatted_markdown('## Fixed\n- **Playback** and `track.apk`\n[Release](https://github.com/Lelonio/Square)\n```sh\nadb shell cmd\n```\n')
+        text, entities = module.formatted_markdown('## Fixed\n- **Playback** and `track.apk`\n[Release](https://github.com/Martinikaws/Moonvault)\n```sh\nadb shell cmd\n```\n')
         self.assertEqual(text, 'Fixed\n• Playback and track.apk\nRelease\nadb shell cmd\n')
         self.assertEqual({e['type'] for e in entities}, {'bold', 'code', 'text_link', 'pre'})
         for entity in entities:
@@ -87,7 +87,7 @@ class ReleaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'release.json'
             path.write_text(json.dumps(release()))
-            with patch.dict(os.environ, {'TELEGRAM_BOT_TOKEN': 'test', 'TELEGRAM_EDIT_MESSAGES': '[5,23]'}, clear=True), \
+            with patch.dict(os.environ, {'TELEGRAM_BOT_TOKEN': 'test', 'TELEGRAM_CHANNEL': '@test', 'TELEGRAM_GROUP': '-100', 'TELEGRAM_EDIT_MESSAGES': '[5,23]'}, clear=True), \
                  patch('sys.argv', ['telegram-release.py', str(path)]), \
                  patch.object(module.request, 'urlopen') as network, \
                  patch.object(module, 'telegram') as api, patch('builtins.print'):

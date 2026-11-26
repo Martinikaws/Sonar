@@ -33,6 +33,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Spot"
+rootProject.name = "Moonvault"
 include(":app")
 include(":innertube")

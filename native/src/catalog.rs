@@ -656,12 +656,12 @@ pub fn tracks_audio_attributes(uris_json: &str) -> EngineResult<String> {
     batched_extension(uris_json, AUDIO_ATTRIBUTES_V2, |data| audio_attributes_in(data, 0))
 }
 
-/// What Square's automatic transitions are worked out from, for a few tracks
+/// What Moonvault's automatic transitions are worked out from, for a few tracks
 /// at once: a JSON object keyed by URI, each
 /// `{lengthMs, downbeats, fadeInMs, fadeOutMs, vocals, points, sections}`.
 ///
 /// Spotify's own Automix works its transitions out on the phone, from these
-/// same traits, and keeps the result to itself; see Mixes.kt for what Square
+/// same traits, and keeps the result to itself; see Mixes.kt for what Moonvault
 /// makes of them. Asked for the pair about to play rather than for a whole
 /// playlist: the waveforms alone are some forty kilobytes a song.
 ///

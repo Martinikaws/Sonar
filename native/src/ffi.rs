@@ -1,4 +1,4 @@
-//! Raw JNI exports for `dev.lelonio.square.nativecore.NativeBridge`.
+//! Raw JNI exports for `app.moonvault.nativecore.NativeBridge`.
 //!
 //! Every function follows the same contract: do the work, and on failure throw
 //! `java.lang.IllegalStateException` with the engine's error message. Kotlin
@@ -89,7 +89,7 @@ fn read_string(env: &mut JNIEnv, s: &JString) -> engine::EngineResult<String> {
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeInitContext(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeInitContext(
     mut env: JNIEnv,
     _class: JClass,
     context: JObject,
@@ -102,7 +102,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeIni
 /// Must be called before playback starts; without it the sink has nowhere to
 /// send audio and every write fails.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSetAudioOutput(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSetAudioOutput(
     mut env: JNIEnv,
     _class: JClass,
     output: JObject,
@@ -115,7 +115,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSet
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeStart(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeStart(
     mut env: JNIEnv,
     _class: JClass,
     client_id: JString,
@@ -181,7 +181,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSta
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeLoadQueue(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeLoadQueue(
     mut env: JNIEnv,
     _class: JClass,
     uris_json: JString,
@@ -219,7 +219,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeLoa
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeNext(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeNext(
     mut env: JNIEnv,
     _class: JClass,
 ) {
@@ -227,7 +227,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeNex
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePrevious(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativePrevious(
     mut env: JNIEnv,
     _class: JClass,
 ) {
@@ -235,7 +235,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePre
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSetShuffle(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSetShuffle(
     mut env: JNIEnv,
     _class: JClass,
     shuffle: jboolean,
@@ -244,7 +244,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSet
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSetRepeat(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSetRepeat(
     mut env: JNIEnv,
     _class: JClass,
     repeat_context: jboolean,
@@ -254,7 +254,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSet
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePlay(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativePlay(
     mut env: JNIEnv,
     _class: JClass,
 ) {
@@ -262,7 +262,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePla
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePause(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativePause(
     mut env: JNIEnv,
     _class: JClass,
 ) {
@@ -270,7 +270,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePau
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeStop(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeStop(
     mut env: JNIEnv,
     _class: JClass,
 ) {
@@ -278,7 +278,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSto
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSeek(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSeek(
     mut env: JNIEnv,
     _class: JClass,
     position_ms: jlong,
@@ -287,7 +287,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSee
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSetVolume(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSetVolume(
     mut env: JNIEnv,
     _class: JClass,
     volume: jint,
@@ -296,7 +296,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSet
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeVolume(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeVolume(
     mut env: JNIEnv,
     _class: JClass,
 ) -> jint {
@@ -304,7 +304,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeVol
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeIsConnected(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeIsConnected(
     _env: JNIEnv,
     _class: JClass,
 ) -> jboolean {
@@ -318,7 +318,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeIsC
 // --- Catalogue lookups, all over the access point rather than the Web API ---
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeUsername(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeUsername(
     mut env: JNIEnv,
     _class: JClass,
 ) -> jstring {
@@ -327,7 +327,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeUse
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeCollectionUri(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeCollectionUri(
     mut env: JNIEnv,
     _class: JClass,
 ) -> jstring {
@@ -336,7 +336,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeCol
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeRootlist(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeRootlist(
     mut env: JNIEnv,
     _class: JClass,
 ) -> jstring {
@@ -345,7 +345,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeRoo
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSetInRootlist(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSetInRootlist(
     mut env: JNIEnv,
     _class: JClass,
     uri: JString,
@@ -356,7 +356,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSet
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeContextTracks(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeContextTracks(
     mut env: JNIEnv,
     _class: JClass,
     uri: JString,
@@ -373,7 +373,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeCon
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeAccessToken(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeAccessToken(
     mut env: JNIEnv,
     _class: JClass,
 ) -> jstring {
@@ -381,7 +381,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeAcc
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeTracksMixAnalysis(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeTracksMixAnalysis(
     mut env: JNIEnv,
     _class: JClass,
     uris: JString,
@@ -397,7 +397,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeTra
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeTracksAudioAttributes(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeTracksAudioAttributes(
     mut env: JNIEnv,
     _class: JClass,
     uris: JString,
@@ -413,7 +413,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeTra
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeTrackVideo(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeTrackVideo(
     mut env: JNIEnv,
     _class: JClass,
     uri: JString,
@@ -429,7 +429,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeTra
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeFriendActivity(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeFriendActivity(
     mut env: JNIEnv,
     _class: JClass,
 ) -> jstring {
@@ -437,7 +437,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeFri
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePlaylistName(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativePlaylistName(
     mut env: JNIEnv,
     _class: JClass,
     uri: JString,
@@ -453,7 +453,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePla
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeAddToPlaylist(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeAddToPlaylist(
     mut env: JNIEnv,
     _class: JClass,
     playlist: JString,
@@ -470,7 +470,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeAdd
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeRemoveFromPlaylist(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeRemoveFromPlaylist(
     mut env: JNIEnv,
     _class: JClass,
     playlist: JString,
@@ -487,7 +487,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeRem
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePlaylistMine(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativePlaylistMine(
     mut env: JNIEnv,
     _class: JClass,
     uri: JString,
@@ -503,7 +503,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePla
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePlaylistMix(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativePlaylistMix(
     mut env: JNIEnv,
     _class: JClass,
     uri: JString,
@@ -519,7 +519,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePla
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePlaylistCover(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativePlaylistCover(
     mut env: JNIEnv,
     _class: JClass,
     uri: JString,
@@ -536,7 +536,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePla
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeCanvas(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeCanvas(
     mut env: JNIEnv,
     _class: JClass,
     track_uri: JString,
@@ -553,7 +553,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeCan
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeLyrics(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeLyrics(
     mut env: JNIEnv,
     _class: JClass,
     track_uri: JString,
@@ -570,7 +570,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeLyr
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeTrackRelatives(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeTrackRelatives(
     mut env: JNIEnv,
     _class: JClass,
     track_uri: JString,
@@ -587,7 +587,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeTra
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeTracksMetadata(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeTracksMetadata(
     mut env: JNIEnv,
     _class: JClass,
     uris_json: JString,
@@ -604,7 +604,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeTra
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSpircLost(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSpircLost(
     _env: JNIEnv,
     _class: JClass,
 ) -> jboolean {
@@ -613,7 +613,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSpi
 
 /// Whether the player is still putting audio out; see sink::sounding.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeIsSounding(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeIsSounding(
     _env: JNIEnv,
     _class: JClass,
 ) -> jboolean {
@@ -622,7 +622,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeIsS
 
 /// The bitrate, in kbit/s, of the song playing now; 0 before the first.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePlayingKbps(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativePlayingKbps(
     _env: JNIEnv,
     _class: JClass,
 ) -> jint {
@@ -631,7 +631,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePla
 
 /// Keeps this device out of the account's device lists (Soloist plays here).
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSetConnectHidden(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSetConnectHidden(
     _env: JNIEnv,
     _class: JClass,
     hidden: jni::sys::jboolean,
@@ -641,7 +641,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSet
 
 /// Rebuilds the player with a new bitrate and crossfade.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSetQuality(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSetQuality(
     mut env: JNIEnv,
     _class: JClass,
     bitrate_kbps: jint,
@@ -654,7 +654,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSet
 
 /// Changes the quality asked for from the next track on, with no rebuild.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSetBitrate(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSetBitrate(
     mut env: JNIEnv,
     _class: JClass,
     bitrate_kbps: jint,
@@ -664,7 +664,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSet
 
 /// Changes whether silence trimming is enabled, with no rebuild.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSetTrimSilence(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSetTrimSilence(
     mut env: JNIEnv,
     _class: JClass,
     enabled: jboolean,
@@ -676,7 +676,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSet
 
 /// The language Spotify answers in; see engine::set_language.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSetLanguage(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSetLanguage(
     mut env: JNIEnv,
     _class: JClass,
     language: JString,
@@ -693,7 +693,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSet
 
 /// Holds the end of the playing track for the sleep timer, with no rebuild.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSetSkipFade(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSetSkipFade(
     mut env: JNIEnv,
     _class: JClass,
     ms: jint,
@@ -704,7 +704,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSet
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSetHoldEnd(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSetHoldEnd(
     mut env: JNIEnv,
     _class: JClass,
     enabled: jboolean,
@@ -713,7 +713,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSet
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSetMixPlan(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSetMixPlan(
     mut env: JNIEnv,
     _class: JClass,
     json: JString,
@@ -729,7 +729,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSet
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSetLocalFiles(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSetLocalFiles(
     mut env: JNIEnv,
     _class: JClass,
     json: JString,
@@ -742,7 +742,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSet
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSetSleepTimer(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSetSleepTimer(
     mut env: JNIEnv,
     _class: JClass,
     value: jlong,
@@ -751,7 +751,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSet
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeReconnect(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeReconnect(
     mut env: JNIEnv,
     _class: JClass,
 ) {
@@ -760,7 +760,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeRec
 
 /// Whether the account is playing on a device that is not this one.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePlaybackElsewhere(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativePlaybackElsewhere(
     _env: JNIEnv,
     _class: JClass,
 ) -> jboolean {
@@ -769,7 +769,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePla
 
 /// Republishes the queue as its real context, before handing playback over.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePublishContext(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativePublishContext(
     mut env: JNIEnv,
     _class: JClass,
     position_ms: jint,
@@ -781,7 +781,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePub
 
 /// Starts playing here what another device was playing.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeResumeHere(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeResumeHere(
     mut env: JNIEnv,
     _class: JClass,
     context_uri: JString,
@@ -797,7 +797,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeRes
 
 /// Takes the account's playback for this device.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeTakeOver(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeTakeOver(
     mut env: JNIEnv,
     _class: JClass,
 ) {
@@ -806,7 +806,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeTak
 
 /// The account's personalised home, as raw JSON from Spotify's gateway.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeHomeFeed(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeHomeFeed(
     mut env: JNIEnv,
     _class: JClass,
     time_zone: JString,
@@ -825,7 +825,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeHom
 
 /// Any of the gateway's persisted queries, by name and hash; raw JSON back.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeGatewayQuery(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeGatewayQuery(
     mut env: JNIEnv,
     _class: JClass,
     operation: JString,
@@ -846,7 +846,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeGat
 
 /// The account's saved tracks, as raw JSON from Spotify's gateway.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeLikedSongs(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeLikedSongs(
     mut env: JNIEnv,
     _class: JClass,
     variables: JString,
@@ -865,7 +865,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeLik
 
 /// This device's own Connect id.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeDeviceId(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeDeviceId(
     mut env: JNIEnv,
     _class: JClass,
 ) -> jstring {
@@ -874,7 +874,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeDev
 
 /// A new running order for the queue already loaded; see `engine::set_queue_order`.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSetQueueOrder(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSetQueueOrder(
     mut env: JNIEnv,
     _class: JClass,
     uris_json: JString,
@@ -897,7 +897,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSet
 
 /// What this device itself is playing, straight from its Connect state.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePlayingHere(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativePlayingHere(
     mut env: JNIEnv,
     _class: JClass,
 ) -> jstring {
@@ -906,7 +906,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativePla
 
 /// What the account is playing, wherever it is playing it.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeRemoteState(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeRemoteState(
     mut env: JNIEnv,
     _class: JClass,
 ) -> jstring {
@@ -915,7 +915,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeRem
 
 /// Any spclient request as this session, for a probe; see remote::raw.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSpclient(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSpclient(
     mut env: JNIEnv,
     _class: JClass,
     method: JString,
@@ -930,7 +930,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSpc
 
 /// Every Connect device the account can see, this one included.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeRemoteDevices(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeRemoteDevices(
     mut env: JNIEnv,
     _class: JClass,
 ) -> jstring {
@@ -941,7 +941,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeRem
 
 /// Sends one command, as Spotify's own clients word it, to another device.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeRemoteCommand(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeRemoteCommand(
     mut env: JNIEnv,
     _class: JClass,
     device_id: JString,
@@ -955,7 +955,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeRem
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeRemoteVolume(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeRemoteVolume(
     mut env: JNIEnv,
     _class: JClass,
     device_id: JString,
@@ -968,7 +968,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeRem
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeShutdown(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeShutdown(
     _env: JNIEnv,
     _class: JClass,
 ) {
@@ -978,7 +978,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeShu
 /// True when the engine came up with no connection and is running on the
 /// downloads alone; see `engine::is_offline`.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeIsOffline(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeIsOffline(
     _env: JNIEnv,
     _class: JClass,
 ) -> jboolean {
@@ -988,7 +988,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeIsO
 /// Whether the player may only use what is on the phone; see
 /// `engine::set_offline_only`.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSetOfflineOnly(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSetOfflineOnly(
     _env: JNIEnv,
     _class: JClass,
     only: jboolean,
@@ -999,7 +999,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSet
 /// Whether the phone has a network carrying anything; see
 /// `engine::set_network_gone`.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSetNetworkGone(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSetNetworkGone(
     _env: JNIEnv,
     _class: JClass,
     gone: jboolean,
@@ -1012,7 +1012,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSet
 /// Where downloads are kept. Called before anything is downloaded, and again
 /// if the listener moves the store to a memory card.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSetDownloadRoot(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeSetDownloadRoot(
     mut env: JNIEnv,
     _class: JClass,
     path: JString,
@@ -1027,7 +1027,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeSet
 /// it from the download queue's own worker rather than from anything the
 /// listener is waiting on.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeDownloadTrack(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeDownloadTrack(
     mut env: JNIEnv,
     _class: JClass,
     track_uri: JString,
@@ -1047,7 +1047,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeDow
 
 /// The sidecar of a downloaded track as JSON, or `null` if it is not here.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeDownloadState(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeDownloadState(
     mut env: JNIEnv,
     _class: JClass,
     track_uri: JString,
@@ -1063,7 +1063,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeDow
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeRemoveDownload(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeRemoveDownload(
     mut env: JNIEnv,
     _class: JClass,
     track_uri: JString,
@@ -1074,7 +1074,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeRem
 
 /// Asks a download in progress to stop at the end of its current chunk.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeCancelDownload(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeCancelDownload(
     mut env: JNIEnv,
     _class: JClass,
     track_uri: JString,
@@ -1085,7 +1085,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeCan
 
 /// One page of the DJ's session; see dj::session.
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeDjSession(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeDjSession(
     mut env: JNIEnv,
     _class: JClass,
     page: JString,
@@ -1099,7 +1099,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeDjS
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeDjSetActive(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeDjSetActive(
     mut env: JNIEnv,
     _class: JClass,
     on: jboolean,
@@ -1111,7 +1111,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeDjS
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeDjJumped(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeDjJumped(
     mut env: JNIEnv,
     _class: JClass,
     uri: JString,
@@ -1124,7 +1124,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeDjJ
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeDjAwaitOpening(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeDjAwaitOpening(
     mut env: JNIEnv,
     _class: JClass,
     uri: JString,
@@ -1135,7 +1135,7 @@ pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeDjA
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_lelonio_square_nativecore_NativeBridge_nativeDjPrepare(
+pub extern "system" fn Java_app_moonvault_nativecore_NativeBridge_nativeDjPrepare(
     mut env: JNIEnv,
     _class: JClass,
     uris_json: JString,

@@ -42,8 +42,8 @@ jobs:
       - name: Publish notes and APKs
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHANNEL: ${{ vars.TELEGRAM_CHANNEL || '@SquareAppOfficial' }}
-          TELEGRAM_GROUP: ${{ vars.TELEGRAM_GROUP || '-1003964165935' }}
+          TELEGRAM_CHANNEL: ${{ vars.TELEGRAM_CHANNEL }}
+          TELEGRAM_GROUP: ${{ vars.TELEGRAM_GROUP }}
           TELEGRAM_THREAD_ID: ${{ vars.TELEGRAM_THREAD_ID }}
           TELEGRAM_EDIT_MESSAGES: ${{ inputs.edit_messages }}
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}

@@ -1,4 +1,4 @@
-"""Send a published Square release to its announcement channel and forum topic."""
+"""Send a published Moonvault release to its announcement channel and forum topic."""
 import json
 import os
 import re
@@ -89,7 +89,7 @@ def formatted_markdown(markdown):
 def messages(release):
     title = release.get('name') or release['tag_name']
     text, entities = formatted_markdown(
-        f"# Square {title}\n\n[View release on GitHub]({release['html_url']})\n\n"
+        f"# Moonvault {title}\n\n[View release on GitHub]({release['html_url']})\n\n"
         + (release.get('body') or 'Release notes are available on GitHub.'))
     chunks = []
     start_units = 0
@@ -122,7 +122,7 @@ def apks(release):
     version = release["tag_name"].removeprefix("v")
     result = []
     for abi in ABIS:
-        name = f"square-{version}-{abi}.apk"
+        name = f"moonvault-{version}-{abi}.apk"
         found = [a for a in release.get("assets", []) if a["name"] == name]
         if len(found) != 1 or found[0].get("state") != "uploaded":
             raise ValueError(f"Missing uploaded APK: {name}")
@@ -170,8 +170,8 @@ def main():
         raise ValueError("Only published releases can be announced")
     assets = apks(release)
     notes = messages(release)
-    channel = os.environ.get("TELEGRAM_CHANNEL", "@SquareAppOfficial")
-    group = os.environ.get("TELEGRAM_GROUP", "-1003964165935")
+    channel = os.environ.get("TELEGRAM_CHANNEL", "")
+    group = os.environ.get("TELEGRAM_GROUP", "")
     thread = os.environ.get("TELEGRAM_THREAD_ID", "")
     destinations = [{"chat_id": channel}, {"chat_id": group}]
     if thread:
@@ -180,6 +180,8 @@ def main():
         print(json.dumps({"destinations": destinations, "notes": notes,
                           "apks": [a["name"] for a, _ in assets]}, indent=2, ensure_ascii=False))
         return
+    if not channel or not group:
+        raise ValueError("Set the TELEGRAM_CHANNEL and TELEGRAM_GROUP variables: TODO Moonvault channel not set up")
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     if not token:
         raise ValueError("Set the TELEGRAM_BOT_TOKEN repository secret first")

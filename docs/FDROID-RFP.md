@@ -1,16 +1,16 @@
-# Square — request for packaging
+# Moonvault: request for packaging
 
-- Application ID: `dev.lelonio.square`
-- Source: https://github.com/Lelonio/Square
-- Releases: https://github.com/Lelonio/Square/releases
-- Issue tracker: https://github.com/Lelonio/Square/issues
+- Application ID: `app.moonvault`
+- Source: https://github.com/Martinikaws/Moonvault
+- Releases: https://github.com/Martinikaws/Moonvault/releases
+- Issue tracker: https://github.com/Martinikaws/Moonvault/issues
 - License: GPL-3.0-or-later, with the lyrics view under AGPL-3.0 as documented
   in the upstream README. Please review the combined-work licensing.
-- Donation: https://ko-fi.com/lelonio
+- Donation: TODO: Moonvault donation link not set up
 - Current release: 2.4.5 (versionCode 46)
 
-I am the upstream author and would like Square included in F-Droid.
-Square is an Android music client for Spotify Premium and YouTube Music with
+TODO: confirm the requester. Would like Moonvault, a fork of Square (https://github.com/Lelonio/Square), included in F-Droid.
+Moonvault is an Android music client for Spotify Premium and YouTube Music with
 Liquid Glass UI, synced lyrics, Spotify Connect, local files, audio effects
 and a sleep timer. It does not require the official Spotify application for
 native playback. Android 8.0 or later is required.

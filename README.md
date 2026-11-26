@@ -1,8 +1,12 @@
 <p align="center">
-  <img src="docs/square.png" width="112" alt="">
+  [LOGO] placeholder: replace with the Moonvault logo
 </p>
 
-<h1 align="center">Square</h1
+<h1 align="center">Moonvault</h1
+
+<p align="center">
+  Moonvault is a fork of Square (https://github.com/Lelonio/Square) by Lelonio, GPL-3.0. Moonvault adds YouTube Music as an audio source and a one-screen settings panel.
+</p>
 
 <p align="center">
   An unofficial Android music client for Spotify Premium and YouTube Music,
@@ -10,10 +14,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Lelonio/Square/releases/latest"><img src="https://img.shields.io/github/v/release/Lelonio/Square?label=release" alt="Latest release"></a>
-  <a href="https://github.com/Lelonio/Square/releases"><img src="https://img.shields.io/github/downloads/Lelonio/Square/total" alt="Downloads"></a>
+  <a href="https://github.com/Martinikaws/Moonvault/releases/latest"><img src="https://img.shields.io/github/v/release/Martinikaws/Moonvault?label=release" alt="Latest release"></a>
+  <a href="https://github.com/Martinikaws/Moonvault/releases"><img src="https://img.shields.io/github/downloads/Martinikaws/Moonvault/total" alt="Downloads"></a>
   <img src="https://img.shields.io/badge/Android-8.0%2B-3DDC84" alt="Android 8.0 or later">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/Lelonio/Square" alt="Licence"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Martinikaws/Moonvault" alt="Licence"></a>
 </p>
 
 <p align="center">
@@ -21,7 +25,7 @@
   <a href="#features"><b>Features</b></a> ·
   <a href="#first-launch"><b>First launch</b></a> ·
   <a href="#faq"><b>FAQ</b></a> ·
-  <a href="https://t.me/+-XDmbFwz7uBkMjc0"><b>Telegram community</b></a> ·
+  <a href="#help-and-feedback"><b>Telegram community</b></a> ·
   <a href="docs/DEVELOPMENT.md"><b>Building</b></a>
 </p>
 
@@ -83,14 +87,14 @@
 
 ### Spotify extras
 
-- A **Connect** device: send playback to Square from any other device, and
+- A **Connect** device: send playback to Moonvault from any other device, and
   control your other devices from it.
 - What your friends are listening to.
 - Similar playlists at the end of each playlist.
 - Song credits: performers, writers and producers.
 - What you play is saved to your listening history, as it would be anywhere
   else you listen.
-- Spotify links can open straight in Square.
+- Spotify links can open straight in Moonvault.
 
 ### Android Auto
 
@@ -108,14 +112,14 @@
 
 ## Download
 
-[![Get it on Orion Store](https://raw.githubusercontent.com/RookieEnough/Orion-Store/refs/heads/main/assets/orion-badge.png)](https://rookieenough.github.io/Orion-Data/redirect.html?id=square)
+TODO: Moonvault Orion Store listing not set up.
 
 Or
 
-Download the APK from the [latest release](https://github.com/Lelonio/Square/releases/latest)
-and install it. Square needs Android 8.0 or later.
+Download the APK from the [latest release](https://github.com/Martinikaws/Moonvault/releases/latest)
+and install it. Moonvault needs Android 8.0 or later.
 
-Square updates itself: it checks for new releases and installs them from the
+Moonvault updates itself: it checks for new releases and installs them from the
 settings. It is not on the Play Store and cannot be; see the
 [disclaimer](#disclaimer).
 
@@ -127,7 +131,7 @@ the interface is noticeably slower. To do it straight away, open the app once
 and give it a few seconds, then run this with the phone connected:
 
 ```bash
-adb shell cmd package compile -m speed-profile -f dev.lelonio.square
+adb shell cmd package compile -m speed-profile -f app.moonvault
 ```
 
 Run before the app has been opened, the command finds nothing to compile.
@@ -136,7 +140,7 @@ Run before the app has been opened, the command finds nothing to compile.
 
 ## First launch
 
-Square first asks where the music should come from. You can change it later in
+Moonvault first asks where the music should come from. You can change it later in
 the settings.
 
 - **YouTube Music** plays straight away. Signing in with Google, from the
@@ -149,9 +153,9 @@ the settings.
 
 ## FAQ
 
-**Square does not appear in Android Auto.**
+**Moonvault does not appear in Android Auto.**
 Android Auto only lists apps installed from the Play Store. Turn on "Unknown
-sources" in Android Auto's developer settings and Square shows up.
+sources" in Android Auto's developer settings and Moonvault shows up.
 
 **Can I use a free Spotify account?**
 No. A free account can sign in, but Spotify only streams to a client like this
@@ -163,8 +167,8 @@ latest release, which is usually where the fix is.
 
 ## Disclaimer
 
-Square is not affiliated with, endorsed by or connected to Spotify or Google.
-Both sources are used on terms they do not offer: Square re-implements
+Moonvault is not affiliated with, endorsed by or connected to Spotify or Google.
+Both sources are used on terms they do not offer: Moonvault re-implements
 Spotify's protocol, which Spotify's Terms of Service forbid, and reads YouTube
 Music through the private endpoints its own web client uses. It cannot be
 published on the Play Store, and you use it at your own risk. There is no
@@ -172,18 +176,18 @@ warranty of any kind; see the licence.
 
 ## Help and feedback
 
-- **Telegram community**: [join Square | Community](https://t.me/+-XDmbFwz7uBkMjc0) for questions, feedback, bug reports and feature requests.
-- **Release announcements**: [Square | Official](https://t.me/SquareAppOfficial) automatically shares new APKs and release notes from GitHub.
-- **Questions** (how something works, how to set it up): [Discussions, Q&A](https://github.com/Lelonio/Square/discussions/categories/q-a)
-- **Ideas and requests**: [Discussions, Ideas](https://github.com/Lelonio/Square/discussions/categories/ideas)
-- **Something broken**: [open an issue](https://github.com/Lelonio/Square/issues/new/choose). If the app closed or froze, attach a report from Settings → About → Save a report.
+- **Telegram community**: TODO: Moonvault channel not set up.
+- **Release announcements**: TODO: Moonvault channel not set up.
+- **Questions** (how something works, how to set it up): [Discussions, Q&A](https://github.com/Martinikaws/Moonvault/discussions/categories/q-a)
+- **Ideas and requests**: [Discussions, Ideas](https://github.com/Martinikaws/Moonvault/discussions/categories/ideas)
+- **Something broken**: [open an issue](https://github.com/Martinikaws/Moonvault/issues/new/choose). If the app closed or froze, attach a report from Settings → About → Save a report.
 
 The same two links are in the app, under Settings → About.
 
 ## Support
 
-Square is free and has no ads. If it is useful to you, you can support its
-development on [Ko-fi](https://ko-fi.com/lelonio).
+Moonvault is free and has no ads. If it is useful to you, you can support its
+development on TODO: Moonvault support link not set up.
 
 ## Credits
 
@@ -213,16 +217,16 @@ in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 GPL-3.0-or-later. See [LICENSE](LICENSE).
 
 The lyrics view,
-[`LyricsView.kt`](app/src/main/java/dev/lelonio/square/ui/player/LyricsView.kt),
+[`LyricsView.kt`](app/src/main/java/app/moonvault/ui/player/LyricsView.kt),
 is ported from Spicy Lyrics and stays under AGPL-3.0, combined with the rest as
 section 13 of both licences allows.
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=lelonio%2Fsquare&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=Martinikaws%2FMoonvault&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=lelonio/square&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=lelonio/square&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=lelonio/square&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Martinikaws/Moonvault&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Martinikaws/Moonvault&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Martinikaws/Moonvault&type=date&legend=top-left" />
  </picture>
 </a>

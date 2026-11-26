@@ -7,10 +7,10 @@
  * ring buffer, and a drain thread hands the PCM on at the pace it would play.
  *
  * Where the PCM goes:
- *   SQUARE_PCM_FD=<n>    an inherited descriptor (a pipe Square reads), which
+ *   SQUARE_PCM_FD=<n>    an inherited descriptor (a pipe Moonvault reads), which
  *                        then paces the drain by blocking;
  *   SQUARE_PCM_PATH=<p>  a file, paced by the clock (for the probe);
- *   SQUARE_PCM_FIFO=<p>  a FIFO Square reads, in packets (see send()), with
+ *   SQUARE_PCM_FIFO=<p>  a FIFO Moonvault reads, in packets (see send()), with
  *                        the audio converted to 16-bit; paced by the reader;
  *   neither              dropped, paced by the clock.
  * Each run of PCM that starts after a change of format is preceded by a line
@@ -91,10 +91,10 @@ static void sleep_us(uint64_t us) {
     nanosleep(&t, NULL);
 }
 
-/* ------------------------------------------------------------- to Square */
+/* ------------------------------------------------------------- to Moonvault */
 
 /* One FIFO for the life of the process, shared by every stream Soloist opens:
- * Square reads it from start to end. Each packet is "SQPC", a type, three
+ * Moonvault reads it from start to end. Each packet is "SQPC", a type, three
  * bytes of padding and a little-endian length, then the payload:
  *   'H' format: u32 rate, u32 channels, u32 encoding (a stream begins)
  *   'A' audio:  interleaved PCM in that encoding: 1 signed 16-bit,
@@ -276,7 +276,7 @@ struct pa_stream {
     unsigned char *tail;
     size_t tail_len, tail_pos;
     uint64_t tail_since;
-    /* Corked by Soloist for a change of song Square asked for: Soloist is told
+    /* Corked by Soloist for a change of song Moonvault asked for: Soloist is told
      * it is corked, the music keeps going from the ring until the new song is
      * there to dissolve into. */
     int held;
@@ -291,7 +291,7 @@ struct pa_stream {
     int draining;
     int fd;
     int clocked;
-    int to_square;
+    int to_moonvault;
 };
 
 static pa_operation *op_new(void) {
@@ -590,7 +590,7 @@ static void stream_success(void *a, void *b, void *c) {
     if (cb) cb(a, 1, c);
 }
 
-/* The dissolves Square asks for, from SQUARE_XFADE_CONF ("<most ahead ms>
+/* The dissolves Moonvault asks for, from SQUARE_XFADE_CONF ("<most ahead ms>
  * <dissolve ms>"), read again at most once a second: changed in the app's
  * settings, they apply to the next song without Soloist being started again,
  * which stopped the music. The environment's values until the file says. */
@@ -659,7 +659,7 @@ EXPORT pa_stream *pa_stream_new_with_proplist(pa_context *c, const char *name, c
     s->spec = *ss;
     s->frame = frame_size(ss);
     pa_cvolume_set(&s->volume, ss->channels, PA_VOLUME_NORM);
-    /* Room ahead for the longest dissolve Square may ask for: the rest of a
+    /* Room ahead for the longest dissolve Moonvault may ask for: the rest of a
      * song ending under a crossfade is what is kept in here. */
     /* Room for the longest the settings allow, offered as far as they ask. */
     s->cap = pa_usec_to_bytes((uint64_t)(XFADE_CAP_MS + 500) * 1000ul, ss);
@@ -702,7 +702,7 @@ static void apply_volume(pa_stream *s, unsigned char *p, size_t n) {
     }
 }
 
-/* What goes to Square: float for Soloist's float and 32-bit streams, 16-bit
+/* What goes to Moonvault: float for Soloist's float and 32-bit streams, 16-bit
  * for 16-bit ones. */
 static uint32_t wire_encoding(pa_stream *s) {
     return s->spec.format == PA_SAMPLE_S16LE ? 1 : 2;
@@ -755,7 +755,7 @@ static void *drain_main(void *arg) {
             free(g_tail);
             g_tail = NULL;
             g_tail_len = g_tail_pos = 0;
-            if (s->to_square) send('P', NULL, 0);
+            if (s->to_moonvault) send('P', NULL, 0);
         }
         if (!s->corked && s->used && !(s->held && g_tail)) {
             n = s->used < chunk ? s->used : chunk;
@@ -805,7 +805,7 @@ static void *drain_main(void *arg) {
         pthread_mutex_unlock(&m->lock);
         if (n) {
             apply_volume(s, buf, n);
-            if (s->to_square) {
+            if (s->to_moonvault) {
                 if (heard_new) send('N', NULL, 0);
                 /* How much music Soloist has given that is not heard yet, five
                  * times a second: how far ahead of the music its word on the
@@ -870,7 +870,7 @@ EXPORT int pa_stream_connect_playback(pa_stream *s, const char *dev, const void 
     const char *fd = getenv("SQUARE_PCM_FD");
     const char *path = getenv("SQUARE_PCM_PATH");
     if (fifo() >= 0) {
-        s->to_square = 1;
+        s->to_moonvault = 1;
         s->clocked = 0;
         uint32_t h[3] = { s->spec.rate, s->spec.channels, wire_encoding(s) };
         send('H', h, sizeof h);
@@ -897,13 +897,13 @@ static long flag_ms(void);
 
 EXPORT int pa_stream_disconnect(pa_stream *s) {
     /* Closed for a new context during a skip: what was ahead of the old song
-     * dissolves into the next stream, and Square's output keeps going. */
+     * dissolves into the next stream, and Moonvault's output keeps going. */
     int transition = (s->held || skipping()) && xfade_bytes(s);
     if (transition && !g_tail) {
         keep_tail(s);
         g_tail_closed = 1;
     }
-    if (s->to_square && !transition) send('P', NULL, 0);
+    if (s->to_moonvault && !transition) send('P', NULL, 0);
     if (s->draining) {
         s->draining = 0;
         pa_threaded_mainloop *m = s->ctx->loop;
@@ -978,7 +978,7 @@ EXPORT pa_operation *pa_stream_cork(pa_stream *s, int b, pa_stream_success_cb_t 
         post(s->ctx->loop, stream_success, s, (void *)cb, ud);
         return op_new();
     }
-    if (s->to_square && s->corked != b) send(b ? 'P' : 'R', NULL, 0);
+    if (s->to_moonvault && s->corked != b) send(b ? 'P' : 'R', NULL, 0);
     if (b && g_tail) {
         /* Paused mid-dissolve: the song left behind does not come back. */
         free(g_tail);
@@ -991,14 +991,14 @@ EXPORT pa_operation *pa_stream_cork(pa_stream *s, int b, pa_stream_success_cb_t 
     return op_new();
 }
 
-/* Square's word that the next cork is a skip, not a pause (SQUARE_XFADE_FLAG,
+/* Moonvault's word that the next cork is a skip, not a pause (SQUARE_XFADE_FLAG,
  * a file it creates just before and removes just after). */
 static int skipping(void) {
     const char *p = getenv("SQUARE_XFADE_FLAG");
     return p && *p && access(p, 0) == 0;
 }
 
-/* The dissolve's length: what Square wrote in the flag for this change of
+/* The dissolve's length: what Moonvault wrote in the flag for this change of
  * song (the skip fade, or the crossfade for a song ending), else the
  * default it started us with. */
 static long flag_ms(void) {
@@ -1061,7 +1061,7 @@ EXPORT pa_operation *pa_stream_flush(pa_stream *s, pa_stream_success_cb_t cb, vo
     s->played += (int64_t)s->used;
     s->head = 0;
     s->used = 0;
-    if (s->to_square) send('F', NULL, 0);
+    if (s->to_moonvault) send('F', NULL, 0);
     post(s->ctx->loop, stream_success, s, (void *)cb, ud);
     return op_new();
 }

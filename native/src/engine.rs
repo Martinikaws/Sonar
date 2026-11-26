@@ -350,7 +350,7 @@ pub fn init_android_context(context: &JObject) -> EngineResult<()> {
 /// Build the session and player, then authenticate with an OAuth access token
 /// obtained by the Kotlin side.
 ///
-/// `listener` must implement `dev.lelonio.square.nativecore.NativeEvents`.
+/// `listener` must implement `app.moonvault.nativecore.NativeEvents`.
 pub fn start(
     client_id: &str,
     device_name: &str,
@@ -374,7 +374,7 @@ pub fn start(
     let rt = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(2)
         .enable_all()
-        .thread_name("squarecore")
+        .thread_name("moonvaultcore")
         .build()
         .map_err(|e| format!("failed to build runtime: {e}"))?;
 
@@ -1479,7 +1479,7 @@ fn spawn_event_pump(
     state_dir: String,
 ) {
     std::thread::Builder::new()
-        .name("squarecore-events".into())
+        .name("moonvaultcore-events".into())
         .spawn(move || {
             let vm = match JAVA_VM.get() {
                 Some(vm) => vm,
@@ -2090,7 +2090,7 @@ pub fn load_queue(
     // A load activates this device, which is right when the listener has just
     // tapped a track and wrong every other time. Opening the app restores the
     // last queue, paused, and that restore was taking the session away from
-    // whatever was playing in the other room: Square went silent-but-active and
+    // whatever was playing in the other room: Moonvault went silent-but-active and
     // the music stopped mid-track.
     //
     // Refused rather than quietly dropped, so the caller keeps its queue marked
