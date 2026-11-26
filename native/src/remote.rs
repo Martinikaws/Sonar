@@ -1,6 +1,6 @@
 //! The rest of the account's Spotify devices, watched and driven.
 //!
-//! Moonvault is a Connect device: it publishes what it is playing and obeys what
+//! Sonar is a Connect device: it publishes what it is playing and obeys what
 //! the account tells it. This is the other half of the same protocol, the half
 //! the official client also implements: seeing what *another* device is playing
 //! and telling it what to do.

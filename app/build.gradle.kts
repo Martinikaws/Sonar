@@ -16,12 +16,12 @@ plugins {
  */
 /**
  * Every ABI a release ships, with a universal APK besides, only when asked:
- * `-Pmoonvault.allAbis=true`, which both GitHub workflows pass (release and the
+ * `-Psonar.allAbis=true`, which both GitHub workflows pass (release and the
  * build on every push), so GitHub always makes all three APKs. A build here is
  * arm64 alone, which is every phone this is run on, and the Rust engine and
  * Bungee built once instead of twice.
  */
-val allAbis = (findProperty("moonvault.allAbis") as String?)?.toBoolean() == true
+val allAbis = (findProperty("sonar.allAbis") as String?)?.toBoolean() == true
 val nativeAbis = if (allAbis) listOf("arm64-v8a", "armeabi-v7a") else listOf("arm64-v8a")
 
 /** NDK used for both AGP and the Cargo cross-build; keep the two in step. */
@@ -49,12 +49,12 @@ val keystoreProperties = Properties().apply {
 }
 
 android {
-    namespace = "app.moonvault"
+    namespace = "app.sonar"
     compileSdk = 37
     ndkVersion = ndkVersionForCargo
 
     defaultConfig {
-        applicationId = "app.moonvault"
+        applicationId = "app.sonar"
         // cpal's Android host is AAudio, which the ndk crate gates at API 26.
         minSdk = 26
         // soloist-android spike: 28 lets the app execute what it downloads.
@@ -141,7 +141,7 @@ android {
             // only view there is of a page that came back in the wrong shape.
             buildConfigField("boolean", "VERBOSE_LOG", "true")
             // The glass's switches from adb, to measure one against the other
-            // without a build each: see MoonvaultApplication.
+            // without a build each: see SonarApplication.
             buildConfigField("boolean", "GLASS_FLAGS", "true")
             // The real key when there is one: a build signed with a different
             // key than the copy already on the phone cannot replace it, and
@@ -174,7 +174,7 @@ android {
 
     buildFeatures {
         compose = true
-        // Off by default since AGP 8; MoonvaultApplication reads BuildConfig.DEBUG.
+        // Off by default since AGP 8; SonarApplication reads BuildConfig.DEBUG.
         buildConfig = true
     }
 
@@ -195,7 +195,7 @@ android {
     packaging {
         // The Rust cdylib is already stripped by the release profile; letting
         // Gradle re-strip it with the wrong tool breaks the arm64 build.
-        jniLibs.keepDebugSymbols += "**/libmoonvaultcore.so"
+        jniLibs.keepDebugSymbols += "**/libsonarcore.so"
         // Patched glibc and friends go in byte for byte.
         jniLibs.keepDebugSymbols += "**/libsq*.so"
         // Extracted to the native library dir at install, where Soloist's

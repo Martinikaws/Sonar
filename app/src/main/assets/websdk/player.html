@@ -1,5 +1,5 @@
 <!doctype html>
-<html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Square Spotify SDK</title></head><body>
+<html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Sonar Web Player</title></head><body>
 <script>
 'use strict';
 let player;
@@ -7,7 +7,7 @@ let lastState;
 const connectAfterProbe = __CONNECT__;
 const tokenRequests = new Map();
 let nextTokenRequest = 0;
-function event(type, data = {}) { SquareSdk.event(JSON.stringify({type, ...data})); }
+function event(type, data = {}) { SonarSdk.event(JSON.stringify({type, ...data})); }
 window.receiveToken = (id, token) => {
   const callback = tokenRequests.get(id);
   tokenRequests.delete(id);
@@ -38,11 +38,11 @@ window.command = async (name, position) => {
 };
 window.onSpotifyWebPlaybackSDKReady = () => {
   player = new Spotify.Player({
-    name: 'Square Web Player',
+    name: 'Sonar Web Player',
     getOAuthToken: callback => {
       const id = ++nextTokenRequest;
       tokenRequests.set(id, callback);
-      SquareSdk.token(id);
+      SonarSdk.token(id);
     },
     volume: 1,
     enableMediaSession: false // Native service owns the notification controls.

@@ -128,7 +128,7 @@
     <string name="add_failed">Zu %1$s konnte nichts hinzugefügt werden. Wenn die Playlist nicht dir gehört, kannst du sie nicht ändern.</string>
     <string name="like_failed">Konnte nicht zu den Lieblingssongs hinzugefügt werden.</string>
     <string name="unlike_failed">Konnte nicht aus den Lieblingssongs entfernt werden.</string>
-    <string name="permission_needed">Moonvault fehlt eine Berechtigung. Verbinde das Konto in den Einstellungen neu.</string>
+    <string name="permission_needed">Sonar fehlt eine Berechtigung. Verbinde das Konto in den Einstellungen neu.</string>
     <string name="remove_failed">%1$s konnte nicht geändert werden. Versuch es gleich noch einmal.</string>
 
     <string name="play_on">Abspielen auf</string>
@@ -231,14 +231,14 @@
     <string name="onboarding_step_of">Schritt %1$d von %2$d</string>
     <string name="onboarding_login_title">Bei Spotify anmelden</string>
     <string name="onboarding_login_1">Der Browser öffnet die Seite von Spotify. Du bestätigst und landest von selbst wieder hier.</string>
-    <string name="onboarding_login_2">Das Passwort tippst du nur auf Spotifys eigener Seite: Moonvault sieht es nie.</string>
+    <string name="onboarding_login_2">Das Passwort tippst du nur auf Spotifys eigener Seite: Sonar sieht es nie.</string>
     <string name="onboarding_login_done">Anmeldung abgeschlossen</string>
     <string name="onboarding_key_title">Eigenen Schlüssel anlegen</string>
     <string name="onboarding_key_intro">Suche und Empfehlungen laufen über Spotifys API, die einen persönlichen Schlüssel braucht. Das dauert eine Minute, ist kostenlos, und eine Karte wird nicht verlangt.</string>
     <string name="onboarding_open_dashboard">Dashboard öffnen</string>
     <string name="onboarding_step_login">Melde dich mit demselben Spotify-Konto an.</string>
     <string name="onboarding_step_create">Oben rechts auf «Create app» tippen.</string>
-    <string name="onboarding_step_names">App name und App description: was du magst, zum Beispiel Moonvault. Website: leer lassen.</string>
+    <string name="onboarding_step_names">App name und App description: was du magst, zum Beispiel Sonar. Website: leer lassen.</string>
     <string name="onboarding_step_redirect">Redirect URI: die Zeile unten einfügen und «Add» drücken. Prüfe, dass sie in der Liste unter dem Feld auftaucht, sonst wird sie nicht gespeichert.</string>
     <string name="onboarding_step_api">Bei «Which API/SDKs are you planning to use?» Web API ankreuzen.</string>
     <string name="onboarding_step_terms">Bedingungen annehmen und «Save» drücken.</string>
@@ -297,7 +297,7 @@
     <string name="quality_low">Niedrig</string>
     <string name="quality_auto_note">Automatisch beginnt bei der Schätzung der Verbindung und folgt dann der Musik: ein Titel, der stockt oder spät startet, senkt sie eine Stufe, mehrere schnelle hintereinander heben sie wieder.</string>
     <string name="quality_restarts">Beim Ändern wird der laufende Titel neu geladen.</string>
-    <string name="premium_required">Moonvault braucht Spotify Premium. Ein kostenloses Konto kann sich anmelden, aber Spotify streamt nicht an einen Client wie diesen.</string>
+    <string name="premium_required">Sonar braucht Spotify Premium. Ein kostenloses Konto kann sich anmelden, aber Spotify streamt nicht an einen Client wie diesen.</string>
     <string name="new_playlist">Neue Playlist</string>
     <string name="rename">Umbenennen</string>
     <string name="delete">Löschen</string>
@@ -337,7 +337,7 @@
     <string name="settings_group_help_summary">Community, Diskussionen und Probleme</string>
     <string name="settings_group_permissions_summary">Was die App von Spotify anfordert</string>
     <string name="youtube_sign_in_required">Dieser Song lässt sich nur mit Anmeldung bei YouTube Music abspielen</string>
-    <string name="youtube_signed_in_unplayable">YouTube gibt diesen Song nur angemeldeten Konten frei, und Moonvault kann ihn noch nicht lesen</string>
+    <string name="youtube_signed_in_unplayable">YouTube gibt diesen Song nur angemeldeten Konten frei, und Sonar kann ihn noch nicht lesen</string>
     <string name="page_app_summary">Sprache, Leiste, System und Links</string>
     <string name="page_downloads">Downloads und Speicher</string>
     <string name="storage_cleanup">Aufräumen</string>
@@ -348,9 +348,9 @@
     <string name="storage_caches">App-Caches</string>
     <string name="page_downloads_summary">Was auf dem Telefon liegt und was geladen wird</string>
     <string name="keep_playing_on_close">Weiterspielen, wenn die App geschlossen wird</string>
-    <string name="keep_playing_on_close_note">Moonvault aus den zuletzt geöffneten Apps zu wischen lässt die Musik laufen. Über die Benachrichtigung lässt sie sich stoppen.</string>
+    <string name="keep_playing_on_close_note">Sonar aus den zuletzt geöffneten Apps zu wischen lässt die Musik laufen. Über die Benachrichtigung lässt sie sich stoppen.</string>
     <string name="pause_for_other_apps">Pausieren, wenn eine andere App abspielt</string>
-    <string name="pause_for_other_apps_note">Übernimmt eine andere App den Ton, pausiert Moonvault. Schalte das aus, wenn die Musik von selbst pausiert: Sie spielt dann weiter, auch über Videos und Sprachnachrichten.</string>
+    <string name="pause_for_other_apps_note">Übernimmt eine andere App den Ton, pausiert Sonar. Schalte das aus, wenn die Musik von selbst pausiert: Sie spielt dann weiter, auch über Videos und Sprachnachrichten.</string>
     <string name="sponsor_block">Nicht-musikalische Teile überspringen</string>
     <string name="sponsor_block_note">Intros, Sketche und Gesprochenes in Musikvideos, markiert von der SponsorBlock-Community. Gesendet wird nur die Video-ID.</string>
     <string name="page_app_bar">Untere Leiste</string>
@@ -371,7 +371,7 @@
     <string name="effect_quality_light_note">Das Telefon übernimmt. Schonender für ältere Geräte, rauer bei Anschlägen.</string>
     <string name="liked_songs">Lieblingssongs</string>
     <string name="local_files">Lokale Dateien</string>
-    <string name="local_files_needs_permission">Moonvault kann die Musik auf diesem Telefon sehen, wenn du es erlaubst.</string>
+    <string name="local_files_needs_permission">Sonar kann die Musik auf diesem Telefon sehen, wenn du es erlaubst.</string>
     <string name="local_files_allow">Erlauben</string>
     <string name="pinned">Angeheftet</string>
     <string name="pin">Oben anheften</string>
@@ -423,7 +423,7 @@
     <string name="remove_download">Download entfernen</string>
     <string name="cancel_download">Download abbrechen</string>
     <string name="playback_refused">Spotify lässt gerade keine Songs abspielen. Versuch es in ein paar Minuten noch einmal. Wenn es weiter passiert, melde dich ab und wieder an.</string>
-    <string name="playback_refused_account">Spotify lässt dieses Konto in Apps wie Moonvault keine Songs abspielen. Das liegt nicht an der App; mit einem anderen Premium-Konto kann es funktionieren.</string>
+    <string name="playback_refused_account">Spotify lässt dieses Konto in Apps wie Sonar keine Songs abspielen. Das liegt nicht an der App; mit einem anderen Premium-Konto kann es funktionieren.</string>
     <string name="downloaded">Heruntergeladen</string>
     <string name="local_file">Lokale Datei</string>
     <string name="downloading">Wird heruntergeladen</string>
@@ -540,14 +540,14 @@
 
     <string name="recap_title">Dein Musikmonat</string>
     <string name="recap_plays">%1$d Wiedergaben</string>
-    <string name="recap_minutes">%1$d Minuten in Moonvault</string>
+    <string name="recap_minutes">%1$d Minuten in Sonar</string>
     <string name="recap_details">Deine Favoriten ansehen</string>
     <string name="recap_hide">Details ausblenden</string>
     <string name="recap_previous">Vorheriger Monat</string>
     <string name="recap_next">Nächster Monat</string>
     <string name="recap_tracks">Meistgespielte Songs</string>
     <string name="recap_artists">Meistgehörte Künstler</string>
-    <string name="recap_partial">Gespeicherte Wiedergaben und der aktuelle Spotify-Verlauf. Frühere oder nicht synchronisierte Wiedergaben können fehlen. Minuten werden nur in Moonvault gemessen.</string>
+    <string name="recap_partial">Gespeicherte Wiedergaben und der aktuelle Spotify-Verlauf. Frühere oder nicht synchronisierte Wiedergaben können fehlen. Minuten werden nur in Sonar gemessen.</string>
     <string name="telegram_community">Telegram-Community</string>
     <string name="login_in_progress">Anmeldung bei Spotify läuft…</string>
     <string name="login_channel">Anmeldung</string>
@@ -568,12 +568,12 @@
     <string name="new_release_followed_tag">Von deinen Künstlern</string>
     <string name="recap_song_of_month">Song des Monats</string>
     <string name="recap_stat_plays">Wiedergaben</string>
-    <string name="recap_stat_minutes">Minuten in Moonvault</string>
+    <string name="recap_stat_minutes">Minuten in Sonar</string>
     <string name="recap_empty">Diesen Monat noch nichts gehört.</string>
-    <string name="recap_partial_youtube">Enthält, was du in Moonvault hörst, und, solange Moonvault geöffnet ist, deinen YouTube-Music-Verlauf. Wiedergaben aus anderen Apps und auf anderen Geräten sind ungefähr: YouTube nennt nur den Tag, nicht die Uhrzeit.</string>
+    <string name="recap_partial_youtube">Enthält, was du in Sonar hörst, und, solange Sonar geöffnet ist, deinen YouTube-Music-Verlauf. Wiedergaben aus anderen Apps und auf anderen Geräten sind ungefähr: YouTube nennt nur den Tag, nicht die Uhrzeit.</string>
     <string name="widget_description">Aktuelle Wiedergabe, Steuerung und deine letzten Playlists</string>
     <string name="widget_nothing_playing">Es läuft nichts</string>
-    <string name="widget_open_app">Moonvault öffnen</string>
+    <string name="widget_open_app">Sonar öffnen</string>
     <string name="animated_cover_source">Quelle</string>
     <string name="animated_cover_spotify">Spotify (Canvas)</string>
     <string name="animated_cover_apple">Apple Music</string>
@@ -603,7 +603,7 @@
     <string name="lyrics_uploaded_by">hochgeladen von</string>
     <string name="lyrics_made_by">erstellt von</string>
     <string name="spicy_lyrics_title">Spicy Lyrics</string>
-    <string name="spicy_lyrics_note">Optional. Mit deinem eigenen Schlüssel wird auch Spicy Lyrics nach Songtexten gefragt, oft silbengenau. Den Schlüssel bekommst du auf der Seite von Moonvault bei Spicy Lyrics.</string>
+    <string name="spicy_lyrics_note">Optional. Mit deinem eigenen Schlüssel wird auch Spicy Lyrics nach Songtexten gefragt, oft silbengenau. Den Schlüssel bekommst du auf der Seite von Sonar bei Spicy Lyrics.</string>
     <string name="spicy_lyrics_key">Spicy-Lyrics-Schlüssel</string>
     <string name="spicy_lyrics_get_key">Schlüssel holen</string>
     <string name="spicy_lyrics_remove">Schlüssel entfernen</string>
@@ -620,7 +620,7 @@
     <string name="spotify_dj_talking">spricht</string>
     <string name="link_copied_open_browser">Der Browser ließ sich nicht öffnen. Der Link ist kopiert: füge ihn dort ein.</string>
     <string name="youtube_signing_in">Anmeldung läuft…</string>
-    <string name="youtube_sign_in_private">Dein Passwort geht nur an Google. Moonvault behält die Sitzung, die Google zurückgibt.</string>
+    <string name="youtube_sign_in_private">Dein Passwort geht nur an Google. Sonar behält die Sitzung, die Google zurückgibt.</string>
     <string name="equalizer">Equalizer</string>
     <string name="page_equalizer_summary">Eine Kurve für jeden Kopfhörer</string>
     <string name="eq_speaker">Telefonlautsprecher</string>
@@ -637,7 +637,7 @@
     <string name="eq_save_preset">Als Voreinstellung speichern</string>
     <string name="eq_reset">Zurücksetzen</string>
     <string name="eq_hint">Bänder antippen und ziehen</string>
-    <string name="eq_note">Jede Ausgabe hat ihre eigene Kurve. Verbindest du andere Kopfhörer, wechselt Moonvault zu deren Kurve. Anhebungen senken die Gesamtlautstärke um denselben Wert, damit nichts übersteuert.</string>
+    <string name="eq_note">Jede Ausgabe hat ihre eigene Kurve. Verbindest du andere Kopfhörer, wechselt Sonar zu deren Kurve. Anhebungen senken die Gesamtlautstärke um denselben Wert, damit nichts übersteuert.</string>
     <string name="eq_flat">Linear</string>
     <string name="eq_bass_boost">Mehr Bass</string>
     <string name="eq_bass_reducer">Weniger Bass</string>
@@ -666,7 +666,7 @@
     <string name="lyrics_folder_title">Songtext-Dateien</string>
     <string name="lyrics_folder_choose">Musikordner wählen</string>
     <string name="lyrics_folder_forget">Ordner vergessen</string>
-    <string name="lyrics_folder_note">Moonvault zeigt eine .lrc-Datei mit demselben Namen wie der Song daneben an, etwa song.mp3 und song.lrc. Ab Android 13 muss es den Ordner deiner Musik kennen. In den Tags des Songs gespeicherte Songtexte werden auch ohne ihn gelesen.</string>
+    <string name="lyrics_folder_note">Sonar zeigt eine .lrc-Datei mit demselben Namen wie der Song daneben an, etwa song.mp3 und song.lrc. Ab Android 13 muss es den Ordner deiner Musik kennen. In den Tags des Songs gespeicherte Songtexte werden auch ohne ihn gelesen.</string>
     <string name="stream_quality">Streamqualität</string>
     <string name="stream_quality_lossless">Verlustfrei</string>
     <string name="stream_quality_very_high">Sehr hoch</string>
@@ -681,7 +681,7 @@
     <string name="soloist_key">Soloist-Schlüssel</string>
     <string name="soloist_get_key">Schlüssel holen</string>
     <string name="soloist_step_download">2. Soloist herunterladen</string>
-    <string name="soloist_download_note">Soloist kommt von Spotify, etwa 13 MB. Ein Build funktioniert etwa 90 Tage, Moonvault lädt den nächsten selbst.</string>
+    <string name="soloist_download_note">Soloist kommt von Spotify, etwa 13 MB. Ein Build funktioniert etwa 90 Tage, Sonar lädt den nächsten selbst.</string>
     <string name="soloist_download">Soloist herunterladen</string>
     <string name="soloist_check_update">Nach neuem Build suchen</string>
     <string name="soloist_downloaded">Heruntergeladen</string>
@@ -690,10 +690,10 @@
     <string name="soloist_download_failed">Download fehlgeschlagen: %1$s</string>
     <string name="soloist_step_account">3. Anmelden</string>
     <string name="soloist_account_wait">Erledige zuerst die Schritte 1 und 2.</string>
-    <string name="soloist_account_pair">Öffne die Spotify-App auf einem Gerät in diesem WLAN, tippe auf die Geräte-Taste und wähle Moonvault. Das ist nur einmal nötig.</string>
+    <string name="soloist_account_pair">Öffne die Spotify-App auf einem Gerät in diesem WLAN, tippe auf die Geräte-Taste und wähle Sonar. Das ist nur einmal nötig.</string>
     <string name="soloist_account_done">Angemeldet als %1$s</string>
     <string name="soloist_error">Soloist meldet: %1$s</string>
-    <string name="onboarding_engine_intro">Moonvault kann Spotify mit zwei Playern abspielen. librespot funktioniert sofort. Soloist ist Spotifys eigener Player mit verlustfreiem Audio und ist in wenigen Minuten eingerichtet.</string>
+    <string name="onboarding_engine_intro">Sonar kann Spotify mit zwei Playern abspielen. librespot funktioniert sofort. Soloist ist Spotifys eigener Player mit verlustfreiem Audio und ist in wenigen Minuten eingerichtet.</string>
     <string name="onboarding_engine_librespot">Sofort bereit, nichts einzurichten. Downloads nutzen immer diesen.</string>
     <string name="onboarding_engine_soloist">Spotifys offizieller Player, verlustfreies Audio. Braucht Premium, einen Schlüssel und eine Anmeldung.</string>
     <string name="onboarding_engine_later">Du kannst später unter Einstellungen › Wiedergabe › Audio zu Soloist wechseln.</string>
@@ -706,7 +706,7 @@
     <string name="soloist_setup">Soloist einrichten</string>
     <string name="jam_title">Jam</string>
     <string name="jam_start">Jam starten</string>
-    <string name="jam_start_note">Hört zusammen auf Moonvault: Alle, die beitreten, ergänzen dieselbe Warteschlange.</string>
+    <string name="jam_start_note">Hört zusammen auf Sonar: Alle, die beitreten, ergänzen dieselbe Warteschlange.</string>
     <string name="jam_needs_soloist">Jams funktionieren mit Soloist als Player.</string>
     <string name="jam_join">Beitreten</string>
     <string name="jam_join_link">Jam-Link</string>

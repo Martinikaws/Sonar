@@ -13,10 +13,10 @@ spec.loader.exec_module(module)
 
 def release():
     return {'tag_name': 'v2.4.5', 'name': '2.4.5', 'body': '## Fixed\nConnect and local files.',
-            'html_url': 'https://github.com/Martinikaws/Moonvault/releases/tag/v2.4.5',
+            'html_url': 'https://github.com/Martinikaws/Sonar/releases/tag/v2.4.5',
             'draft': False, 'published_at': '2026-10-07T10:42:26Z',
-            'assets': [{'name': f'moonvault-2.4.5-{abi}.apk', 'state': 'uploaded', 'size': 20,
-                        'browser_download_url': f'https://github.com/Martinikaws/Moonvault/releases/download/v2.4.5/moonvault-2.4.5-{abi}.apk'} for abi in module.ABIS]}
+            'assets': [{'name': f'sonar-2.4.5-{abi}.apk', 'state': 'uploaded', 'size': 20,
+                        'browser_download_url': f'https://github.com/Martinikaws/Sonar/releases/download/v2.4.5/sonar-2.4.5-{abi}.apk'} for abi in module.ABIS]}
 
 
 class ReleaseTests(unittest.TestCase):
@@ -25,10 +25,10 @@ class ReleaseTests(unittest.TestCase):
         value['body'] = '🧪 test\n' * 3000
         chunks = module.messages(value)
         self.assertTrue(all(len(c['text'].encode('utf-16-le')) // 2 <= 3500 for c in chunks))
-        self.assertEqual(''.join(c['text'] for c in chunks), f"Moonvault 2.4.5\n\nView release on GitHub\n\n{value['body']}")
+        self.assertEqual(''.join(c['text'] for c in chunks), f"Sonar 2.4.5\n\nView release on GitHub\n\n{value['body']}")
 
     def test_markdown_formats_headings_lists_links_and_code(self):
-        text, entities = module.formatted_markdown('## Fixed\n- **Playback** and `track.apk`\n[Release](https://github.com/Martinikaws/Moonvault)\n```sh\nadb shell cmd\n```\n')
+        text, entities = module.formatted_markdown('## Fixed\n- **Playback** and `track.apk`\n[Release](https://github.com/Martinikaws/Sonar)\n```sh\nadb shell cmd\n```\n')
         self.assertEqual(text, 'Fixed\n• Playback and track.apk\nRelease\nadb shell cmd\n')
         self.assertEqual({e['type'] for e in entities}, {'bold', 'code', 'text_link', 'pre'})
         for entity in entities:

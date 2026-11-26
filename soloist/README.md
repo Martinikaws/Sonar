@@ -69,7 +69,7 @@ blocked.
 
 Soloist dlopens libpulse. `pulse.c` is a libpulse with only what Soloist calls:
 a threaded mainloop, a context and playback streams. Each stream's PCM goes to
-Square over a FIFO as packets (`SQPC`, a type, three bytes of padding, a
+Sonar over a FIFO as packets (`SQPC`, a type, three bytes of padding, a
 little-endian length, the payload):
 
     H  format: u32 rate, u32 channels, u32 encoding (1 s16, 2 float)
@@ -78,8 +78,8 @@ little-endian length, the payload):
     N  the song after a dissolve is first heard
     L  u32 ms of music given by Soloist and not yet heard, five times a second
 
-`SoloistAudio` reads them into Square's own AudioOutput, so the equaliser,
-karaoke, reverb, speed and pitch apply. Crossfades are made here: Square writes
+`SoloistAudio` reads them into Sonar's own AudioOutput, so the equaliser,
+karaoke, reverb, speed and pitch apply. Crossfades are made here: Sonar writes
 the dissolve length to the `SQUARE_XFADE_FLAG` file before a skip, and the
 stream keeps what was ahead of the old song to fade under the new one.
 `SQUARE_XFADE_CONF` names a file (`<ms kept ahead> <dissolve ms>`) read again
@@ -92,7 +92,7 @@ position runs from the music written to the output, not from the clock.
 
 Soloist makes its own crossfade when the account's playback settings on
 Spotify's side say so (`getAudioTransition: crossfade` in its log); nothing
-here turns it off, and Square then makes none of its own over it.
+here turns it off, and Sonar then makes none of its own over it.
 
 Teardown: jobs still queued for a stream or a context are taken out when it is
 let go of, and mainloops and contexts are not freed (a stream let go of after

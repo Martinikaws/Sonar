@@ -3,9 +3,13 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 const html=fs.readFileSync('app/src/main/assets/websdk/player.html','utf8');
 const script=html.match(/<script>([\s\S]*)<\/script>/)[1];
+const engine=fs.readFileSync('app/src/main/java/app/sonar/playback/websdk/WebSdkEngine.kt','utf8');
+const registration=engine.match(/addJavascriptInterface\(object\s*\{[\s\S]*?^\s*},\s*"([^"]+)"\)/m);
+assert.ok(registration,'Expected a named WebSdkEngine JavaScript interface');
+const bridgeName=registration[1];
 async function env({eme=true,secure=true,probe=false,reject=false}={}) {
  const events=[],tokens=[],scripts=[],calls=[],listeners={}; let options;
- const context={SquareSdk:{event:s=>events.push(JSON.parse(s)),token:id=>tokens.push(id)},
+ const context={[bridgeName]:{event:s=>events.push(JSON.parse(s)),token:id=>tokens.push(id)},
   navigator:eme?{requestMediaKeySystemAccess:async()=>{if(reject)throw Error()}}:{},
   isSecureContext:secure,
   document:{createElement:()=>({}),head:{appendChild:s=>scripts.push(s)}},

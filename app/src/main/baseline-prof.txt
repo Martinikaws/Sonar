@@ -12,19 +12,19 @@
 # same numbers a warm run gives. These rules ship that head start.
 
 # 1. Preload application and UI classes
-Lapp/moonvault/**;
+Lapp/sonar/**;
 
 # 2. Jetpack Compose UI methods with complete signatures (Composer, bitmask, and return types)
 # Explicit signature with parameters and types ensures the AOT compiler does not silently discard the profile.
-HSPLapp/moonvault/ui/**;->*(**Landroidx/compose/runtime/Composer;*)V
-HSPLapp/moonvault/ui/**;->*(**Landroidx/compose/runtime/Composer;I)V
-HSPLapp/moonvault/ui/**;->*(**Landroidx/compose/runtime/Composer;II)V
-HSPLapp/moonvault/ui/**;->*(Landroidx/compose/runtime/Composer;I)V
-HSPLapp/moonvault/ui/**;->*(Landroidx/compose/runtime/Composer;II)V
-HSPLapp/moonvault/ui/**;->*(**Landroidx/compose/runtime/Composer;*)Lkotlin/Unit;
-HSPLapp/moonvault/ui/**;->*(**Landroidx/compose/runtime/Composer;*)**
+HSPLapp/sonar/ui/**;->*(**Landroidx/compose/runtime/Composer;*)V
+HSPLapp/sonar/ui/**;->*(**Landroidx/compose/runtime/Composer;I)V
+HSPLapp/sonar/ui/**;->*(**Landroidx/compose/runtime/Composer;II)V
+HSPLapp/sonar/ui/**;->*(Landroidx/compose/runtime/Composer;I)V
+HSPLapp/sonar/ui/**;->*(Landroidx/compose/runtime/Composer;II)V
+HSPLapp/sonar/ui/**;->*(**Landroidx/compose/runtime/Composer;*)Lkotlin/Unit;
+HSPLapp/sonar/ui/**;->*(**Landroidx/compose/runtime/Composer;*)**
 
 # 3. Whole UI, playback, and data layers
-HSPLapp/moonvault/ui/**;->*(**)**
-HSPLapp/moonvault/playback/**;->*(**)**
-HSPLapp/moonvault/data/**;->*(**)**
+HSPLapp/sonar/ui/**;->*(**)**
+HSPLapp/sonar/playback/**;->*(**)**
+HSPLapp/sonar/data/**;->*(**)**

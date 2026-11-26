@@ -1,16 +1,16 @@
-# Moonvault: request for packaging
+# Sonar: request for packaging
 
-- Application ID: `app.moonvault`
-- Source: https://github.com/Martinikaws/Moonvault
-- Releases: https://github.com/Martinikaws/Moonvault/releases
-- Issue tracker: https://github.com/Martinikaws/Moonvault/issues
+- Application ID: `app.sonar`
+- Source: https://github.com/Martinikaws/Sonar
+- Releases: https://github.com/Martinikaws/Sonar/releases
+- Issue tracker: https://github.com/Martinikaws/Sonar/issues
 - License: GPL-3.0-or-later, with the lyrics view under AGPL-3.0 as documented
   in the upstream README. Please review the combined-work licensing.
-- Donation: TODO: Moonvault donation link not set up
+- Donation: TODO: Sonar donation link not set up
 - Current release: 2.4.5 (versionCode 46)
 
-TODO: confirm the requester. Would like Moonvault, a fork of Square (https://github.com/Lelonio/Square), included in F-Droid.
-Moonvault is an Android music client for Spotify Premium and YouTube Music with
+TODO: confirm the requester. Would like Sonar, a fork of Square (https://github.com/Lelonio/Square), included in F-Droid.
+Sonar is an Android music client for Spotify Premium and YouTube Music with
 Liquid Glass UI, synced lyrics, Spotify Connect, local files, audio effects
 and a sleep timer. It does not require the official Spotify application for
 native playback. Android 8.0 or later is required.

@@ -23,14 +23,13 @@ OUT = "docs/social-preview.png"
 
 HELV = "/System/Library/Fonts/HelveticaNeue.ttc"
 
-# S Q U A R E, straight from GLYPHS in Wordmark.kt.
+# S O N A R, straight from GLYPHS in Wordmark.kt.
 GLYPHS = [
     [[(6, 0), (0, 0), (0, 5), (6, 5), (6, 10), (0, 10)]],
-    [[(0, 0), (6, 0), (6, 10), (0, 10), (0, 0)], [(4, 8), (4, 12)]],
-    [[(0, 0), (0, 10), (6, 10), (6, 0)]],
+    [[(0, 0), (6, 0), (6, 10), (0, 10), (0, 0)]],
+    [[(0, 10), (0, 0)], [(0, 2), (3, 2), (3, 8), (6, 8)], [(6, 10), (6, 0)]],
     [[(0, 10), (0, 0), (6, 0), (6, 10)], [(0, 6), (6, 6)]],
     [[(0, 10), (0, 0), (6, 0), (6, 5), (0, 5)], [(3, 5), (3, 10)]],
-    [[(6, 0), (0, 0), (0, 10), (6, 10)], [(0, 5), (4, 5)]],
 ]
 ADVANCE = 9.5   # units between glyph origins
 BOX = 12.0      # units of the wordmark's own height

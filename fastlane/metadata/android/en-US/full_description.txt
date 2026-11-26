@@ -1,4 +1,4 @@
-Moonvault is a free, open-source Android music client for Spotify Premium and YouTube Music, with a Liquid Glass interface.
+Sonar is a free, open-source Android music client for Spotify Premium and YouTube Music, with a Liquid Glass interface.
 
 • Synced lyrics and Canvas
 • Spotify Connect
@@ -10,7 +10,7 @@ Moonvault is a free, open-source Android music client for Spotify Premium and Yo
 
 Spotify playback requires a Spotify Premium account. Setup instructions are included in the app. Some playback modes have different capabilities; audio effects are not available through Spotify Web Playback.
 
-Moonvault uses proprietary Spotify and YouTube Music services. Optional Spotify Web Playback loads Spotify's official JavaScript SDK remotely in a WebView; it is not bundled in the APK. Moonvault is not affiliated with Spotify or Google.
+Sonar uses proprietary Spotify and YouTube Music services. Optional Spotify Web Playback loads Spotify's official JavaScript SDK remotely in a WebView; it is not bundled in the APK. Sonar is not affiliated with Spotify or Google.
 
-Source, setup and feedback: https://github.com/Martinikaws/Moonvault
+Source, setup and feedback: https://github.com/Martinikaws/Sonar
 Community: https://t.me/+-XDmbFwz7uBkMjc0

@@ -6,28 +6,28 @@
 # adding a call across the boundary.
 
 # native fn declarations resolved against this class
--keepclasseswithmembernames class app.moonvault.nativecore.NativeBridge {
+-keepclasseswithmembernames class app.sonar.nativecore.NativeBridge {
     native <methods>;
 }
 
 # called from the engine's event pump (native/src/engine.rs)
--keep class app.moonvault.nativecore.NativeEvents { *; }
--keep class * implements app.moonvault.nativecore.NativeEvents { *; }
+-keep class app.sonar.nativecore.NativeEvents { *; }
+-keep class * implements app.sonar.nativecore.NativeEvents { *; }
 
 # start / stop / write, called from the audio sink (native/src/sink.rs)
--keep class app.moonvault.playback.AudioOutput { *; }
+-keep class app.sonar.playback.AudioOutput { *; }
 
 # kotlinx.serialization generates serializers reflectively from these.
 -keepattributes *Annotation*, InnerClasses
 -dontnote kotlinx.serialization.**
--keepclassmembers class app.moonvault.data.** {
+-keepclassmembers class app.sonar.data.** {
     *** Companion;
     kotlinx.serialization.KSerializer serializer(...);
 }
 
 # Retrofit keeps generic signatures on its interface methods.
 -keepattributes Signature, RuntimeVisibleAnnotations
--keep,allowobfuscation interface app.moonvault.data.SpotifyApi
+-keep,allowobfuscation interface app.sonar.data.SpotifyApi
 
 # NewPipeExtractor carries Rhino, which is a JavaScript engine written for the
 # JVM: it references java.beans, javax.script and jdk.dynalink, none of which
@@ -53,8 +53,8 @@
 
 # Resolved by name from app/src/main/cpp/stretch.cpp, whose JNI symbols embed
 # the fully qualified class name.
--keepclasseswithmembernames class app.moonvault.playback.Stretcher { native <methods>; }
--keep class app.moonvault.playback.Stretcher { *; }
+-keepclasseswithmembernames class app.sonar.playback.Stretcher { native <methods>; }
+-keep class app.sonar.playback.Stretcher { *; }
 
 # Preserve readable line numbers and stack traces in release builds
 -renamesourcefileattribute SourceFile
