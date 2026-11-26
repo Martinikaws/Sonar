@@ -60,9 +60,19 @@ jobs:
             echo "keyPassword=$KEY_PASSWORD"
           } > keystore.properties
 
+      # The runner has 7 GB: the native core and Gradle's 6 GB heap together
+      # ran it out of memory and the job was killed. The core is built first,
+      # alone and with two jobs, so the Gradle step finds it already done.
+      - name: Native core
+        env:
+          CARGO_BUILD_JOBS: 2
+        run: |
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/28.2.13676358"
+          cd native && cargo ndk -t arm64-v8a -t armeabi-v7a -P 26 -o ../app/src/main/jniLibs build --release
+
       - name: Build
         # Every ABI and the universal APK: see allAbis in app/build.gradle.kts.
-        run: ./gradlew :app:assembleRelease -Psonar.allAbis=true --stacktrace
+        run: ./gradlew :app:assembleRelease -Psonar.allAbis=true -Dorg.gradle.jvmargs=-Xmx3g --stacktrace
 
       # Without the right key an update does not install over the app people
       # already have, and the build would not say so: a missing keystore falls
