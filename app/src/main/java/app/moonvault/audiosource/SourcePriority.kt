@@ -10,8 +10,11 @@ import org.json.JSONObject
 
 enum class AudioSource { FLAC, SPOTIFY, YOUTUBE_MUSIC }
 
+/** Spotify first, then Soloist's lossless stream, then a YouTube Music match. */
+val DEFAULT_SOURCE_ORDER = listOf(AudioSource.SPOTIFY, AudioSource.FLAC, AudioSource.YOUTUBE_MUSIC)
+
 data class SourcePriority(
-    val order: List<AudioSource> = AudioSource.entries,
+    val order: List<AudioSource> = DEFAULT_SOURCE_ORDER,
     val disabled: Set<AudioSource> = emptySet(),
 ) {
     init {
@@ -31,6 +34,13 @@ data class SourcePriority(
     fun effective(): List<AudioSource> =
         order.filterNot { it in disabled }.ifEmpty { listOf(AudioSource.SPOTIFY) }
 
+    /**
+     * The enabled sources still to try for a track once [tried] have failed,
+     * best first. FLAC is left out unless Soloist can serve it.
+     */
+    fun fallbacks(tried: Set<AudioSource>, flacReady: Boolean): List<AudioSource> =
+        effective().filter { it !in tried && (it != AudioSource.FLAC || flacReady) }
+
     fun toJson(): String = JSONObject()
         .put("order", JSONArray(order.map { it.name }))
         .put("disabled", JSONArray(disabled.map { it.name }))
@@ -46,7 +56,7 @@ data class SourcePriority(
             }
             val order = obj.optJSONArray("order").readSources()
             val disabled = obj.optJSONArray("disabled").readSources()
-            return SourcePriority((order + AudioSource.entries).distinct(), disabled.toSet())
+            return SourcePriority((order + DEFAULT_SOURCE_ORDER).distinct(), disabled.toSet())
         }
 
         private fun JSONArray?.readSources(): List<AudioSource> {

@@ -218,6 +218,10 @@ class MoonvaultApplication : Application(), ImageLoaderFactory {
         app.moonvault.data.LibraryViewStore(this)
     }
     val preferences: PreferencesStore by lazy { PreferencesStore(this) }
+    /** One instance, so the settings and the playback service share its flow. */
+    val sourcePriority: app.moonvault.audiosource.SourcePriorityStore by lazy {
+        app.moonvault.audiosource.SourcePriorityStore(this)
+    }
 
     /** Which file the engine asks Spotify for. */
     val quality: app.moonvault.data.QualityStore by lazy {

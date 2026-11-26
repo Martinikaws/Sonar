@@ -15,6 +15,8 @@ import app.moonvault.playback.websdk.WebSdkRecovery as MvWebSdkRecovery
 import app.moonvault.ui.components.ProfilePicture as MvProfilePicture
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -78,6 +80,7 @@ import app.moonvault.BuildConfig
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.adamglin.phosphoricons.regular.UserCircle
 import com.adamglin.phosphoricons.regular.Waveform
+import com.adamglin.phosphoricons.regular.Stack
 import com.adamglin.phosphoricons.regular.Info
 import com.adamglin.phosphoricons.regular.DownloadSimple
 import androidx.compose.ui.res.pluralStringResource
@@ -132,6 +135,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -315,7 +319,7 @@ fun SettingsScreen(
     val soloistOffered = showSpotify && MvSoloistRuntime.isSupported(context)
     val available: (String) -> Boolean = { id ->
         when (id) {
-            "account", "webapi", "tutorial", "spotify-dj", "connected-device-label", "spicy-lyrics" -> showSpotify
+            "account", "webapi", "tutorial", "audio-sources", "spotify-dj", "connected-device-label", "spicy-lyrics" -> showSpotify
             // YouTube Music's own; the account section draws nothing on Spotify.
             "youtube-account", "youtube-quality" -> !showSpotify
             // Spotify's sign-out, so only while Spotify is the source.
@@ -426,6 +430,10 @@ fun SettingsScreen(
 
         "engine" -> {
             EngineSection()
+        }
+
+        "audio-sources" -> {
+            AudioSourcesSection(soloistOffered)
         }
 
         "equalizer" -> Section(null) {
@@ -1306,6 +1314,105 @@ private fun EngineSection() {
 }
 
 /**
+ * The order the sources of a Spotify track's sound are tried in, each one
+ * switchable. Spotify stays the catalogue whichever plays the sound.
+ */
+@Composable
+private fun AudioSourcesSection(soloistOffered: Boolean) {
+    val context = LocalContext.current
+    val store = remember(context) {
+        (context.applicationContext as app.moonvault.MoonvaultApplication).sourcePriority
+    }
+    val priority by store.priority.collectAsStateWithLifecycle()
+    val soloist = if (soloistOffered) rememberSoloistSetup() else null
+    val flacReady = soloist != null && soloist.chosen && soloist.savedKey.isNotEmpty() &&
+        soloist.installed && soloist.signedIn
+
+    Section(stringResource(R.string.settings_group_sources)) {
+        Text(
+            stringResource(R.string.audio_sources_note),
+            style = MaterialTheme.typography.bodySmall,
+            color = InkDim,
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
+        )
+        priority.order.forEachIndexed { index, source ->
+            RowDivider()
+            val label = stringResource(
+                when (source) {
+                    app.moonvault.audiosource.AudioSource.SPOTIFY -> R.string.audio_source_spotify
+                    app.moonvault.audiosource.AudioSource.FLAC -> R.string.audio_source_flac
+                    app.moonvault.audiosource.AudioSource.YOUTUBE_MUSIC -> R.string.audio_source_youtube
+                },
+            )
+            val enabled = source !in priority.disabled
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 18.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                // The whole row switches, as DownloadSwitch does; the arrows are apart.
+                Row(
+                    Modifier
+                        .weight(1f)
+                        .heightIn(min = 44.dp)
+                        .toggleable(value = enabled, role = Role.Switch) { store.set(priority.setEnabled(source, it)) },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (enabled) Ink else InkDim,
+                        )
+                        if (source == app.moonvault.audiosource.AudioSource.FLAC && enabled && !flacReady) {
+                            Text(
+                                stringResource(R.string.audio_source_flac_needs_soloist),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = InkDim,
+                            )
+                        }
+                    }
+                    PlainToggle(checked = enabled) { store.set(priority.setEnabled(source, it)) }
+                }
+                SourceMoveButton(
+                    PhosphorIcons.Regular.CaretUp,
+                    stringResource(R.string.audio_source_move_up, label),
+                    enabled = index > 0,
+                ) { store.set(priority.move(source, index - 1)) }
+                SourceMoveButton(
+                    PhosphorIcons.Regular.CaretDown,
+                    stringResource(R.string.audio_source_move_down, label),
+                    enabled = index < priority.order.lastIndex,
+                ) { store.set(priority.move(source, index + 1)) }
+            }
+        }
+    }
+}
+
+/** An arrow of the source list, at a full touch target. */
+@Composable
+private fun SourceMoveButton(icon: ImageVector, description: String, enabled: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = if (enabled) Ink else InkDim.copy(alpha = 0.4f),
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+/**
  * The Google account YouTube Music reads a library with.
  *
  * Only shown while that backend is the active one: on Spotify it would be an
@@ -2144,6 +2251,7 @@ private fun groupIcon(group: SettingsGroup): ImageVector = when (group) {
     SettingsGroup.ACCOUNT -> PhosphorIcons.Regular.UserCircle
     SettingsGroup.SETUP -> PhosphorIcons.Regular.Key
     SettingsGroup.SOUND -> PhosphorIcons.Regular.Waveform
+    SettingsGroup.SOURCES -> PhosphorIcons.Regular.Stack
     SettingsGroup.LISTENING -> PhosphorIcons.Regular.Playlist
     SettingsGroup.LYRICS -> PhosphorIcons.Regular.MicrophoneStage
     SettingsGroup.COVERS -> PhosphorIcons.Regular.FilmStrip

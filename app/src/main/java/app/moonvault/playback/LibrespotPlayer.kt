@@ -291,6 +291,12 @@ class LibrespotPlayer(
     var playsElsewhere: ((uri: String) -> Boolean)? = null
     var elsewhere: ((items: List<MediaItem>, index: Int, positionMs: Long, playing: Boolean) -> Unit)? = null
 
+    /**
+     * The track playing now could not be loaded, and no queued track takes
+     * over: the caller may play it from another source.
+     */
+    var onCurrentUnavailable: ((PlayQueue.Track) -> Unit)? = null
+
     /** The last one handed over, so a run of events asks for it once. */
     private var unknownAsked: String? = null
 
@@ -1959,8 +1965,10 @@ class LibrespotPlayer(
             // the listener was in the middle of because a later one was slow to
             // arrive.
             "unavailable" -> {
-                val current = queue.items.getOrNull(queue.currentIndex)?.uri
-                if (uri.isEmpty() || uri == current) takeOverForQueued()
+                val track = queue.items.getOrNull(queue.currentIndex)
+                if (uri.isEmpty() || uri == track?.uri) {
+                    if (!takeOverForQueued() && track != null) onCurrentUnavailable?.invoke(track)
+                }
                 return
             }
             else -> return

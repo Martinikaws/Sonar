@@ -27,7 +27,22 @@ import org.schabi.newpipe.extractor.stream.StreamInfo
 @UnstableApi
 object YouTubePlayerFactory {
 
-    fun create(host: PlaybackHost): Player {
+    /**
+     * The sound of a Spotify track from its YouTube Music match: the item keeps
+     * its Spotify id and metadata, and only its URI is this plus the video id.
+     * Always audio alone, never retitled; see YtAudioForSpotify.
+     */
+    const val SPOTIFY_AUDIO_PREFIX = "moonvault-ytaudio:"
+
+    /**
+     * @param onTerminalError told, in place of the skip, when an item under
+     *   [SPOTIFY_AUDIO_PREFIX] cannot be played, so the caller can try the
+     *   next source. Null keeps the player as it always was.
+     */
+    fun create(
+        host: PlaybackHost,
+        onTerminalError: ((androidx.media3.common.MediaItem) -> Unit)? = null,
+    ): Player {
         fun loadControl() = androidx.media3.exoplayer.DefaultLoadControl.Builder()
             .setBufferDurationsMs(
                 /* minBufferMs = */ 30_000,
@@ -84,6 +99,14 @@ object YouTubePlayerFactory {
                     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                         // A signed-in address that failed is not handed out again.
                         SignedInStreams.forget()
+                        val current = exo.currentMediaItem
+                        val giveUp = if (onTerminalError != null && current != null &&
+                            current.localConfiguration?.uri?.toString()?.startsWith(SPOTIFY_AUDIO_PREFIX) == true
+                        ) {
+                            { onTerminalError(current) }
+                        } else {
+                            null
+                        }
                         val causes = generateSequence<Throwable>(error) { it.cause }.toList()
                         val message = when {
                             causes.any { it is SignedInStreams.SignInRequired } ->
@@ -91,9 +114,13 @@ object YouTubePlayerFactory {
                             causes.any { it is SignedInStreams.Refused } ->
                                 app.moonvault.R.string.youtube_signed_in_unplayable
                             else -> {
-                                recover(exo, error)
+                                recover(exo, error, giveUp)
                                 return
                             }
+                        }
+                        if (giveUp != null) {
+                            giveUp()
+                            return
                         }
                         android.os.Handler(android.os.Looper.getMainLooper()).post {
                             android.widget.Toast.makeText(
@@ -168,15 +195,22 @@ object YouTubePlayerFactory {
      * [RETRIES] times in a row within [RETRY_WINDOW_MS] is passed over, as a
      * song that cannot be played would be.
      */
-    private fun recover(exo: ExoPlayer, error: androidx.media3.common.PlaybackException) {
+    private fun recover(
+        exo: ExoPlayer,
+        error: androidx.media3.common.PlaybackException,
+        giveUp: (() -> Unit)? = null,
+    ) {
         val item = exo.currentMediaItem ?: return
         val id = item.mediaId
+        // A Spotify track's id says nothing about the video it plays from.
+        val streamUri = item.localConfiguration?.uri?.toString()
+            ?.takeIf { it.startsWith(SPOTIFY_AUDIO_PREFIX) } ?: id
         if (!exo.playWhenReady) return
         val now = android.os.SystemClock.elapsedRealtime()
         val last = recovering?.takeIf { it.first == id && now - it.second < RETRY_WINDOW_MS }
         val attempt = (last?.third ?: 0) + 1
         recovering = Triple(id, now, attempt)
-        YouTubeStreams.forget(YouTubeBackend.videoIdOfUri(id))
+        YouTubeStreams.forget(YouTubeBackend.videoIdOfUri(streamUri))
         val at = exo.currentPosition
         val index = exo.currentMediaItemIndex
         android.util.Log.w("MoonvaultYT", "playback failed (${error.errorCodeName}), try $attempt at ${at}ms")
@@ -184,6 +218,7 @@ object YouTubePlayerFactory {
             // Moved on in the meantime: nothing of this to pick up.
             if (exo.currentMediaItem?.mediaId != id || exo.playerError == null) return@postDelayed
             if (attempt > RETRIES) {
+                if (giveUp != null) return@postDelayed giveUp()
                 if (exo.hasNextMediaItem()) exo.seekToNextMediaItem() else return@postDelayed
             } else {
                 exo.seekTo(index, at)
@@ -379,7 +414,7 @@ private class YouTubeStreamResolver(
         val kind = when (dataSpec.uri.fragment) {
             PART_VIDEO -> SignedInStreams.Kind.VIDEO
             PART_AUDIO -> SignedInStreams.Kind.AUDIO
-            else -> if (YouTubeVideoMode.wantsVideo(base)) SignedInStreams.Kind.MUXED else SignedInStreams.Kind.AUDIO
+            else -> if (base.startsWith(YouTubePlayerFactory.SPOTIFY_AUDIO_PREFIX)) SignedInStreams.Kind.AUDIO else if (YouTubeVideoMode.wantsVideo(base)) SignedInStreams.Kind.MUXED else SignedInStreams.Kind.AUDIO
         }
         val id = YouTubeBackend.videoIdOfUri(base)
         val url = try {
@@ -395,6 +430,13 @@ private class YouTubeStreamResolver(
 
     private fun resolveAnonymously(dataSpec: DataSpec): DataSpec {
         val uri = dataSpec.uri.toString()
+        if (uri.startsWith(YouTubePlayerFactory.SPOTIFY_AUDIO_PREFIX)) {
+            val id = YouTubeBackend.videoIdOfUri(uri)
+            app.moonvault.download.YouTubeDownloads.fileFor(context, "${YouTubeBackend.TRACK_PREFIX}$id")
+                ?.let { return dataSpec.withUri(android.net.Uri.fromFile(it)) }
+            YouTubeStreams.ensureNewPipe()
+            return dataSpec.withUri(android.net.Uri.parse(bestAudio(YouTubeStreams.info(id), id)))
+        }
         if (!uri.startsWith(YouTubeBackend.TRACK_PREFIX) && !uri.startsWith(YouTubeBackend.VIDEO_PREFIX)) {
             return dataSpec
         }
@@ -477,19 +519,21 @@ private class YouTubeStreamResolver(
             //
             // At the rate the listener asked for: the highest, the lowest, or
             // the highest on Wi-Fi and the lowest on a metered connection.
-            ?: info.audioStreams
-                .filter { !it.content.isNullOrEmpty() }
-                .sortedWith(
-                    compareByDescending<org.schabi.newpipe.extractor.stream.AudioStream> {
-                        it.format == org.schabi.newpipe.extractor.MediaFormat.M4A
-                    }.thenBy { if (wantsLowRate()) it.averageBitrate else -it.averageBitrate },
-                )
-                .firstOrNull()
-                ?.content
-            ?: error("nessuna traccia audio per $videoId")
+            ?: bestAudio(info, videoId)
 
         return dataSpec.withUri(android.net.Uri.parse(url))
     }
+
+    private fun bestAudio(info: StreamInfo, videoId: String): String = info.audioStreams
+        .filter { !it.content.isNullOrEmpty() }
+        .sortedWith(
+            compareByDescending<org.schabi.newpipe.extractor.stream.AudioStream> {
+                it.format == org.schabi.newpipe.extractor.MediaFormat.M4A
+            }.thenBy { if (wantsLowRate()) it.averageBitrate else -it.averageBitrate },
+        )
+        .firstOrNull()
+        ?.content
+        ?: error("nessuna traccia audio per $videoId")
 
     /** Whether the lower rate is wanted now; see PreferencesStore.youtubeQuality. */
     private fun wantsLowRate(): Boolean {

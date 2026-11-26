@@ -818,7 +818,7 @@ class PlaybackService : MediaLibraryService() {
      * neither backend's player can open them. So what decides this is not only
      * the setting but what is being played; see [ensurePlayerFor].
      */
-    private enum class PlayerKind { SPOTIFY, YOUTUBE, LOCAL, VIDEO, SPOTIFY_WEB, SOLOIST }
+    private enum class PlayerKind { SPOTIFY, YOUTUBE, LOCAL, VIDEO, SPOTIFY_WEB, SOLOIST, SPOTIFY_YOUTUBE_AUDIO }
 
     private var playerKind = PlayerKind.SPOTIFY
         set(value) {
@@ -1147,6 +1147,102 @@ class PlaybackService : MediaLibraryService() {
     @Volatile
     private var handedOverAt = 0L
 
+    private val ytAudio by lazy { app.moonvault.audiosource.YtAudioForSpotify(cacheDir) }
+
+    /** The queue entry to go on to once the YouTube Music stand-in is done. */
+    private var youtubeAudioNext = androidx.media3.common.C.INDEX_UNSET
+
+    /** The track a match is being looked for, so a run of failures asks once. */
+    private var youtubeAudioFor: String? = null
+
+    /**
+     * The last track stood in for at the end of the queue: put back on the
+     * engine there, it fails again, and is not to be stood in for again.
+     */
+    private var youtubeAudioLast: String? = null
+
+    /**
+     * librespot could not load the track playing: its YouTube Music match,
+     * when that is the next enabled source, plays it in front of the parked
+     * engine. No match leaves things as they were.
+     */
+    private fun fallBackToYouTubeAudio(track: PlayQueue.Track) {
+        if (!YOUTUBE_AUDIO_FALLBACK || playerKind != PlayerKind.SPOTIFY || handingOver) return
+        if (!track.uri.startsWith("spotify:track:") || youtubeAudioFor == track.uri) return
+        if (youtubeAudioLast == track.uri) return
+        if (app.moonvault.playback.OfflineMode.reason.value == app.moonvault.playback.OfflineMode.Reason.MANUAL) return
+        val priority = (application as app.moonvault.MoonvaultApplication).sourcePriority.priority.value
+        // shortcut: the FLAC leg is skipped, Soloist's own failure signal is unverified; wire it once it is.
+        val next = priority.fallbacks(setOf(app.moonvault.audiosource.AudioSource.SPOTIFY), flacReady = false)
+            .firstOrNull()
+        if (next != app.moonvault.audiosource.AudioSource.YOUTUBE_MUSIC) return
+        val original = player.currentMediaItem?.takeIf { it.mediaId == track.uri } ?: return
+        val after = player.nextMediaItemIndex
+        val position = player.currentPosition.coerceAtLeast(0)
+        val playing = player.playWhenReady
+        youtubeAudioFor = track.uri
+        scope.launch {
+            try {
+                val key = app.moonvault.audiosource.SpotifyTrackKey(
+                    id = track.uri.substringAfterLast(':'),
+                    title = track.title,
+                    artists = track.artists.map { it.name }.ifEmpty { track.artist.split(", ") },
+                    durationMs = track.durationMs,
+                )
+                val match = ytAudio.findAudio(key) ?: return@launch
+                // Moved on while the match was looked for: nothing to stand in for.
+                if (playerKind != PlayerKind.SPOTIFY || handingOver || player.currentMediaItem?.mediaId != track.uri) {
+                    return@launch
+                }
+                android.util.Log.i(TAG, "${track.uri} unavailable on Spotify: YouTube Music ${match.videoId}")
+                handingOver = true
+                try {
+                    swapPlayer(PlayerKind.SPOTIFY_YOUTUBE_AUDIO, restore = false)
+                    youtubeAudioNext = after
+                    player.setMediaItem(
+                        original.buildUpon()
+                            .setUri("${app.moonvault.backend.youtube.YouTubePlayerFactory.SPOTIFY_AUDIO_PREFIX}${match.videoId}")
+                            .build(),
+                        position,
+                    )
+                    player.prepare()
+                    if (playing) player.play()
+                } finally {
+                    handedOverAt = System.currentTimeMillis()
+                    handingOver = false
+                }
+            } finally {
+                youtubeAudioFor = null
+            }
+        }
+    }
+
+    /**
+     * The YouTube Music stand-in ended or could not play: back to the Spotify
+     * player and its queue, on at the entry after the one it stood in for.
+     */
+    private suspend fun leaveYouTubeAudio() {
+        if (playerKind != PlayerKind.SPOTIFY_YOUTUBE_AUDIO || handingOver) return
+        val next = youtubeAudioNext
+        youtubeAudioNext = androidx.media3.common.C.INDEX_UNSET
+        handingOver = true
+        try {
+            swapPlayer(audioKind(), restore = true)
+            if (next != androidx.media3.common.C.INDEX_UNSET && next < player.mediaItemCount) {
+                youtubeAudioLast = null
+                player.seekTo(next, 0L)
+                player.prepare()
+                player.play()
+            } else {
+                youtubeAudioLast = player.currentMediaItem?.mediaId
+                player.pause()
+            }
+        } finally {
+            handedOverAt = System.currentTimeMillis()
+            handingOver = false
+        }
+    }
+
     /** A song of Spotify's kept on this phone, so playing it costs no data on librespot. */
     private fun downloadedHere(uri: String?): Boolean {
         // A plain URI, or the car's browse id, whose last part is the song.
@@ -1273,6 +1369,25 @@ class PlaybackService : MediaLibraryService() {
             playerKind = kind
             app.moonvault.playback.websdk.WebSdkPlayer(this, playbackHost.looper)
         }
+        // One Spotify track, its sound from YouTube Music, in front of the
+        // parked engine whose queue it stays part of; like the video.
+        PlayerKind.SPOTIFY_YOUTUBE_AUDIO -> {
+            librespot = null
+            playerKind = kind
+            app.moonvault.backend.youtube.YouTubePlayerFactory.create(playbackHost) {
+                scope.launch { leaveYouTubeAudio() }
+            }.also { built ->
+                built.playbackParameters = androidx.media3.common.PlaybackParameters(
+                    AudioEffects.speed.value,
+                    AudioEffects.pitch.value,
+                )
+                built.addListener(object : androidx.media3.common.Player.Listener {
+                    override fun onPlaybackStateChanged(state: Int) {
+                        if (state == androidx.media3.common.Player.STATE_ENDED) scope.launch { leaveYouTubeAudio() }
+                    }
+                })
+            }
+        }
         PlayerKind.SOLOIST -> {
             librespot = null
             playerKind = kind
@@ -1301,6 +1416,7 @@ class PlaybackService : MediaLibraryService() {
                     !restoringQueue && !handingOver && engineStarted && soloistWanted() &&
                     !app.moonvault.playback.OfflineMode.active.value && !downloadedHere(uri)
             }
+            built.onCurrentUnavailable = ::fallBackToYouTubeAudio
             built.elsewhere = { items, index, position, playing ->
                 if (playerKind == PlayerKind.SPOTIFY && items.isNotEmpty()) {
                     handOver(PlayerKind.SOLOIST, items, index.coerceIn(items.indices), position, playing)
@@ -1393,7 +1509,8 @@ class PlaybackService : MediaLibraryService() {
         // engine stays up.
         val frontOnly = (librespot != null || parkedSpotify != null) &&
             (kind == PlayerKind.LOCAL || kind == PlayerKind.VIDEO ||
-                kind == PlayerKind.SPOTIFY_WEB || kind == PlayerKind.SOLOIST)
+                kind == PlayerKind.SPOTIFY_WEB || kind == PlayerKind.SOLOIST ||
+                kind == PlayerKind.SPOTIFY_YOUTUBE_AUDIO)
         if (frontOnly) {
             // Kept playing through a handover to Soloist, until Soloist is
             // heard: see [handOver].
@@ -2561,6 +2678,13 @@ class PlaybackService : MediaLibraryService() {
     }
 
     companion object {
+        /**
+         * A Spotify track librespot cannot load plays its YouTube Music match,
+         * when that source is enabled. Off until tried on a device: the
+         * handover around a failing engine has not been heard yet.
+         */
+        private const val YOUTUBE_AUDIO_FALLBACK = false
+
         /** How long after a handover a change of song is the new player settling, not the music. */
         private const val HANDOVER_SETTLE_MS = 4_000L
 

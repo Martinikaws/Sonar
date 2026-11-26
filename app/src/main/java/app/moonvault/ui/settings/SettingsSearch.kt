@@ -15,6 +15,7 @@ internal enum class SettingsGroup(@StringRes val title: Int, @StringRes val summ
     ACCOUNT(R.string.account, R.string.page_account_summary),
     SETUP(R.string.settings_group_setup, R.string.settings_group_setup_summary),
     SOUND(R.string.settings_group_sound, R.string.settings_group_sound_summary),
+    SOURCES(R.string.settings_group_sources, R.string.settings_group_sources_summary),
     LISTENING(R.string.settings_group_listening, R.string.settings_group_listening_summary),
     LYRICS(R.string.settings_group_lyrics, R.string.settings_group_lyrics_summary),
     COVERS(R.string.settings_group_covers, R.string.settings_group_covers_summary),
@@ -88,6 +89,12 @@ internal val SETTINGS_INDEX: List<SettingsEntry> = listOf(
         listOf(R.string.youtube_quality_auto, R.string.youtube_quality_high, R.string.youtube_quality_low), SettingsGroup.SOUND,
     ),
     SettingsEntry("effect-quality", R.string.effect_quality, null, emptyList(), SettingsGroup.SOUND),
+
+    SettingsEntry(
+        "audio-sources", R.string.settings_group_sources, null,
+        listOf(R.string.audio_source_spotify, R.string.audio_source_flac, R.string.audio_source_youtube),
+        SettingsGroup.SOURCES,
+    ),
 
     SettingsEntry(
         "keep-playing", R.string.keep_playing_on_close, null,

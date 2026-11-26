@@ -84,7 +84,7 @@ jobs:
             certs=$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$apk")
             echo "$certs"
             digest=$(echo "$certs" | sed -n 's/^Signer.*certificate SHA-256 digest: //p' | head -n 1)
-            if [ "$digest" != "9f3469d5049fa93e6b63effd1ad10a1913c9a65b0f7c9a5f2f770cd8ea27cf0c" ]; then
+            if [ "$digest" != "1de2ad7f94d56e0a674a514ffb9193365193f92b72988a280ef57e92ede12f9e" ]; then
               echo "::error::$abi signed with ${digest:-nothing}, not the release key"
               exit 1
             fi
