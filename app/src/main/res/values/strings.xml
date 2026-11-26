@@ -789,4 +789,7 @@
     <string name="jam_join_failed">Could not join the Jam</string>
     <string name="jam_scan">Scan a Jam code</string>
     <string name="jam_of">Jam of %1$s</string>
+    <string name="settings_search_hint">Search settings</string>
+    <string name="settings_search_empty">No settings match “%1$s”</string>
+    <string name="settings_search_clear">Clear search</string>
 </resources>

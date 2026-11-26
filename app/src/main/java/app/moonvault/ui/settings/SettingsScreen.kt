@@ -29,13 +29,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -78,12 +76,8 @@ import com.adamglin.phosphoricons.regular.Translate
 import app.moonvault.ui.glass.backdrop.Backdrop
 import app.moonvault.BuildConfig
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.foundation.layout.heightIn
 import com.adamglin.phosphoricons.regular.UserCircle
 import com.adamglin.phosphoricons.regular.Waveform
-import com.adamglin.phosphoricons.regular.Drop
-import com.adamglin.phosphoricons.regular.Equalizer
-import com.adamglin.phosphoricons.regular.SlidersHorizontal
 import com.adamglin.phosphoricons.regular.Info
 import com.adamglin.phosphoricons.regular.DownloadSimple
 import androidx.compose.ui.res.pluralStringResource
@@ -119,7 +113,6 @@ import com.adamglin.phosphoricons.regular.Pause
 import com.adamglin.phosphoricons.regular.Playlist
 import androidx.compose.foundation.layout.fillMaxHeight
 import com.adamglin.phosphoricons.regular.Trash
-import com.adamglin.phosphoricons.regular.HandHeart
 import com.adamglin.phosphoricons.regular.ChatsCircle
 import com.adamglin.phosphoricons.regular.TelegramLogo
 import com.adamglin.phosphoricons.regular.Bug
@@ -135,20 +128,27 @@ import app.moonvault.ui.glass.LiquidButton
 import app.moonvault.ui.theme.Ink
 import app.moonvault.ui.theme.InkDim
 import app.moonvault.ui.theme.softShadow
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import app.moonvault.ui.components.GlassSearchBar
 
 /**
  * Everything that is configuration rather than listening.
  *
  * Reached from the avatar in the home header, not from the tab bar. The bar has
- * three places you go to play something and settings is not one of them — it is
+ * three places you go to play something and settings is not one of them: it is
  * somewhere you visit twice a year, and giving it a permanent quarter of the
  * navigation would say otherwise.
  *
- * Deliberately short. Most of what a music app usually puts here is decided by
- * the account or by the engine and is not ours to offer: bitrate comes from
- * Premium, the device name from the phone. What is left is the account itself,
- * the Web API application the user has to register for search, and the licences
- * this app owes attribution to.
+ * One list, grouped, with a search over it: every setting is on this screen,
+ * and the few that need a screen of their own (the equalizer, the glass, the
+ * Web API application) open from a single row. Which groups there are and what
+ * is in them is SETTINGS_INDEX; see SettingsSearch.
  */
 @Composable
 fun SettingsScreen(
@@ -191,19 +191,22 @@ fun SettingsScreen(
     val sdkPlayback by MvWebSdkRecovery.inUse.collectAsStateWithLifecycle()
 
     /**
-     * Which page is open, or null for the list of them.
+     * Which page is open over the list, or null for the list itself.
      *
-     * One screen with a page inside it rather than a second destination: every
-     * page here reads the same state and the same stores, and threading all of
-     * it through a navigation graph would buy nothing but the plumbing.
-     * Remembered across a rotation, since coming back to the top of the
-     * settings after turning the phone is not what anyone meant to do.
+     * A page inside this screen rather than a second destination: every page
+     * reads the same state and the same stores. Remembered across a rotation.
      */
     var open by rememberSaveable { mutableStateOf<SettingsPage?>(null) }
 
     // The back gesture closes the page first and leaves the settings second,
     // which is the order the screen is read in.
     BackHandler(enabled = open != null) { open = null }
+
+    // Held above the pages, so coming back from one finds the same search and
+    // the same place in the list.
+    var query by rememberSaveable { mutableStateOf("") }
+    val listState = rememberLazyListState()
+    val keyboard = LocalSoftwareKeyboardController.current
 
     // One accent for the whole screen; see LocalSettingsAccent.
     val accent = rememberSettingsAccent()
@@ -257,6 +260,27 @@ fun SettingsScreen(
         installPermission.launch(updater.permissionIntent())
     }
 
+    // The lyrics folder picker, here for the same reason as the report's.
+    val pickLyricsFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { tree ->
+        if (tree == null) return@rememberLauncherForActivityResult
+        runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                tree,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION,
+            )
+        }
+        // Let go of the folder this replaces, so the grants do not pile up.
+        app.preferences.lyricsFolder.value.takeIf { it.isNotBlank() && it != tree.toString() }?.let { old ->
+            runCatching {
+                context.contentResolver.releasePersistableUriPermission(
+                    android.net.Uri.parse(old),
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            }
+        }
+        app.preferences.setLyricsFolder(tree.toString())
+    }
+
     // Set rather than assigned from inside, because the page being drawn is a
     // value handed to the animation below and cannot be written to.
     val goTo: (SettingsPage?) -> Unit = { open = it }
@@ -284,79 +308,36 @@ fun SettingsScreen(
         }
     }
 
-    // A page arrives from the side it was opened from and leaves the other way,
-    // which is the one thing that said "this is a different page" and was
-    // missing: the list simply swapped its rows for other rows.
-    androidx.compose.runtime.CompositionLocalProvider(LocalSettingsAccent provides accent) {
-    AnimatedContent(
-        targetState = open,
-        transitionSpec = {
-            val forward = initialState == null
-            val width = { w: Int -> if (forward) w / 4 else -w / 4 }
-            val back = { w: Int -> if (forward) -w / 4 else w / 4 }
-            (
-                slideInHorizontally(tween(PAGE_TRAVEL_MS), width) +
-                    fadeIn(tween(PAGE_TRAVEL_MS))
-                ) togetherWith (
-                slideOutHorizontally(tween(PAGE_TRAVEL_MS), back) +
-                    fadeOut(tween(PAGE_FADE_MS))
-                )
-        },
-        label = "settingsPage",
-    ) { shown ->
-    if (shown == SettingsPage.Equalizer) {
-        EqualizerPage(
-            contentPadding = contentPadding,
-            header = { heading(shown) },
-        )
-        return@AnimatedContent
-    }
-    if (shown == SettingsPage.Glass) {
-        GlassPage(
-            backdrop = backdrop,
-            contentPadding = contentPadding,
-            header = { heading(shown) },
-        )
-        return@AnimatedContent
-    }
-
-    // Every group folded when a page opens: the headings are the page's
-    // contents, and only the group asked for opens.
-    var openGroups by remember(shown) { mutableStateOf(emptySet<String>()) }
-    val toggleGroup: (String) -> Unit = { id -> openGroups = if (id in openGroups) openGroups - id else openGroups + id }
-
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            top = contentPadding.calculateTopPadding(),
-            bottom = contentPadding.calculateBottomPadding() + 24.dp,
-        ),
-    ) {
-        item("top") { heading(shown) }
-
-        if (shown == null) item("pages") {
-            // On YouTube Music, the Google account says who this is. The
-            // library's own answer outlived a sign-out: the card went on
-            // showing a name, a picture and a count of playlists for an account
-            // the app was no longer signed in to.
-            val youtubeName by app.youtubeAccount.accountName.collectAsStateWithLifecycle()
-            val activeBackend by app.preferences.backend.collectAsStateWithLifecycle()
-            val signedOutOfYouTube = activeBackend == BackendId.YOUTUBE_MUSIC && youtubeName == null
-            SettingsIndex(
-                name = ready?.displayName?.takeUnless { signedOutOfYouTube },
-                note = when {
-                    signedOutOfYouTube -> stringResource(R.string.youtube_sign_in)
-                    ready != null -> stringResource(R.string.playlist_count, ready.playlists.size)
-                    else -> stringResource(R.string.log_in_to_resume)
-                },
-                avatarUrl = ready?.avatarUrl?.takeUnless { signedOutOfYouTube },
-            ) { goTo(it) }
+    // Which blocks this source and this phone have at all; search only looks
+    // among these, so the empty state agrees with what is drawn.
+    val sdkRecoveryOffered = showSpotify &&
+        (MvSpotifyWebPlayback.needed(context) || MvWebSdkRecovery.isConfigured(context))
+    val soloistOffered = showSpotify && MvSoloistRuntime.isSupported(context)
+    val available: (String) -> Boolean = { id ->
+        when (id) {
+            "account", "webapi", "tutorial", "spotify-dj", "connected-device-label", "spicy-lyrics" -> showSpotify
+            // YouTube Music's own; the account section draws nothing on Spotify.
+            "youtube-account", "youtube-quality" -> !showSpotify
+            // Spotify's sign-out, so only while Spotify is the source.
+            "logout" -> showSpotify && ready != null
+            "web-sdk-recovery" -> sdkRecoveryOffered
+            "engine" -> soloistOffered
+            // The bitrate is librespot's; ExoPlayer takes what YouTube serves.
+            "quality" -> showSpotify && !sdkPlayback
+            "effect-quality", "crossfade", "downloads" -> !sdkPlayback
+            // Where the phone's own .lrc files are; needed from Android 13 (#158).
+            "lyrics-folder" -> android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
+            "links" -> android.os.Build.VERSION.SDK_INT >= 31
+            else -> true
         }
+    }
+    val found = matchSettings(SETTINGS_INDEX.filter { available(it.id) }, query) { context.getString(it) }
 
-        // Who this is, before anything that can be done about it. Nothing else
-        // on the page is worth as much room: the picture and the name answer
-        // the question people open this page with.
-        if (shown == SettingsPage.Account && showSpotify) item("account") {
+    // One block of the list, by its id in SETTINGS_INDEX.
+    val block: @Composable (String) -> Unit = { id ->
+    when (id) {
+        // Who this is, before anything that can be done about it.
+        "account" -> {
             Column(
                 Modifier
                     .fillMaxWidth()
@@ -395,29 +376,27 @@ fun SettingsScreen(
             }
         }
 
-        if (shown == SettingsPage.Account && showSpotify) groupHeading(Group.SETUP, open = "setup" in openGroups) { toggleGroup("setup") }
-
-        if (shown == SettingsPage.Account && showSpotify && "setup" in openGroups) groupItem("webapi", Group.SETUP) {
-            Section(stringResource(R.string.web_api)) {
-                if (webApi.connected) {
-                    InfoRow(stringResource(R.string.application), stringResource(R.string.connected))
-                    RowDivider()
-                    InfoRow(
-                        stringResource(R.string.client_id),
-                        webApi.clientId.take(8) + if (webApi.clientId.length > 8) "…" else "",
-                    )
-                    RowDivider()
-                    ActionRow(stringResource(R.string.disconnect), destructive = true, onClick = onDisconnectWebApi)
-                } else {
-                    // The full explanation, because with no application
-                    // connected search does not work at all and the reason is
-                    // not something anyone would guess.
-                    WebApiSetup(webApi, backdrop, onClientIdChange, onConnectWebApi)
-                }
-            }
+        "youtube-account" -> {
+            YouTubeAccountSection(
+                onSignIn = onYouTubeSignIn,
+                onChannelChange = onYouTubeChannelChange,
+            )
         }
 
-        if (shown == SettingsPage.Account && showSpotify && "setup" in openGroups) groupItem("tutorial", Group.SETUP) {
+        "logout" -> {
+                Section(null) {
+                    ActionRow(stringResource(R.string.log_out), destructive = true, onClick = onLogOut)
+                }
+        }
+
+        "webapi" -> Section(null) {
+            PageRow(
+                stringResource(R.string.web_api),
+                stringResource(if (webApi.connected) R.string.connected else R.string.not_connected),
+            ) { goTo(SettingsPage.WebApi) }
+        }
+
+        "tutorial" -> {
             Section(stringResource(R.string.guide)) {
                 ActionRow(stringResource(R.string.see_setup_again), destructive = false) {
                     onShowTutorial()
@@ -425,13 +404,7 @@ fun SettingsScreen(
             }
         }
 
-        if (shown == SettingsPage.Account && showSpotify && "setup" in openGroups) groupEnd(Group.SETUP)
-
-        if (shown == SettingsPage.Playback) groupHeading(Group.SOUND, open = "sound" in openGroups) { toggleGroup("sound") }
-
-        if (shown == SettingsPage.Playback && showSpotify &&
-            (MvSpotifyWebPlayback.needed(context) ||
-                MvWebSdkRecovery.isConfigured(context)) && "sound" in openGroups) groupItem("web-sdk-recovery", Group.SOUND) {
+        "web-sdk-recovery" -> {
             Section(stringResource(R.string.web_sdk_settings_title)) {
                 ActionRow(stringResource(R.string.web_sdk_settings_open), destructive = false) {
                     context.startActivity(android.content.Intent(
@@ -447,63 +420,36 @@ fun SettingsScreen(
             }
         }
 
-        if (shown == SettingsPage.Playback && "sound" in openGroups) groupItem("backend", Group.SOUND) {
+        "backend" -> {
             BackendSection()
         }
 
-        if (shown == SettingsPage.Playback && showSpotify && "sound" in openGroups &&
-            MvSoloistRuntime.isSupported(context)) groupItem("engine", Group.SOUND) {
+        "engine" -> {
             EngineSection()
         }
 
-        if (shown == SettingsPage.Account) item("youtube-account") {
-            YouTubeAccountSection(
-                onSignIn = onYouTubeSignIn,
-                onChannelChange = onYouTubeChannelChange,
-            )
+        "equalizer" -> Section(null) {
+            PageRow(
+                stringResource(R.string.equalizer),
+                stringResource(R.string.page_equalizer_summary),
+            ) { goTo(SettingsPage.Equalizer) }
         }
 
-        // What is kept on the phone. Under Playback rather than Account: it is
-        // about how the music arrives, and it belongs beside the bitrate it
-        // shares its wording with.
-        // First on the page: where the space went, before anything that can be
-        // done about it.
-        if (shown == SettingsPage.Downloads) item("storage-chart") {
-            StorageChart()
-        }
-
-        if (shown == SettingsPage.Downloads && !sdkPlayback) groupHeading(Group.DOWNLOADS, open = "downloads" in openGroups) { toggleGroup("downloads") }
-
-        // For YouTube Music too: its downloads wait for Wi-Fi like Spotify's,
-        // and with the section hidden there was no way to say they need not
-        // (#153). Only the parts that are Spotify's own stay with Spotify.
-        if (shown == SettingsPage.Downloads && !sdkPlayback && "downloads" in openGroups) groupItem("downloads", Group.DOWNLOADS) {
-            DownloadsSection(backdrop, spotify = showSpotify)
-        }
-
-        // The bitrate is librespot's; ExoPlayer takes what YouTube serves.
-        if (shown == SettingsPage.Playback && showSpotify && !sdkPlayback && "sound" in openGroups) groupItem("quality", Group.SOUND) {
+        "quality" -> {
             QualitySection()
         }
 
-        // Crossfade: mixed by the engine on Spotify, volume-shaped on YouTube Music.
-        // What happens when the app is swiped away, which is a playback
-        // decision rather than an app one; asked for in #27.
         // YouTube Music's own, in the place Spotify's quality has.
-        if (shown == SettingsPage.Playback && !showSpotify && "sound" in openGroups) groupItem("youtube-quality", Group.SOUND) {
+        "youtube-quality" -> {
             YouTubeQualitySection()
         }
 
         // The effects run on our own output, so this one holds for both backends.
-        if (shown == SettingsPage.Playback && !sdkPlayback && "sound" in openGroups) groupItem("effect-quality", Group.SOUND) {
+        "effect-quality" -> {
             EffectQualitySection()
         }
 
-        if (shown == SettingsPage.Playback && "sound" in openGroups) groupEnd(Group.SOUND)
-
-        if (shown == SettingsPage.Playback) groupHeading(Group.LISTENING, open = "listening" in openGroups) { toggleGroup("listening") }
-
-        if (shown == SettingsPage.Playback && "listening" in openGroups) groupItem("keep-playing", Group.LISTENING) {
+        "keep-playing" -> {
             val prefs = remember(context) {
                 (context.applicationContext as app.moonvault.MoonvaultApplication).preferences
             }
@@ -562,17 +508,17 @@ fun SettingsScreen(
             }
         }
 
-        if (shown == SettingsPage.Playback && !sdkPlayback && "listening" in openGroups) groupItem("crossfade", Group.LISTENING) {
+        "crossfade" -> {
             CrossfadeSection(backdrop)
         }
 
         // Autoplay: automatically append similar tracks when queue reaches the end.
-        if (shown == SettingsPage.Playback && "listening" in openGroups) groupItem("autoplay", Group.LISTENING) {
+        "autoplay" -> {
             AutoplaySection(backdrop)
         }
 
         // Spotify's DJ: offered and played with its voice, or kept out of sight.
-        if (shown == SettingsPage.Playback && showSpotify && "listening" in openGroups) groupItem("spotify-dj", Group.LISTENING) {
+        "spotify-dj" -> {
             val enabled by app.preferences.spotifyDj.collectAsStateWithLifecycle()
             Section(stringResource(R.string.spotify_dj)) {
                 DownloadSwitch(
@@ -585,7 +531,7 @@ fun SettingsScreen(
             }
         }
 
-        if (shown == SettingsPage.Playback && showSpotify && "listening" in openGroups) groupItem("connected-device-label", Group.LISTENING) {
+        "connected-device-label" -> {
             val enabled by app.preferences.showConnectedDevice.collectAsStateWithLifecycle()
             Section(stringResource(R.string.connected_device_label)) {
                 DownloadSwitch(
@@ -597,45 +543,38 @@ fun SettingsScreen(
             }
         }
 
-        if (shown == SettingsPage.Playback && "listening" in openGroups) groupEnd(Group.LISTENING)
-
-        if (shown == SettingsPage.Playback) groupHeading(Group.LYRICS, open = "lyrics" in openGroups) { toggleGroup("lyrics") }
-
-        if (shown == SettingsPage.Playback && "lyrics" in openGroups) groupItem("lyrics-source", Group.LYRICS) {
+        "lyrics-source" -> {
             PreferredLyricsSection(showSpotify)
         }
 
-        // Where the phone's own .lrc files are; needed from Android 13 (#158).
-        if (shown == SettingsPage.Playback && "lyrics" in openGroups &&
-            android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
-        ) groupItem("lyrics-folder", Group.LYRICS) {
-            LyricsFolderSection()
+        "lyrics-folder" -> {
+            LyricsFolderSection(onPick = { runCatching { pickLyricsFolder.launch(null) } })
         }
 
         // Spicy Lyrics is asked by Spotify track id, so only on that source.
-        if (shown == SettingsPage.Playback && showSpotify && "lyrics" in openGroups) groupItem("spicy-lyrics", Group.LYRICS) {
+        "spicy-lyrics" -> {
             SpicyLyricsSection()
         }
 
-        if (shown == SettingsPage.Playback && "lyrics" in openGroups) groupEnd(Group.LYRICS)
-
-        if (shown == SettingsPage.Playback) groupHeading(Group.COVERS, open = "covers" in openGroups) { toggleGroup("covers") }
-
         // On either source: Apple's moving covers play over YouTube Music too.
-        if (shown == SettingsPage.Playback && "covers" in openGroups) groupItem("canvas", Group.COVERS) {
+        "canvas" -> {
             CanvasSection(backdrop)
         }
 
-        if (shown == SettingsPage.Playback && "covers" in openGroups) groupEnd(Group.COVERS)
+        // Where the space went, before anything that can be done about it.
+        "storage-chart" -> {
+            StorageChart()
+        }
 
-        if (shown == SettingsPage.Downloads && !sdkPlayback && "downloads" in openGroups) groupEnd(Group.DOWNLOADS)
+        // For YouTube Music too: its downloads wait for Wi-Fi like Spotify's
+        // (#153). Only the parts that are Spotify's own stay with Spotify.
+        "downloads" -> {
+            DownloadsSection(backdrop, spotify = showSpotify)
+        }
 
-        if (shown == SettingsPage.Downloads) groupHeading(Group.CLEANUP, open = "cleanup" in openGroups) { toggleGroup("cleanup") }
-
-        // The cleaning up, under everything it cleans: the songs first, then
-        // the copies of playlists that make a long list open at once, then the
-        // app's own working files. Each says what goes and what stays.
-        if (shown == SettingsPage.Downloads && "cleanup" in openGroups) groupItem("cleanup", Group.CLEANUP) {
+        // The cleaning up, under everything it cleans. Each says what goes
+        // and what stays.
+        "cleanup" -> {
             var clearedLists by remember { mutableStateOf(false) }
             var clearedCache by remember { mutableStateOf(false) }
             Section(stringResource(R.string.storage_cleanup)) {
@@ -683,11 +622,7 @@ fun SettingsScreen(
             if (clearedLists && clearedCache) Spacer(Modifier.height(0.dp))
         }
 
-        if (shown == SettingsPage.Downloads && "cleanup" in openGroups) groupEnd(Group.CLEANUP)
-
-        if (shown == SettingsPage.App) groupHeading(Group.LANGUAGE, open = "language" in openGroups) { toggleGroup("language") }
-
-        if (shown == SettingsPage.App && "language" in openGroups) groupItem("language", Group.LANGUAGE) {
+        "language" -> {
             Section(stringResource(R.string.language)) {
                 AppLanguages.forEachIndexed { index, (tag, name) ->
                     if (index > 0) RowDivider()
@@ -699,12 +634,8 @@ fun SettingsScreen(
             }
         }
 
-        if (shown == SettingsPage.App && "language" in openGroups) groupEnd(Group.LANGUAGE)
-
-        if (shown == SettingsPage.App) groupHeading(Group.APPEARANCE, open = "appearance" in openGroups) { toggleGroup("appearance") }
-
         // Light or dark, whatever the phone is.
-        if (shown == SettingsPage.App && "appearance" in openGroups) groupItem("theme", Group.APPEARANCE) {
+        "theme" -> {
             val store = remember(context) {
                 (context.applicationContext as app.moonvault.MoonvaultApplication).preferences
             }
@@ -753,9 +684,15 @@ fun SettingsScreen(
             }
         }
 
-        // What the bar does, which is behaviour rather than material: the glass
-        // page says what it is made of, this says how it acts.
-        if (shown == SettingsPage.App && "appearance" in openGroups) groupItem("bar", Group.APPEARANCE) {
+        "glass" -> Section(null) {
+            PageRow(
+                stringResource(R.string.glass),
+                stringResource(R.string.page_glass_summary),
+            ) { goTo(SettingsPage.Glass) }
+        }
+
+        // What the bar does, which is behaviour rather than material.
+        "bar" -> {
             val glass = remember(context) {
                 (context.applicationContext as app.moonvault.MoonvaultApplication).glass
             }
@@ -771,11 +708,8 @@ fun SettingsScreen(
             }
         }
 
-        // The two settings that are Android's rather than the app's, and the
-        // two people are sent to when the music stops in the background or a
-        // notification never arrives.
         // The face the app is set in: its own, or the phone's.
-        if (shown == SettingsPage.App && "appearance" in openGroups) groupItem("font", Group.APPEARANCE) {
+        "font" -> {
             val store = remember(context) {
                 (context.applicationContext as app.moonvault.MoonvaultApplication).preferences
             }
@@ -800,11 +734,8 @@ fun SettingsScreen(
             }
         }
 
-        if (shown == SettingsPage.App && "appearance" in openGroups) groupEnd(Group.APPEARANCE)
-
-        if (shown == SettingsPage.App) groupHeading(Group.SYSTEM, open = "system" in openGroups) { toggleGroup("system") }
-
-        if (shown == SettingsPage.App && "system" in openGroups) groupItem("system", Group.SYSTEM) {
+        // The settings that are Android's rather than the app's.
+        "system" -> {
             Section(stringResource(R.string.page_app_system)) {
                 ActionRow(
                     stringResource(R.string.app_system_settings),
@@ -835,8 +766,7 @@ fun SettingsScreen(
             }
         }
 
-        if (shown == SettingsPage.App && android.os.Build.VERSION.SDK_INT >= 31 && "system" in openGroups) {
-            groupItem("links", Group.SYSTEM) {
+        "links" -> {
                 Section(stringResource(R.string.spotify_links)) {
                     Text(
                         stringResource(R.string.spotify_links_note),
@@ -864,12 +794,9 @@ fun SettingsScreen(
                         }
                     }
                 }
-            }
         }
 
-        if (shown == SettingsPage.App && "system" in openGroups) groupEnd(Group.SYSTEM)
-
-        if (shown == SettingsPage.About) item("author") {
+        "author" -> {
             Section(stringResource(R.string.developed_by)) {
                 val uriHandler = LocalUriHandler.current
                 Row(
@@ -938,10 +865,9 @@ fun SettingsScreen(
             }
         }
 
-        // The version as a statement rather than a row: it is the one fact
-        // anybody is asked for when they report something, and it was the
-        // smallest line on the page.
-        if (shown == SettingsPage.About) item("version") {
+        // The version as a statement rather than a row, and the update under
+        // it, never folded away.
+        "update" -> {
             Column(
                 Modifier
                     .fillMaxWidth()
@@ -960,19 +886,12 @@ fun SettingsScreen(
                     color = InkDim,
                 )
             }
-        }
-
-        // The update on its own, never folded away: the one thing on this
-        // page somebody comes to do rather than to read.
-        if (shown == SettingsPage.About) item("update") {
             Section(null) {
                 UpdateRow(askToInstall)
             }
         }
 
-        if (shown == SettingsPage.About) groupHeading(Group.ABOUT, open = "about" in openGroups) { toggleGroup("about") }
-
-        if (shown == SettingsPage.About && "about" in openGroups) groupItem("about", Group.ABOUT) {
+        "about" -> {
             Section(stringResource(R.string.about)) {
                 Licences()
                 RowDivider()
@@ -980,14 +899,8 @@ fun SettingsScreen(
             }
         }
 
-        if (shown == SettingsPage.About && "about" in openGroups) groupEnd(Group.ABOUT)
-
-        if (shown == SettingsPage.About) groupHeading(Group.HELP, open = "help" in openGroups) { toggleGroup("help") }
-
-        // Where to take a question, an idea or a problem. Beside the report,
-        // which is what a problem needs attached: the whole errand on one
-        // page, rather than a web address to go and find.
-        if (shown == SettingsPage.About && "help" in openGroups) groupItem("help", Group.HELP) {
+        // Where to take a question, an idea or a problem.
+        "help" -> {
             val uriHandler = LocalUriHandler.current
             Section(stringResource(R.string.help_feedback)) {
                 ActionRow(
@@ -1010,13 +923,8 @@ fun SettingsScreen(
             }
         }
 
-        if (shown == SettingsPage.About && "help" in openGroups) groupEnd(Group.HELP)
-
-        if (shown == SettingsPage.About) groupHeading(Group.PERMISSIONS, open = "permissions" in openGroups) { toggleGroup("permissions") }
-
-        // Last, and tighter than the rest: a reference for whoever wants to
-        // check what the app asks Spotify for, not something anyone does.
-        if (shown == SettingsPage.About && "permissions" in openGroups) groupItem("permissions", Group.PERMISSIONS) {
+        // A reference for whoever wants to check what the app asks Spotify for.
+        "permissions" -> {
             Section(stringResource(R.string.permissions_asked)) {
                 Text(
                     stringResource(R.string.permissions_note),
@@ -1049,150 +957,116 @@ fun SettingsScreen(
             }
         }
 
-        if (shown == SettingsPage.About && "permissions" in openGroups) groupEnd(Group.PERMISSIONS)
+        else -> {}
+    }
+    }
 
-        // Spotify's sign-out, so only while Spotify is the source. On YouTube
-        // Music the account section above has its own, and this one signed the
-        // app out of Spotify from a page about a Google account.
-        if (ready != null && shown == SettingsPage.Account && showSpotify) {
-            item("logout") {
-                Section(null) {
-                    ActionRow(stringResource(R.string.log_out), destructive = true, onClick = onLogOut)
+    val listPadding = PaddingValues(
+        top = contentPadding.calculateTopPadding(),
+        bottom = contentPadding.calculateBottomPadding() + 24.dp,
+    )
+
+    // A page arrives from the side it was opened from and leaves the other way.
+    androidx.compose.runtime.CompositionLocalProvider(LocalSettingsAccent provides accent) {
+    AnimatedContent(
+        targetState = open,
+        transitionSpec = {
+            val forward = initialState == null
+            val width = { w: Int -> if (forward) w / 4 else -w / 4 }
+            val back = { w: Int -> if (forward) -w / 4 else w / 4 }
+            (
+                slideInHorizontally(tween(PAGE_TRAVEL_MS), width) +
+                    fadeIn(tween(PAGE_TRAVEL_MS))
+                ) togetherWith (
+                slideOutHorizontally(tween(PAGE_TRAVEL_MS), back) +
+                    fadeOut(tween(PAGE_FADE_MS))
+                )
+        },
+        label = "settingsPage",
+    ) { shown ->
+    when (shown) {
+        SettingsPage.Equalizer -> EqualizerPage(
+            contentPadding = contentPadding,
+            header = { heading(shown) },
+        )
+
+        SettingsPage.Glass -> GlassPage(
+            backdrop = backdrop,
+            contentPadding = contentPadding,
+            header = { heading(shown) },
+        )
+
+        SettingsPage.WebApi -> LazyColumn(Modifier.fillMaxSize(), contentPadding = listPadding) {
+            item("top") { heading(shown) }
+            item("webapi") {
+            Section(stringResource(R.string.web_api)) {
+                if (webApi.connected) {
+                    InfoRow(stringResource(R.string.application), stringResource(R.string.connected))
+                    RowDivider()
+                    InfoRow(
+                        stringResource(R.string.client_id),
+                        webApi.clientId.take(8) + if (webApi.clientId.length > 8) "…" else "",
+                    )
+                    RowDivider()
+                    ActionRow(stringResource(R.string.disconnect), destructive = true, onClick = onDisconnectWebApi)
+                } else {
+                    // The full explanation, because with no application
+                    // connected search does not work at all and the reason is
+                    // not something anyone would guess.
+                    WebApiSetup(webApi, backdrop, onClientIdChange, onConnectWebApi)
                 }
+            }
+            }
+        }
+
+        null -> LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = listPadding) {
+            item("top") { heading(null) }
+
+            item("search") {
+                GlassSearchBar(
+                    query = query,
+                    onQuery = { query = it },
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                    placeholder = stringResource(R.string.settings_search_hint),
+                    backdrop = backdrop,
+                    onSubmit = { keyboard?.hide() },
+                )
+            }
+
+            // Said, with the query, and the way back to the whole list.
+            if (query.isNotBlank() && found.isEmpty()) item("search-empty") {
+                Section(null) {
+                    Text(
+                        stringResource(R.string.settings_search_empty, query.trim()),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = InkDim,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp, vertical = 14.dp)
+                            .semantics { liveRegion = LiveRegionMode.Polite },
+                    )
+                    RowDivider()
+                    ActionRow(stringResource(R.string.settings_search_clear), destructive = false) { query = "" }
+                }
+            }
+
+            SettingsGroup.entries.forEach { group ->
+                val entries = found.filter { it.group == group }
+                if (entries.isEmpty()) return@forEach
+                groupHeading(group)
+                entries.forEach { entry -> groupItem(entry.id, group) { block(entry.id) } }
+                groupEnd(group)
             }
         }
     }
     }
     }
-}
-
-/**
- * The pages the settings are divided into.
- *
- * Four, and no deeper: a page that holds one row is a row that was hidden, and
- * a tree that goes further than this is somewhere to lose things in.
- *
- * The order is how often they are wanted. The account is what a first launch
- * comes here for, playback is what a settled install comes back for, and the
- * rest is read once.
- */
-private enum class SettingsPage(
-    @StringRes val title: Int,
-    /** One line under the name, so a page can be chosen without opening it. */
-    @StringRes val summary: Int,
-    /** The mark on its tile; see SettingsIndex. */
-    val icon: ImageVector,
-) {
-    Account(R.string.account, R.string.page_account_summary, PhosphorIcons.Regular.UserCircle),
-    Playback(R.string.page_playback, R.string.page_playback_summary, PhosphorIcons.Regular.Waveform),
-    // Its own page rather than a section of the app's: the preview has to stay
-    // on screen while the numbers under it move, and a section inside a list
-    // scrolls away. See GlassPage.
-    // Its own page for the glass's reason: the curve is moved by hand, and
-    // stays on screen while it is.
-    Equalizer(R.string.equalizer, R.string.page_equalizer_summary, PhosphorIcons.Regular.Equalizer),
-    Glass(R.string.glass, R.string.page_glass_summary, PhosphorIcons.Regular.Drop),
-    Downloads(R.string.page_downloads, R.string.page_downloads_summary, PhosphorIcons.Regular.DownloadSimple),
-    App(R.string.page_app, R.string.page_app_summary, PhosphorIcons.Regular.SlidersHorizontal),
-    About(R.string.about, R.string.page_about_summary, PhosphorIcons.Regular.Info),
 }
 
 /** How long a page takes to arrive, and how quickly the last one goes. */
 private const val PAGE_TRAVEL_MS = 260
 private const val PAGE_FADE_MS = 140
 
-/**
- * The way in: whose account this is, and the four places to go.
- *
- * Five identical rows was a list of words where the first thing anyone wants
- * to see is whether they are signed in and as whom. The account is a card with
- * their picture on it, and the rest are tiles two abreast — a shape you can
- * aim at, and one that says these are four places rather than four settings.
- */
-@Composable
-private fun SettingsIndex(
-    name: String?,
-    note: String,
-    avatarUrl: String?,
-    onOpen: (SettingsPage) -> Unit,
-) {
-    Column(
-        Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .background(Ink.copy(alpha = 0.07f))
-                .clickable { onOpen(SettingsPage.Account) }
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            app.moonvault.ui.components.ProfilePicture(
-                url = avatarUrl,
-                name = name,
-                size = 56.dp,
-                modifier = Modifier
-                    .size(56.dp)
-                    .softShadow(CircleShape, elevation = 10.dp),
-                decodeSize = 56.dp,
-            )
-            Column(
-                Modifier
-                    .weight(1f)
-                    .padding(start = 14.dp),
-            ) {
-                Text(
-                    name ?: stringResource(R.string.not_connected),
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    note,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = InkDim,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Icon(
-                PhosphorIcons.Regular.CaretRight,
-                contentDescription = null,
-                tint = InkDim,
-                modifier = Modifier.size(18.dp),
-            )
-        }
-
-        // Six places, and a seventh tile that is not a place: it leaves the app
-        // for the Ko-fi page. Last, and in the same shape as the rest, because
-        // it is an offer rather than a setting — asking louder than that would
-        // be asking on a screen somebody opened to change something.
-        val uriHandler = LocalUriHandler.current
-        val pages = SettingsPage.entries.filter { it != SettingsPage.Account }
-        val rows = pages.chunked(2)
-        rows.forEachIndexed { index, pair ->
-            val last = index == rows.lastIndex
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                pair.forEach { page -> PageTile(page, Modifier.weight(1f)) { onOpen(page) } }
-                // The support tile fills the gap a row of one would leave, and
-                // makes its own row when the pages divide evenly.
-                if (last && pair.size == 1) {
-                    SupportTile(Modifier.weight(1f)) { uriHandler.openUri(KOFI_URL) }
-                }
-            }
-            if (last && pair.size == 2) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SupportTile(Modifier.weight(1f)) { uriHandler.openUri(KOFI_URL) }
-                    Spacer(Modifier.weight(1f))
-                }
-            }
-        }
-
-        IndexFooter()
-    }
-}
 
 /**
  * What Square is keeping, as a bar and a legend.
@@ -1281,85 +1155,13 @@ private fun StorageChart() {
     }
 }
 
-/** What the page ends on: which build this is. */
-@Composable
-private fun IndexFooter() {
-    Text(
-        "Moonvault ${BuildConfig.VERSION_NAME}",
-        style = MaterialTheme.typography.bodySmall,
-        color = InkDim,
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-    )
-}
-
-/** One place to go, as a tile: its mark, its name, and what is in it. */
-@Composable
-private fun PageTile(page: SettingsPage, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Tile(
-        icon = page.icon,
-        title = stringResource(page.title),
-        summary = stringResource(page.summary),
-        modifier = modifier,
-        onClick = onClick,
-    )
-}
-
-/** Not a page: the one tile that leaves the app. */
-@Composable
-private fun SupportTile(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Tile(
-        icon = PhosphorIcons.Regular.HandHeart,
-        title = stringResource(R.string.support_development),
-        summary = KOFI_URL.removePrefix("https://"),
-        modifier = modifier,
-        onClick = onClick,
-    )
-}
-
-/** The shape every tile on the index has. */
-@Composable
-private fun Tile(
-    icon: ImageVector,
-    title: String,
-    summary: String,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    Column(
-        modifier
-            .heightIn(min = 132.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(Ink.copy(alpha = 0.07f))
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        RowIcon(icon)
-        Spacer(Modifier.weight(1f))
-        Text(
-            title,
-            style = MaterialTheme.typography.titleMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            summary,
-            style = MaterialTheme.typography.bodySmall,
-            color = InkDim,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
 /** A row that opens a page. */
 @Composable
 private fun PageRow(title: String, summary: String, onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = 18.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1924,31 +1726,12 @@ private fun PreferredLyricsSection(showSpotify: Boolean) {
  * are not audio; before that they are read without asking. See LocalLyrics.
  */
 @Composable
-private fun LyricsFolderSection() {
+private fun LyricsFolderSection(onPick: () -> Unit) {
     val context = LocalContext.current
     val store = remember(context) {
         (context.applicationContext as app.moonvault.MoonvaultApplication).preferences
     }
     val folder by store.lyricsFolder.collectAsStateWithLifecycle()
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { tree ->
-        if (tree == null) return@rememberLauncherForActivityResult
-        runCatching {
-            context.contentResolver.takePersistableUriPermission(
-                tree,
-                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION,
-            )
-        }
-        // Let go of the folder this replaces, so the grants do not pile up.
-        folder.takeIf { it.isNotBlank() && it != tree.toString() }?.let { old ->
-            runCatching {
-                context.contentResolver.releasePersistableUriPermission(
-                    android.net.Uri.parse(old),
-                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION,
-                )
-            }
-        }
-        store.setLyricsFolder(tree.toString())
-    }
     // "primary:Music" reads as "Music"; the root of a card as its name.
     val name = remember(folder) {
         folder.takeIf { it.isNotBlank() }?.let { uri ->
@@ -1963,7 +1746,7 @@ private fun LyricsFolderSection() {
             name ?: stringResource(R.string.lyrics_folder_choose),
             destructive = false,
             icon = PhosphorIcons.Regular.FolderOpen,
-        ) { runCatching { pick.launch(null) } }
+        ) { onPick() }
         if (name != null) {
             RowDivider()
             ActionRow(stringResource(R.string.lyrics_folder_forget), destructive = true) {
@@ -2356,99 +2139,62 @@ private fun Section(title: String?, content: @Composable () -> Unit) {
     }
 }
 
-/**
- * The groups a settings page is folded into, each under a heading that opens
- * it. A page used to be one long run of sections with nothing to say which of
- * them belonged together; now it reads as a short list of what is on it.
- */
-private enum class Group(@StringRes val title: Int, @StringRes val summary: Int, val icon: ImageVector) {
-    SOUND(R.string.settings_group_sound, R.string.settings_group_sound_summary, PhosphorIcons.Regular.Waveform),
-    LISTENING(R.string.settings_group_listening, R.string.settings_group_listening_summary, PhosphorIcons.Regular.Playlist),
-    LYRICS(R.string.settings_group_lyrics, R.string.settings_group_lyrics_summary, PhosphorIcons.Regular.MicrophoneStage),
-    COVERS(R.string.settings_group_covers, R.string.settings_group_covers_summary, PhosphorIcons.Regular.FilmStrip),
-    SETUP(R.string.settings_group_setup, R.string.settings_group_setup_summary, PhosphorIcons.Regular.Key),
-    DOWNLOADS(R.string.downloads, R.string.settings_group_downloads_summary, PhosphorIcons.Regular.DownloadSimple),
-    CLEANUP(R.string.storage_cleanup, R.string.settings_group_cleanup_summary, PhosphorIcons.Regular.Broom),
-    LANGUAGE(R.string.language, R.string.settings_group_language_summary, PhosphorIcons.Regular.Translate),
-    APPEARANCE(R.string.settings_group_appearance, R.string.settings_group_appearance_summary, PhosphorIcons.Regular.Palette),
-    SYSTEM(R.string.page_app_system, R.string.settings_group_system_summary, PhosphorIcons.Regular.GearSix),
-    ABOUT(R.string.about, R.string.settings_group_about_summary, PhosphorIcons.Regular.Info),
-    HELP(R.string.help_feedback, R.string.settings_group_help_summary, PhosphorIcons.Regular.Lifebuoy),
-    PERMISSIONS(R.string.permissions_asked, R.string.settings_group_permissions_summary, PhosphorIcons.Regular.ShieldCheck),
+/** A group's mark; the groups themselves are SettingsGroup. */
+private fun groupIcon(group: SettingsGroup): ImageVector = when (group) {
+    SettingsGroup.ACCOUNT -> PhosphorIcons.Regular.UserCircle
+    SettingsGroup.SETUP -> PhosphorIcons.Regular.Key
+    SettingsGroup.SOUND -> PhosphorIcons.Regular.Waveform
+    SettingsGroup.LISTENING -> PhosphorIcons.Regular.Playlist
+    SettingsGroup.LYRICS -> PhosphorIcons.Regular.MicrophoneStage
+    SettingsGroup.COVERS -> PhosphorIcons.Regular.FilmStrip
+    SettingsGroup.DOWNLOADS -> PhosphorIcons.Regular.DownloadSimple
+    SettingsGroup.CLEANUP -> PhosphorIcons.Regular.Broom
+    SettingsGroup.LANGUAGE -> PhosphorIcons.Regular.Translate
+    SettingsGroup.APPEARANCE -> PhosphorIcons.Regular.Palette
+    SettingsGroup.SYSTEM -> PhosphorIcons.Regular.GearSix
+    SettingsGroup.ABOUT -> PhosphorIcons.Regular.Info
+    SettingsGroup.HELP -> PhosphorIcons.Regular.Lifebuoy
+    SettingsGroup.PERMISSIONS -> PhosphorIcons.Regular.ShieldCheck
 }
 
 /** The group a section is drawn in, whose heading it then does not repeat; see Section. */
 private val LocalGroupTitle = androidx.compose.runtime.compositionLocalOf<String?> { null }
 
 /**
- * A group's heading, and the panel its sections sit in when it is open.
+ * A group's heading, at the top of the panel its sections sit in.
  *
  * The panel is wider than the sections' own cards and quieter than them, so
  * a group reads as the thing that holds settings and a setting as the thing
- * inside: folded, the panel is only its heading; open, the heading is its
- * top, the sections run down it on the same ground, and [groupEnd] closes it.
- * The heading says what is inside, so a folded group still says what opening
- * it will show.
+ * inside: the heading is its top, the sections run down it on the same
+ * ground, and [groupEnd] closes it.
  */
-private fun LazyListScope.groupHeading(group: Group, open: Boolean, onToggle: () -> Unit) =
+private fun LazyListScope.groupHeading(group: SettingsGroup) =
     item("group-${group.name}") {
-        val turn by androidx.compose.animation.core.animateFloatAsState(
-            if (open) 180f else 0f,
-            tween(GROUP_MOTION_MS),
-            label = "groupCaret",
-        )
-        val lower by androidx.compose.animation.core.animateDpAsState(
-            if (open) 0.dp else GROUP_CORNER,
-            tween(GROUP_MOTION_MS),
-            label = "groupCorner",
-        )
-        val gap by androidx.compose.animation.core.animateDpAsState(
-            if (open) 0.dp else 6.dp,
-            tween(GROUP_MOTION_MS),
-            label = "groupGap",
-        )
         Row(
             Modifier
                 .animateItem(fadeInSpec = tween(GROUP_MOTION_MS), fadeOutSpec = tween(150))
                 .fillMaxWidth()
-                .padding(start = GROUP_MARGIN, end = GROUP_MARGIN, top = 6.dp, bottom = gap)
-                .clip(RoundedCornerShape(GROUP_CORNER, GROUP_CORNER, lower, lower))
+                .padding(start = GROUP_MARGIN, end = GROUP_MARGIN, top = 6.dp)
+                .clip(RoundedCornerShape(GROUP_CORNER, GROUP_CORNER, 0.dp, 0.dp))
                 .background(groupPanel())
-                .clickable(onClick = onToggle)
-                .padding(start = 18.dp, end = 20.dp, top = 16.dp, bottom = 16.dp),
+                .padding(start = 18.dp, end = 20.dp, top = 16.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            GroupMark(group.icon)
-            Column(Modifier.weight(1f)) {
-                Text(
-                    stringResource(group.title),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    stringResource(group.summary),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = InkDim,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Icon(
-                PhosphorIcons.Regular.CaretDown,
-                contentDescription = null,
-                tint = InkDim,
-                modifier = Modifier
-                    .size(18.dp)
-                    .graphicsLayer { rotationZ = turn },
+            GroupMark(groupIcon(group))
+            Text(
+                stringResource(group.title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).semantics { heading() },
             )
         }
     }
 
-/** The foot of an open group's panel, under its last section. */
-private fun LazyListScope.groupEnd(group: Group) =
+/** The foot of a group's panel, under its last section. */
+private fun LazyListScope.groupEnd(group: SettingsGroup) =
     item("group-end-${group.name}") {
         Box(
             Modifier
@@ -2488,8 +2234,8 @@ private val GROUP_MARGIN = 10.dp
 private val GROUP_CORNER = 28.dp
 private const val GROUP_MOTION_MS = 220
 
-/** One of a group's sections, fading in as the group opens and out as it closes. */
-private fun LazyListScope.groupItem(key: String, group: Group, content: @Composable () -> Unit) =
+/** One of a group's sections, fading in and out as a search finds it or not. */
+private fun LazyListScope.groupItem(key: String, group: SettingsGroup, content: @Composable () -> Unit) =
     item(key) {
         val title = stringResource(group.title)
         // A column, not a box: some items are more than one section (the
@@ -2504,6 +2250,7 @@ private fun LazyListScope.groupItem(key: String, group: Group, content: @Composa
             androidx.compose.runtime.CompositionLocalProvider(LocalGroupTitle provides title) { content() }
         }
     }
+
 
 @Composable
 private fun InfoRow(label: String, value: String, icon: ImageVector? = null) {
