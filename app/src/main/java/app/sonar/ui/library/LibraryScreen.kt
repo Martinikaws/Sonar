@@ -1,6 +1,7 @@
 package app.sonar.ui.library
 
 import app.sonar.ui.components.glassMenuTrigger
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.annotation.StringRes
@@ -189,7 +190,10 @@ fun LibraryScreen(
         // The same page the home tab shows signed out, mark and all: the two
         // are one state reached from two tabs, and a plain title here made
         // them read as two different apps.
-        MainViewModel.UiState.LoggedOut -> Centered {
+        MainViewModel.UiState.LoggedOut -> Centered(
+            Modifier.verticalScroll(rememberScrollState())
+                .padding(bottom = contentPadding.calculateBottomPadding()),
+        ) {
             SonarStackedLogo(height = 104.dp)
             Text(
                 stringResource(R.string.unofficial_client),
@@ -900,9 +904,10 @@ private fun GlassAction(label: String, backdrop: Backdrop, onClick: () -> Unit) 
 }
 
 @Composable
-private fun Centered(content: @Composable () -> Unit) {
+private fun Centered(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
+            modifier = modifier,
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) { content() }

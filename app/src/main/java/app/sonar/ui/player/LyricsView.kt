@@ -86,6 +86,7 @@ import app.sonar.data.LyricLine
 import app.sonar.data.LyricWord
 import app.sonar.data.Lyrics
 import app.sonar.ui.look.Look
+import app.sonar.ui.look.LookNextLineAlpha
 import app.sonar.ui.look.SweptLyricLine
 import kotlin.math.abs
 import kotlin.math.cos
@@ -151,6 +152,7 @@ fun LyricsView(
     showTranslation: Boolean = false,
     look: Look = Look.CLASSIC,
     reducedMotion: Boolean = false,
+    stageVisible: Boolean = true,
     onSeek: (Long) -> Unit,
 ) {
     val listState = remember(lyrics) { LazyListState() }
@@ -217,9 +219,17 @@ fun LyricsView(
             val distance = if (activeLine < 0) 0 else abs(index - activeLine)
 
             if (line.text.isBlank() || (line.text.trim() == "♪")) {
+                val animate = if (isActive && !reducedMotion && stageVisible && isPlaying) {
+                    val visible by remember(listState, index) {
+                        derivedStateOf {
+                            listState.layoutInfo.visibleItemsInfo.any { it.index == index }
+                        }
+                    }
+                    visible
+                } else false
                 InterludeDotsItem(
                     isActive = isActive,
-                    reducedMotion = reducedMotion,
+                    animate = animate,
                     onClick = { line.startTimeMs?.let { onSeek(it) } },
                 )
             } else {
@@ -228,6 +238,7 @@ fun LyricsView(
                     translation = line.translation.takeIf { showTranslation },
                     positionMs = position,
                     distance = distance,
+                    isNext = index == activeLine + 1 && activeLine >= 0,
                     isActive = isActive,
                     unsynced = !lyrics.synced,
                     look = look,
@@ -285,6 +296,7 @@ private fun LyricLineItem(
     translation: String?,
     positionMs: Long,
     distance: Int,
+    isNext: Boolean,
     isActive: Boolean,
     unsynced: Boolean,
     look: Look,
@@ -293,9 +305,14 @@ private fun LyricLineItem(
 ) {
     val visualSettings = LocalLyricVisualSettings.current
 
-    val targetAlpha = if (isActive) 1.0f else (0.62f - (distance * 0.12f)).coerceAtLeast(0.22f)
+    val nextLookLine = look.usesSweep && isNext
+    val targetAlpha = when {
+        isActive -> 1f
+        nextLookLine -> LookNextLineAlpha
+        else -> (0.62f - (distance * 0.12f)).coerceAtLeast(0.22f)
+    }
     val targetScale = if (isActive) 1.025f else 0.92f
-    val targetBlur = if (isActive || unsynced) 0f else visualSettings.inactiveBlur
+    val targetBlur = if (isActive || unsynced || nextLookLine) 0f else visualSettings.inactiveBlur
 
     val animatedAlpha by animateFloatAsState(
         targetValue = if (unsynced) 1f else targetAlpha,
@@ -333,13 +350,13 @@ private fun LyricLineItem(
             .graphicsLayer {
                 scaleX = animatedScale
                 scaleY = animatedScale
-                alpha = animatedAlpha
+                alpha = if (nextLookLine) maxOf(animatedAlpha, LookNextLineAlpha) else animatedAlpha
                 transformOrigin = TransformOrigin(0f, 0.5f)
                 clip = false
                 compositingStrategy = CompositingStrategy.ModulateAlpha
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    renderEffect = if (animatedBlur > 0.4f) {
+                    renderEffect = if (!nextLookLine && animatedBlur > 0.4f) {
                         RenderEffect
                             .createBlurEffect(animatedBlur, animatedBlur, Shader.TileMode.DECAL)
                             .asComposeRenderEffect()
@@ -376,7 +393,7 @@ private fun LyricLineItem(
                 Text(
                     text = line.text,
                     modifier = Modifier.fillMaxWidth(),
-                    color = if (isActive) Color.White else Color.White.copy(alpha = 0.35f),
+                    color = if (isActive || nextLookLine) Color.White else Color.White.copy(alpha = 0.35f),
                     textAlign = TextAlign.Start,
                     softWrap = true,
                     style = if (isActive) {
@@ -1022,30 +1039,15 @@ fun KaraokeLetterItem(
  * Three-dot interlude item for instrumental gaps during the song.
  */
 @Composable
-fun InterludeDotsItem(
+private fun InterludeDotsItem(
     isActive: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    reducedMotion: Boolean = false,
+    animate: Boolean,
 ) {
-    val springSpec = spring<Float>(
-        dampingRatio = Spring.DampingRatioLowBouncy,
-        stiffness = Spring.StiffnessLow,
-    )
-
-    val scale by animateFloatAsState(
-        targetValue = if (isActive) 1f else 0.90f,
-        animationSpec = springSpec,
-        label = "interludeScale",
-    )
-
-    val alpha by animateFloatAsState(
-        targetValue = if (isActive) 1f else 0.35f,
-        animationSpec = springSpec,
-        label = "interludeAlpha",
-    )
-
-    val pulseAlpha = if (reducedMotion) 1f else {
+    val scale = if (isActive) 1f else 0.90f
+    val alpha = if (isActive) 1f else 0.35f
+    val pulseAlpha = if (!animate) 1f else {
         val infiniteTransition = rememberInfiniteTransition(label = "interludePulse")
         infiniteTransition.animateFloat(
             initialValue = 0.4f,
@@ -1075,38 +1077,33 @@ fun InterludeDotsItem(
                 this.alpha = alpha
             },
         ) {
-            PulsingGlowDot(
-                isActive = isActive,
-                activeColor = Color.White,
-                pulseAlpha = pulseAlpha,
-            )
-            PulsingGlowDot(
-                isActive = isActive,
-                activeColor = Color.White,
-                pulseAlpha = pulseAlpha,
-            )
-            PulsingGlowDot(
-                isActive = isActive,
-                activeColor = Color.White,
-                pulseAlpha = pulseAlpha,
-            )
+            repeat(3) {
+                PulsingGlowDot(
+                    isActive = isActive,
+                    activeColor = Color.White,
+                    pulseAlpha = pulseAlpha,
+                    animate = animate,
+                )
+            }
         }
     }
 }
 
 @Composable
-fun PulsingGlowDot(
+private fun PulsingGlowDot(
     isActive: Boolean,
     activeColor: Color,
     pulseAlpha: Float,
+    animate: Boolean,
 ) {
     val visualSettings = LocalLyricVisualSettings.current
 
-    val alpha by animateFloatAsState(
-        targetValue = if (isActive) pulseAlpha else 0.35f,
-        animationSpec = tween(600),
-        label = "dotAlpha",
-    )
+    val targetAlpha = if (isActive) pulseAlpha else 0.35f
+    val alpha = if (animate) {
+        animateFloatAsState(targetAlpha, tween(600), label = "dotAlpha").value
+    } else {
+        targetAlpha
+    }
 
     Box(
         modifier = Modifier.size(13.dp),

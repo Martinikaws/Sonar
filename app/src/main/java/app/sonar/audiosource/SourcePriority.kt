@@ -10,6 +10,8 @@ import org.json.JSONObject
 
 enum class AudioSource { FLAC, SPOTIFY, YOUTUBE_MUSIC }
 
+internal enum class TrackSourceAction { WAIT, PLAY_SPOTIFY, LOOK_UP_YOUTUBE, RECOVER_WITH_WEB, EXHAUSTED }
+
 /** Spotify first, then Soloist's lossless stream, then a YouTube Music match. */
 val DEFAULT_SOURCE_ORDER = listOf(AudioSource.SPOTIFY, AudioSource.FLAC, AudioSource.YOUTUBE_MUSIC)
 
@@ -50,6 +52,23 @@ data class SourcePriority(
         if (spotifyPending) return null
         return fallbacks(tried, flacReady = false).firstOrNull {
             it != AudioSource.YOUTUBE_MUSIC || youtubeAllowed
+        }
+    }
+
+    internal fun trackSourceAction(
+        tried: Set<AudioSource>,
+        spotifyUnavailable: Boolean,
+        lookupPending: Boolean,
+        recoverWithWeb: Boolean,
+        youtubeAllowed: Boolean = true,
+    ): TrackSourceAction {
+        val spotifyEnabled = AudioSource.SPOTIFY in effective()
+        val spotifyPending = spotifyEnabled && AudioSource.SPOTIFY in tried && !spotifyUnavailable
+        if (lookupPending || spotifyPending) return TrackSourceAction.WAIT
+        return when (nextTrackSource(tried, youtubeAllowed)) {
+            AudioSource.SPOTIFY -> TrackSourceAction.PLAY_SPOTIFY
+            AudioSource.YOUTUBE_MUSIC -> TrackSourceAction.LOOK_UP_YOUTUBE
+            else -> if (spotifyEnabled && recoverWithWeb) TrackSourceAction.RECOVER_WITH_WEB else TrackSourceAction.EXHAUSTED
         }
     }
 

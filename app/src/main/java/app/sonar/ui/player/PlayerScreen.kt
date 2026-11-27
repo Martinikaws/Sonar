@@ -15,7 +15,6 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -1359,34 +1358,35 @@ fun PlayerScreen(
                             // laid across the top where it does not, both of
                             // them ending in the colour the page is made of.
 
+                        val targetStage = when (panel) {
+                            PlayerPanel.LYRICS -> Stage.LYRICS
+                            PlayerPanel.EFFECTS -> Stage.EFFECTS
+                            PlayerPanel.INFO -> Stage.INFO
+                            PlayerPanel.QUEUE -> Stage.QUEUE
+                            PlayerPanel.DEVICES -> Stage.DEVICES
+                            PlayerPanel.ADD_TO_PLAYLIST -> Stage.ADD_TO_PLAYLIST
+                            // On its side the cover is on the card to the
+                            // left, so the right half opens on the words, or
+                            // on what is coming up for a song without any.
+                            PlayerPanel.NONE -> if (sideways) {
+                                if (lyrics != null || lyricsLoading) Stage.LYRICS else Stage.QUEUE
+                            } else when {
+                                // Not while the player is travelling: a
+                                // TextureView inside a layer being scaled
+                                // and faded loses its surface for the length
+                                // of the animation and leaves a black
+                                // rectangle sliding down the screen. The
+                                // cover stands in for those few hundred
+                                // milliseconds — the same trick the Canvas
+                                // above uses, and for the same reason.
+                                videoOn && videoPlayer != null &&
+                                    LocalGlassEnabled.current -> Stage.VIDEO
+                                canvas == null || !canvasReady -> Stage.COVER
+                                else -> Stage.CANVAS
+                            }
+                        }
                         AnimatedContent(
-                            targetState = when (panel) {
-                                PlayerPanel.LYRICS -> Stage.LYRICS
-                                PlayerPanel.EFFECTS -> Stage.EFFECTS
-                                PlayerPanel.INFO -> Stage.INFO
-                                PlayerPanel.QUEUE -> Stage.QUEUE
-                                PlayerPanel.DEVICES -> Stage.DEVICES
-                                PlayerPanel.ADD_TO_PLAYLIST -> Stage.ADD_TO_PLAYLIST
-                                // On its side the cover is on the card to the
-                                // left, so the right half opens on the words, or
-                                // on what is coming up for a song without any.
-                                PlayerPanel.NONE -> if (sideways) {
-                                    if (lyrics != null || lyricsLoading) Stage.LYRICS else Stage.QUEUE
-                                } else when {
-                                    // Not while the player is travelling: a
-                                    // TextureView inside a layer being scaled
-                                    // and faded loses its surface for the length
-                                    // of the animation and leaves a black
-                                    // rectangle sliding down the screen. The
-                                    // cover stands in for those few hundred
-                                    // milliseconds — the same trick the Canvas
-                                    // above uses, and for the same reason.
-                                    videoOn && videoPlayer != null &&
-                                        LocalGlassEnabled.current -> Stage.VIDEO
-                                    canvas == null || !canvasReady -> Stage.COVER
-                                    else -> Stage.CANVAS
-                                }
-                            },
+                            targetState = targetStage,
                             // Spelled out rather than left to Crossfade.
                             //
                             // Crossfade dropped the cover the instant a panel
@@ -1499,6 +1499,7 @@ fun PlayerScreen(
                                     backdrop = panelBackdrop,
                                     expandSignal = karaokeExpand,
                                     alone = lyricsAlone,
+                                    stageVisible = targetStage == Stage.LYRICS && panelAlpha > 0f,
                                 )
 
                                 // Effects and the queue share the lyrics' space
@@ -3009,6 +3010,7 @@ private fun LyricsStage(
      * depth effect for a lyric glanced at between the controls.
      */
     alone: Boolean = false,
+    stageVisible: Boolean,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val preferences = remember(context) {
@@ -3131,7 +3133,13 @@ private fun LyricsStage(
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if (lyrics != null && !loading && !optionsOpen) {
-            LookBackdrop(look, Modifier.matchParentSize(), trackKey = trackUri, reducedMotion = reducedMotion)
+            LookBackdrop(
+                look,
+                Modifier.matchParentSize(),
+                trackKey = trackUri,
+                reducedMotion = reducedMotion,
+                animate = isPlaying && stageVisible,
+            )
         }
         when {
             optionsOpen && query != null -> LyricsOptionsPanel(
@@ -3160,6 +3168,7 @@ private fun LyricsStage(
             ) {
                 ClassicLyricsView(
                     lyrics = shown ?: lyrics,
+                    overLookMesh = look.usesSweep,
                     reducedMotion = reducedMotion,
                     positionMs = heardMs,
                     showTranslation = translated || romanized,
@@ -3180,6 +3189,7 @@ private fun LyricsStage(
                     reducedMotion = reducedMotion,
                     positionMs = heardMs,
                     isPlaying = isPlaying,
+                    stageVisible = stageVisible && !optionsOpen,
                     showTranslation = translated || romanized,
                     onSeek = seekHeard,
                     modifier = Modifier.fillMaxSize(),

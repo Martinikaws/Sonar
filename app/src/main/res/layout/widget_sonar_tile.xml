@@ -79,7 +79,7 @@
                 android:id="@+id/widget_logo"
                 android:layout_width="28dp"
                 android:layout_height="28dp"
-                android:contentDescription="@string/wire2_sonar_logo"
+                android:contentDescription="@string/widget_open_app"
                 android:padding="5dp"
                 android:src="@drawable/ic_app_mark" />
 

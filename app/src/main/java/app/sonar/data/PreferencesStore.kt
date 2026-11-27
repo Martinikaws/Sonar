@@ -342,7 +342,8 @@ class PreferencesStore(context: Context) {
         prefs.edit().putBoolean(KEY_AUTOPLAY_INFINITE, value).apply()
     }
 
-    private val _youtubeFallback = MutableStateFlow(prefs.getBoolean(KEY_YOUTUBE_FALLBACK, true))
+    // Keep this off until verified on a device.
+    private val _youtubeFallback = MutableStateFlow(prefs.getBoolean(KEY_YOUTUBE_FALLBACK, false))
     val youtubeFallback: StateFlow<Boolean> = _youtubeFallback.asStateFlow()
 
     fun setYouTubeFallback(value: Boolean) {

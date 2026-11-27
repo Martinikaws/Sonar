@@ -30,6 +30,7 @@ fun LookBackdrop(
     modifier: Modifier = Modifier,
     trackKey: Any? = null,
     reducedMotion: Boolean = rememberLookReducedMotion(),
+    animate: Boolean = true,
 ) {
     val scheme = MaterialTheme.colorScheme
     val palette = when (look) {
@@ -47,11 +48,12 @@ fun LookBackdrop(
         Look.GLASSIFY, Look.CUPERTINO -> 0.28f
         else -> 0.42f
     }
-    val drift = remember { Animatable(0f) }
-    LaunchedEffect(look, trackKey, reducedMotion) {
-        if (!reducedMotion) {
-            drift.snapTo(1f)
-            drift.animateTo(0f, tween(durationMillis = 8_000))
+    val drift = remember(look, trackKey, reducedMotion) {
+        Animatable(if (reducedMotion) 0f else 1f)
+    }
+    LaunchedEffect(drift, animate) {
+        if (animate && drift.value > 0f) {
+            drift.animateTo(0f, tween(durationMillis = (8_000 * drift.value).toInt()))
         }
     }
     Box(modifier.fillMaxSize().drawWithCache {
@@ -66,7 +68,7 @@ fun LookBackdrop(
             )
         }
         val scrim = Brush.verticalGradient(
-            listOf(Color.Black.copy(alpha = 0.10f), Color.Black.copy(alpha = 0.38f)),
+            listOf(Color.Black.copy(alpha = 0.72f), Color.Black.copy(alpha = 0.78f)),
         )
         onDrawBehind {
             val phase = if (reducedMotion) 0f else drift.value

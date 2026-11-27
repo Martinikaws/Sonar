@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -23,6 +24,9 @@ import app.sonar.data.LyricLine
 import app.sonar.data.LyricWord
 import java.text.BreakIterator
 import java.util.Locale
+
+internal const val LookNextLineAlpha = 0.72f
+internal const val LookUnsungAlpha = 0.68f
 
 internal data class TimedText(val word: LyricWord, val boundaries: List<Int>)
 
@@ -64,12 +68,15 @@ fun SweptLyricLine(
     style: TextStyle,
     color: Color,
     modifier: Modifier = Modifier,
-    dimAlpha: Float = 0.38f,
+    dimAlpha: Float = LookUnsungAlpha,
     reducedMotion: Boolean = rememberLookReducedMotion(),
 ) {
     val timed = remember(line) { timedText(line) }
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val sweep = timed.isNotEmpty() && !reducedMotion
+    val geometry = remember(layout, timed, sweep) {
+        layout?.takeIf { sweep && it.layoutInput.text.text == line.text }?.let(::SweepGeometry)
+    }
     Text(
         text = line.text,
         color = if (sweep) color.copy(alpha = color.alpha * dimAlpha) else color,
@@ -78,8 +85,8 @@ fun SweptLyricLine(
         onTextLayout = { layout = it },
         modifier = modifier.fillMaxWidth().drawWithContent {
             drawContent()
-            val result = layout ?: return@drawWithContent
-            if (!sweep || result.layoutInput.text.text != line.text) return@drawWithContent
+            val cached = geometry ?: return@drawWithContent
+            val result = cached.layout
             val now = positionMs()
             val sungEnd = timed.indexOfFirst { wordSweep(it.word, now) < 1f }
                 .let { if (it == -1) timed.lastIndex else it - 1 }
@@ -89,7 +96,7 @@ fun SweptLyricLine(
                 else -> 0
             }
             if (prefixEnd > 0) {
-                clipPath(result.getPathForRange(0, prefixEnd)) { drawText(result, color = color) }
+                clipPath(cached.path(0, prefixEnd)) { drawText(result, color = color) }
             }
 
             for (index in sungEnd + 1..timed.lastIndex) {
@@ -98,7 +105,7 @@ fun SweptLyricLine(
                 if (progress <= 0f) continue
                 val start = boundaries.first()
                 if (progress >= 1f) {
-                    clipPath(result.getPathForRange(start, boundaries.last())) {
+                    clipPath(cached.path(start, boundaries.last())) {
                         drawText(result, color = color)
                     }
                     continue
@@ -109,22 +116,36 @@ fun SweptLyricLine(
                 val edge = boundaries[glyph]
                 val end = boundaries[glyph + 1]
                 if (edge > start) {
-                    clipPath(result.getPathForRange(start, edge)) { drawText(result, color = color) }
+                    clipPath(cached.path(start, edge)) { drawText(result, color = color) }
                 }
-                val box = result.getPathForRange(edge, end).getBounds()
-                val rtl = result.getBidiRunDirection(edge) == ResolvedTextDirection.Rtl
-                val visible = sweepBounds(box, swept - glyph, rtl)
-                if (visible.width > 0f) {
-                    clipRect(visible.left, visible.top, visible.right, visible.bottom) {
-                        drawText(result, color = color)
-                    }
+                val (box, rtl) = cached.glyph(edge, end)
+                val width = box.width * (swept - glyph)
+                if (width > 0f) {
+                    val boundary = sweepBoundary(box.left, box.right, width, rtl)
+                    val left = if (rtl) boundary else box.left
+                    val right = if (rtl) box.right else boundary
+                    clipRect(left, box.top, right, box.bottom) { drawText(result, color = color) }
                 }
             }
         },
     )
 }
 
-private fun sweepBounds(box: Rect, progress: Float, rtl: Boolean): Rect {
-    val width = box.width * progress
-    return if (rtl) box.copy(left = box.right - width) else box.copy(right = box.left + width)
+internal fun sweepBoundary(left: Float, right: Float, width: Float, rtl: Boolean): Float =
+    if (rtl) right - width else left + width
+
+private class SweepGeometry(val layout: TextLayoutResult) {
+    private val paths = mutableMapOf<Long, Path>()
+    private val glyphs = mutableMapOf<Long, Glyph>()
+
+    fun path(start: Int, end: Int): Path =
+        paths.getOrPut(rangeKey(start, end)) { layout.getPathForRange(start, end) }
+
+    fun glyph(start: Int, end: Int): Glyph = glyphs.getOrPut(rangeKey(start, end)) {
+        Glyph(path(start, end).getBounds(), layout.getBidiRunDirection(start) == ResolvedTextDirection.Rtl)
+    }
+
+    private fun rangeKey(start: Int, end: Int): Long = (start.toLong() shl 32) or end.toLong()
+
+    data class Glyph(val box: Rect, val rtl: Boolean)
 }

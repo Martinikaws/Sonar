@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.sonar.data.LyricLine
 import app.sonar.data.Lyrics
+import app.sonar.ui.look.LookNextLineAlpha
+import app.sonar.ui.look.LookUnsungAlpha
 import kotlin.math.abs
 
 /**
@@ -57,6 +59,7 @@ fun ClassicLyricsView(
     modifier: Modifier = Modifier,
     showTranslation: Boolean = false,
     reducedMotion: Boolean = false,
+    overLookMesh: Boolean = false,
     onSeek: (Long) -> Unit,
 ) {
     val listState = remember(lyrics) { LazyListState() }
@@ -110,11 +113,15 @@ fun ClassicLyricsView(
     ) {
         itemsIndexed(lyrics.lines) { index, line ->
             val sung = !lyrics.synced || index == activeLine
-            val ink by animateColorAsState(
-                targetValue = if (sung) GlassInk else GlassInk.copy(alpha = 0.38f),
+            val next = overLookMesh && activeLine >= 0 && index == activeLine + 1
+            val fullInk = if (overLookMesh) Color.White else GlassInk
+            val quietInk = fullInk.copy(alpha = if (overLookMesh) LookUnsungAlpha else 0.38f)
+            val animatedInk by animateColorAsState(
+                targetValue = if (sung) fullInk else quietInk,
                 animationSpec = tween(300),
                 label = "classicLine",
             )
+            val ink = if (next) fullInk.copy(alpha = LookNextLineAlpha) else animatedInk
             Column(
                 Modifier
                     .fillMaxWidth()
@@ -130,7 +137,7 @@ fun ClassicLyricsView(
                 val ranges = remember(line) { wordRanges(line) }
                 Text(
                     if (timed) {
-                        sungSoFar(line, ranges, positionMs.value, GlassInk, GlassInk.copy(alpha = 0.38f))
+                        sungSoFar(line, ranges, positionMs.value, fullInk, quietInk)
                     } else {
                         AnnotatedString(line.text.ifBlank { "♪" })
                     },
@@ -139,7 +146,7 @@ fun ClassicLyricsView(
                         lineHeight = 31.sp,
                         fontWeight = FontWeight.Bold,
                     ),
-                    color = if (timed) GlassInk.copy(alpha = 0.38f) else ink,
+                    color = if (timed) quietInk else ink,
                 )
                 val translation = line.translation.takeIf { showTranslation && !it.isNullOrBlank() }
                 if (translation != null) {

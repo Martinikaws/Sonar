@@ -1,6 +1,8 @@
 package app.sonar.ui.home
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -67,7 +69,6 @@ import com.adamglin.phosphoricons.regular.ArrowsLeftRight
 import com.adamglin.phosphoricons.regular.SpotifyLogo
 import com.adamglin.phosphoricons.regular.YoutubeLogo
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onSizeChanged
@@ -214,7 +215,10 @@ fun HomeScreen(
     }
 
     when (state) {
-        MainViewModel.UiState.LoggedOut -> Centered {
+        MainViewModel.UiState.LoggedOut -> Centered(
+            Modifier.verticalScroll(rememberScrollState())
+                .padding(bottom = contentPadding.calculateBottomPadding()),
+        ) {
             SonarStackedLogo(height = 104.dp)
             Text(
                 stringResource(R.string.unofficial_client),
@@ -1620,9 +1624,10 @@ private fun YouTubeHeader(
 }
 
 @Composable
-private fun Centered(content: @Composable () -> Unit) {
+private fun Centered(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
+            modifier = modifier,
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) { content() }

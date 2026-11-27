@@ -14,7 +14,7 @@
     <ImageView
         android:layout_width="20dp"
         android:layout_height="20dp"
-        android:contentDescription="@string/wire2_sonar_logo"
+        android:importantForAccessibility="no"
         android:src="@drawable/ic_app_mark" />
 
     <TextView

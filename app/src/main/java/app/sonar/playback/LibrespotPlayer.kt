@@ -88,6 +88,8 @@ class LibrespotPlayer(
      * from the side that owns it.
      */
     private fun pushQueue(startPlaying: Boolean, positionMs: Int = 0) {
+        if (nativePlaybackBlocked()) return
+        val loadGeneration = nativeLoadGeneration
         val uris = queue.items.map { it.uri }
         if (uris.isEmpty()) return
         loadSentAt = android.os.SystemClock.elapsedRealtime()
@@ -139,8 +141,10 @@ class LibrespotPlayer(
             // so when that is gone the track simply never changes. Build a new
             // one first and load on the other side of it.
             withDevice {
+                if (released || loadGeneration != nativeLoadGeneration || nativePlaybackBlocked()) {
+                    return@withDevice
+                }
                 loadSentAt = 0L
-                if (released) return@withDevice
                 // Read now, not when this was scheduled. The fade takes a
                 // moment, and a tap on a track while paused arrives as "load
                 // this" followed immediately by "play": with the flag frozen at
@@ -297,6 +301,41 @@ class LibrespotPlayer(
      */
     var onCurrentUnavailable: ((PlayQueue.Track) -> Unit)? = null
     var onPlaybackAttemptChanged: (() -> Unit)? = null
+    var beforeNativePlayback: (() -> Unit)? = null
+    var fallbackLookupPending: (() -> Boolean)? = null
+    var onNativePlaying: (() -> Unit)? = null
+
+    var nativePlaybackHeld = false
+        private set
+    private var nativeLoadGeneration = 0
+
+    fun holdNativePlayback() {
+        if (nativePlaybackHeld) return
+        nativePlaybackHeld = true
+        nativeLoadGeneration++
+        loadSentAt = 0L
+        engineQueueStale = true
+        handler.removeCallbacks(stallWatch)
+        handler.removeCallbacks(settleSkip)
+        handler.removeCallbacks(skipGaveUp)
+        skipPending = false
+        skipInFlight = false
+        engine("pause for fallback") { NativeBridge.pause() }
+    }
+
+    fun releaseNativePlayback() {
+        nativePlaybackHeld = false
+    }
+
+    fun resumeHeldNativePlayback() {
+        if (!awaitingEngine) pushQueue(startPlaying = true, positionMs = positionMs.toInt())
+    }
+
+    private fun nativePlaybackBlocked(): Boolean {
+        if (!nativePlaybackHeld && playbackIntent) beforeNativePlayback?.invoke()
+        return nativePlaybackHeld || fallbackLookupPending?.invoke() == true ||
+            (fallbackEndedEntry != null && fallbackEndedEntry == currentQueueEntryId)
+    }
 
     val currentQueueEntry: PlayQueue.Track? get() = queue.items.getOrNull(queue.currentIndex)
     val currentQueueEntryId: Long? get() = queue.idAt(queue.currentIndex)
@@ -832,7 +871,7 @@ class LibrespotPlayer(
         // Paused: nothing is loaded until play; see deferredSkip. Held as a
         // pending skip so what the engine says about the track it is still on
         // does not pull the screen back to it.
-        if (!playWhenReady && !deviceGone && engineIndex >= 0) {
+        if (nativePlaybackHeld || (!playWhenReady && !deviceGone && engineIndex >= 0)) {
             deferredSkip = queue.currentIndex != engineIndex || this.positionMs > 0
             skipPending = deferredSkip
             handler.removeCallbacks(settleSkip)
@@ -896,7 +935,8 @@ class LibrespotPlayer(
     }
 
     private val settleSkip = Runnable {
-        if (released) return@Runnable
+        if (released || nativePlaybackBlocked()) return@Runnable
+        val loadGeneration = nativeLoadGeneration
         val target = queue.currentIndex
         val from = engineIndex
 
@@ -918,7 +958,9 @@ class LibrespotPlayer(
             // show up on other devices as a new session rather than a next.
             !engineQueueStale && from >= 0 && target == from + 1 -> changing {
                 handler.post {
-                    if (released) return@post
+                    if (released || loadGeneration != nativeLoadGeneration || nativePlaybackBlocked()) {
+                        return@post
+                    }
                     runCatching { NativeBridge.next() }
                     if (!dissolves()) fadeIn()
                 }
@@ -926,7 +968,9 @@ class LibrespotPlayer(
 
             !engineQueueStale && from >= 0 && target == from - 1 -> changing {
                 handler.post {
-                    if (released) return@post
+                    if (released || loadGeneration != nativeLoadGeneration || nativePlaybackBlocked()) {
+                        return@post
+                    }
                     runCatching { NativeBridge.previous() }
                     if (!dissolves()) fadeIn()
                 }
@@ -1002,6 +1046,7 @@ class LibrespotPlayer(
                 playbackState = Player.STATE_READY
             }
             invalidateState()
+            if (nativePlaybackBlocked()) return Futures.immediateVoidFuture()
 
             // Pressed before there is an engine to press it on. Remembered
             // rather than sent: the queue goes over the moment the access point
@@ -1804,6 +1849,11 @@ class LibrespotPlayer(
 
     private fun applyEvent(type: String, uri: String, eventPositionMs: Long) {
         if (released) return
+        if (nativePlaybackHeld && type != "cluster") {
+            if (type == "playing") engine("pause for fallback") { NativeBridge.pause() }
+            return
+        }
+        if ((type == "stopped" || type == "paused") && fallbackLookupPending?.invoke() == true) return
         val ended = fallbackEndedEntry
         if (ended != null && currentQueueEntryId == ended &&
             (uri.isEmpty() || uri == currentQueueEntry?.uri) &&
@@ -1905,7 +1955,7 @@ class LibrespotPlayer(
                 handler.removeCallbacks(stallWatch)
             }
             "playing" -> {
-                onPlaybackAttemptChanged?.invoke()
+                if (uri == currentQueueEntry?.uri && engineIndex == queue.currentIndex) onNativePlaying?.invoke()
                 wantPlay = true
                 // A new track to watch, and one this side has not moved on
                 // from yet.

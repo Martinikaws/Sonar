@@ -92,7 +92,11 @@ fun LookPreview(look: Look, modifier: Modifier = Modifier) {
                     color = Color.White,
                     reducedMotion = reducedMotion || !look.usesSweep,
                 )
-                Text(next, color = Color.White.copy(alpha = 0.5f), style = style)
+                Text(
+                    next,
+                    color = Color.White.copy(alpha = if (look == Look.CLASSIC) 0.5f else LookNextLineAlpha),
+                    style = style,
+                )
             }
         }
         if (look.usesSweep && !reducedMotion) {

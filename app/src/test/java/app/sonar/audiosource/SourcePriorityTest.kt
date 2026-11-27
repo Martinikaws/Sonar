@@ -104,4 +104,44 @@ class SourcePriorityTest {
                 .nextTrackSource(setOf(SPOTIFY), youtubeAllowed = true),
         )
     }
+
+    @Test
+    fun callbacksWaitForTheYoutubeLookupAndLeaveSpotifyAvailableAfterAMiss() {
+        val priority = SourcePriority(order = listOf(YOUTUBE_MUSIC, SPOTIFY, FLAC))
+        val duringLookup = setOf(YOUTUBE_MUSIC)
+        assertEquals(
+            TrackSourceAction.WAIT,
+            priority.trackSourceAction(duringLookup, spotifyUnavailable = false, lookupPending = true, recoverWithWeb = false),
+        )
+        assertEquals(
+            TrackSourceAction.PLAY_SPOTIFY,
+            priority.trackSourceAction(duringLookup, spotifyUnavailable = false, lookupPending = false, recoverWithWeb = false),
+        )
+        assertEquals(
+            TrackSourceAction.LOOK_UP_YOUTUBE,
+            priority.trackSourceAction(duringLookup - YOUTUBE_MUSIC, spotifyUnavailable = false, lookupPending = false, recoverWithWeb = false),
+        )
+    }
+
+    @Test
+    fun anUnavailableSpotifyTrackExhaustsItsSourcesOrRecoversWithWeb() {
+        val priority = SourcePriority()
+        val triedBoth = setOf(SPOTIFY, YOUTUBE_MUSIC)
+        assertEquals(
+            TrackSourceAction.WAIT,
+            priority.trackSourceAction(triedBoth, spotifyUnavailable = true, lookupPending = true, recoverWithWeb = true),
+        )
+        assertEquals(
+            TrackSourceAction.EXHAUSTED,
+            priority.trackSourceAction(triedBoth, spotifyUnavailable = true, lookupPending = false, recoverWithWeb = false),
+        )
+        assertEquals(
+            TrackSourceAction.RECOVER_WITH_WEB,
+            priority.trackSourceAction(triedBoth, spotifyUnavailable = true, lookupPending = false, recoverWithWeb = true),
+        )
+        assertEquals(
+            TrackSourceAction.WAIT,
+            priority.trackSourceAction(triedBoth, spotifyUnavailable = false, lookupPending = false, recoverWithWeb = false),
+        )
+    }
 }

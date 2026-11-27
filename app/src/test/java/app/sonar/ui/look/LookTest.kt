@@ -37,4 +37,12 @@ class LookTest {
             timedText(LyricLine(0L, sample, words)).map { it.boundaries },
         )
     }
+
+    @Test
+    fun sweepClipMovesFromTheLeadingEdgeOfEachBidiRun() {
+        assertEquals(10f, sweepBoundary(10f, 30f, 0f, rtl = false), 0f)
+        assertEquals(15f, sweepBoundary(10f, 30f, 5f, rtl = false), 0f)
+        assertEquals(30f, sweepBoundary(10f, 30f, 0f, rtl = true), 0f)
+        assertEquals(25f, sweepBoundary(10f, 30f, 5f, rtl = true), 0f)
+    }
 }
