@@ -10,6 +10,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import app.sonar.backend.PlaybackHost
 import app.sonar.data.LocalLibrary
+import app.sonar.flac.FlacDataSource
 
 /**
  * The player for music that is already on the phone.
@@ -29,7 +30,7 @@ object LocalPlayerFactory {
         .setMediaSourceFactory(
             DefaultMediaSourceFactory(
                 ResolvingDataSource.Factory(
-                    DefaultDataSource.Factory(host.context),
+                    DefaultDataSource.Factory(host.context) { FlacDataSource(host.context) },
                     // The queue carries `local:track:<id>`, which is an
                     // identity rather than a location: it survives being
                     // written to disk and read back next week, where a

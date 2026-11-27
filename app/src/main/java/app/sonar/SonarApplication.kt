@@ -223,6 +223,8 @@ class SonarApplication : Application(), ImageLoaderFactory {
     }
     val preferences: PreferencesStore by lazy { PreferencesStore(this) }
     /** One instance, so the settings and the playback service share its flow. */
+    internal val flacSources by lazy { app.sonar.flac.FlacSources(this) }
+
     val sourcePriority: app.sonar.audiosource.SourcePriorityStore by lazy {
         app.sonar.audiosource.SourcePriorityStore(this)
     }

@@ -86,6 +86,21 @@ class SourcePriorityTest {
     }
 
     @Test
+    fun configuredFlacRespectsOrderAndDoesNotDependOnYoutube() {
+        val priority = SourcePriority()
+        assertEquals(SPOTIFY, priority.nextTrackSource(emptySet(), youtubeAllowed = false, flacReady = true))
+        assertEquals(
+            TrackSourceAction.LOOK_UP_FLAC,
+            priority.trackSourceAction(setOf(SPOTIFY), spotifyUnavailable = true, lookupPending = false,
+                recoverWithWeb = false, youtubeAllowed = false, flacReady = true),
+        )
+        assertEquals(FLAC, priority.move(FLAC, 0).nextTrackSource(emptySet(), youtubeAllowed = true, flacReady = true))
+        assertEquals(YOUTUBE_MUSIC, priority.nextTrackSource(setOf(SPOTIFY, FLAC), youtubeAllowed = true, flacReady = true))
+        assertNull(priority.setEnabled(FLAC, false)
+            .nextTrackSource(setOf(SPOTIFY), youtubeAllowed = false, flacReady = true))
+    }
+
+    @Test
     fun youtubeFirstCanFallThroughToSpotifyAndNextTrackStartsFresh() {
         val priority = SourcePriority().move(YOUTUBE_MUSIC, 0)
         assertEquals(YOUTUBE_MUSIC, priority.nextTrackSource(emptySet(), youtubeAllowed = true))

@@ -15,10 +15,13 @@ import kotlinx.coroutines.flow.asStateFlow
  * says is shown only while it is the player in front.
  */
 object StreamQuality {
+    private const val FLAC_LABEL = "FLAC"
     private val _soloist = MutableStateFlow<String?>(null)
     private val _librespot = MutableStateFlow<String?>(null)
     private val _shown = MutableStateFlow<String?>(null)
     private val _soloistInFront = MutableStateFlow(false)
+
+    @Volatile private var flacInFront = false
 
     val label: StateFlow<String?> = _shown.asStateFlow()
 
@@ -26,20 +29,25 @@ object StreamQuality {
     val soloistInFront: StateFlow<Boolean> = _soloistInFront.asStateFlow()
 
     /** Which engine the music comes from; see PlaybackService. */
-    fun setFront(soloist: Boolean) {
+    fun setFront(soloist: Boolean, flac: Boolean = false) {
+        flacInFront = flac
         _soloistInFront.value = soloist
         publish()
     }
 
     private fun publish() {
-        _shown.value = if (_soloistInFront.value) _soloist.value else _librespot.value
+        _shown.value = when {
+            flacInFront -> FLAC_LABEL
+            _soloistInFront.value -> _soloist.value
+            else -> _librespot.value
+        }
     }
 
     /** From Soloist: a codec as it logs it ("flac", "vorbis", ...) and its bitrate in bit/s. */
     fun stream(codec: String?, bitrate: Int?) {
         _soloist.value = when {
             codec == null -> _soloist.value
-            codec.equals("flac", ignoreCase = true) -> "FLAC"
+            codec.equals("flac", ignoreCase = true) -> FLAC_LABEL
             codec.equals("vorbis", ignoreCase = true) -> "OGG" + kbps(bitrate).orEmpty()
             else -> codec.uppercase() + kbps(bitrate).orEmpty()
         }

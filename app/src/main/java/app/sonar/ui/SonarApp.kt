@@ -2156,6 +2156,7 @@ fun SonarApp(
                                 onLogOut = viewModel::logOut,
                                 onShowTutorial = { showTutorial = true },
                                 onAstralImport = { navController.navigate(ASTRAL_IMPORT_ROUTE) },
+                                onPlayFlac = { tracks, index -> onPlay(tracks, index, null, false, "", 0L) },
                                 language = language,
                                 onLanguage = setLanguage,
                                 onBack = { navController.popBackStack() },

@@ -374,12 +374,21 @@ class MainActivity : ComponentActivity() {
         // like the download had failed rather than like the song after it was
         // never here. Files on the phone play in every mode; they were never
         // coming over the network.
-        val reachable = if (!app.sonar.playback.OfflineMode.active.value) {
+        val offline = app.sonar.playback.OfflineMode
+        val reachable = if (!offline.active.value) {
             tracks
         } else {
-            val here = (application as app.sonar.SonarApplication)
-                .downloads.files.value
-            tracks.filter { it.uri.startsWith("local:") || it.localFile != null || it.uri in here }
+            val sonarApplication = application as app.sonar.SonarApplication
+            val here = sonarApplication.downloads.files.value
+            val flacAvailable = app.sonar.audiosource.AudioSource.FLAC in sonarApplication.sourcePriority.priority.value.effective() &&
+                sonarApplication.flacSources.available()
+            tracks.filter {
+                val stream = app.sonar.flac.FlacSources.stream(it.uri)
+                it.uri.startsWith("local:") || it.localFile != null || it.uri in here ||
+                    (flacAvailable && it.uri.startsWith("spotify:track:")) ||
+                    (stream != null && (stream.provider == app.sonar.flac.FlacProvider.BANDCAMP ||
+                        offline.reason.value != app.sonar.playback.OfflineMode.Reason.MANUAL))
+            }
         }
 
         // One player plays a queue: Spotify's engine or the phone's own files,
@@ -388,9 +397,10 @@ class MainActivity : ComponentActivity() {
         // an entry with no file on this phone is left out, as the engine could
         // only skip it. The phone's own shelf plays on the files' own player.
         val local = app.sonar.data.LocalLibrary
-        val tappedLocal = tracks.getOrNull(index)?.uri?.let(local::isLocal) == true
+        fun usesLocalPlayer(uri: String) = local.isLocal(uri) || app.sonar.flac.FlacSources.owns(uri)
+        val tappedLocal = tracks.getOrNull(index)?.uri?.let(::usesLocalPlayer) == true
         val playable = reachable.filter {
-            local.isLocal(it.uri) == tappedLocal && (!local.isSpotifyLocal(it.uri) || it.localFile != null)
+            usesLocalPlayer(it.uri) == tappedLocal && (!local.isSpotifyLocal(it.uri) || it.localFile != null)
         }
         if (playable.isEmpty()) return
 

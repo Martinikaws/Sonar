@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="flac_settings">FLAC sources</string>
+    <string name="flac_settings_summary">Set up lossless providers and play imported FLAC files</string>
+    <string name="flac_jamendo">Jamendo</string>
+    <string name="flac_navidrome">Navidrome / OpenSubsonic</string>
+    <string name="flac_archive">Live Music Archive</string>
+    <string name="flac_bandcamp">Bandcamp imports</string>
+    <string name="flac_massive">MassiveMusic / 7digital</string>
+    <string name="flac_client_id">Jamendo client ID</string>
+    <string name="flac_server">HTTPS server address</string>
+    <string name="flac_username">Username</string>
+    <string name="flac_password">Password</string>
+    <string name="flac_recording">Archive recording ID or link</string>
+    <string name="flac_partner_key">Partner access key</string>
+    <string name="flac_massive_description">Full-track playback requires a commercial agreement and a licensed Sonar integration.</string>
+    <string name="flac_massive_access">View MassiveMusic developer access</string>
+    <string name="flac_search_query">Track or artist</string>
+    <string name="flac_search">Search</string>
+    <string name="flac_load_recording">Load recording</string>
+    <string name="flac_import">Import purchased FLAC files</string>
+    <string name="flac_show_imports">Show imports</string>
+    <string name="flac_loading">Loading…</string>
+    <string name="flac_error">Could not load FLAC tracks. Check the source settings or selected files.</string>
+    <string name="flac_empty">No FLAC tracks found</string>
+    <string name="flac_play">Play track</string>
+</resources>

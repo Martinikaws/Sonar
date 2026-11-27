@@ -34,6 +34,7 @@ internal enum class SettingsPage(@StringRes val title: Int) {
     Equalizer(R.string.equalizer),
     Glass(R.string.glass),
     WebApi(R.string.web_api),
+    Flac(R.string.flac_settings),
 }
 
 /** What choosing an entry does: it is drawn in the list, or it opens a page. */
@@ -105,6 +106,12 @@ internal val SETTINGS_INDEX: List<SettingsEntry> = listOf(
             R.string.youtube_audio_fallback, R.string.youtube_audio_fallback_summary,
         ),
         SettingsGroup.SOURCES,
+    ),
+
+    SettingsEntry(
+        "flac-sources", R.string.flac_settings, R.string.flac_settings_summary,
+        listOf(R.string.flac_jamendo, R.string.flac_navidrome, R.string.flac_archive, R.string.flac_bandcamp, R.string.flac_massive),
+        SettingsGroup.SOURCES, SettingsAction.Open(SettingsPage.Flac),
     ),
 
     SettingsEntry(

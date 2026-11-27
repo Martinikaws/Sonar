@@ -185,6 +185,7 @@ fun SettingsScreen(
     /** After switching channel: the library and the home belong to the new one. */
     onYouTubeChannelChange: () -> Unit = {},
     onAstralImport: () -> Unit = {},
+    onPlayFlac: (List<app.sonar.data.CatalogTrack>, Int) -> Unit = { _, _ -> },
 ) {
     val ready = state as? MainViewModel.UiState.Ready
     val context = LocalContext.current
@@ -497,6 +498,11 @@ fun SettingsScreen(
 
         "audio-sources" -> {
             AudioSourcesSection()
+        }
+        "flac-sources" -> Section(null) {
+            PageRow(stringResource(R.string.flac_settings), stringResource(R.string.flac_settings_summary)) {
+                goTo(SettingsPage.Flac)
+            }
         }
 
         "equalizer" -> Section(null) {
@@ -1047,6 +1053,13 @@ fun SettingsScreen(
             header = { heading(shown) },
         )
 
+        SettingsPage.Flac -> LazyColumn(Modifier.fillMaxSize(), contentPadding = listPadding) {
+            item("top") { heading(shown) }
+            items(app.sonar.flac.FlacProvider.entries.size) { index ->
+                FlacProviderSettings(app.sonar.flac.FlacProvider.entries[index], sonarApp.flacSources, onPlayFlac)
+            }
+        }
+
         SettingsPage.WebApi -> LazyColumn(Modifier.fillMaxSize(), contentPadding = listPadding) {
             item("top") { heading(shown) }
             item("webapi") {
@@ -1426,13 +1439,6 @@ private fun AudioSourcesSection() {
                             style = MaterialTheme.typography.bodyLarge,
                             color = if (enabled) Ink else InkDim,
                         )
-                        if (source == app.sonar.audiosource.AudioSource.FLAC) {
-                            Text(
-                                stringResource(R.string.audio_source_flac_unavailable),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = InkDim,
-                            )
-                        }
                     }
                     Switch(checked = enabled, onCheckedChange = null)
                 }

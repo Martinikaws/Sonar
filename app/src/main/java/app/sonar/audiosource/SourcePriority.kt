@@ -10,9 +10,9 @@ import org.json.JSONObject
 
 enum class AudioSource { FLAC, SPOTIFY, YOUTUBE_MUSIC }
 
-internal enum class TrackSourceAction { WAIT, PLAY_SPOTIFY, LOOK_UP_YOUTUBE, RECOVER_WITH_WEB, EXHAUSTED }
+internal enum class TrackSourceAction { WAIT, PLAY_SPOTIFY, LOOK_UP_FLAC, LOOK_UP_YOUTUBE, RECOVER_WITH_WEB, EXHAUSTED }
 
-/** Spotify first, then Soloist's lossless stream, then a YouTube Music match. */
+/** Spotify first, then a lossless provider, then a YouTube Music match. */
 val DEFAULT_SOURCE_ORDER = listOf(AudioSource.SPOTIFY, AudioSource.FLAC, AudioSource.YOUTUBE_MUSIC)
 
 data class SourcePriority(
@@ -38,19 +38,20 @@ data class SourcePriority(
 
     /**
      * The enabled sources still to try for a track once [tried] have failed,
-     * best first. FLAC is left out unless Soloist can serve it.
+     * best first. FLAC requires a configured provider.
      */
     fun fallbacks(tried: Set<AudioSource>, flacReady: Boolean): List<AudioSource> =
         effective().filter { it !in tried && (it != AudioSource.FLAC || flacReady) }
 
-    /** The next playable source for this attempt. FLAC has no playback route here. */
+    /** The next playable source for this attempt. */
     fun nextTrackSource(
         tried: Set<AudioSource>,
         youtubeAllowed: Boolean,
         spotifyPending: Boolean = false,
+        flacReady: Boolean = false,
     ): AudioSource? {
         if (spotifyPending) return null
-        return fallbacks(tried, flacReady = false).firstOrNull {
+        return fallbacks(tried, flacReady).firstOrNull {
             it != AudioSource.YOUTUBE_MUSIC || youtubeAllowed
         }
     }
@@ -61,12 +62,14 @@ data class SourcePriority(
         lookupPending: Boolean,
         recoverWithWeb: Boolean,
         youtubeAllowed: Boolean = true,
+        flacReady: Boolean = false,
     ): TrackSourceAction {
         val spotifyEnabled = AudioSource.SPOTIFY in effective()
         val spotifyPending = spotifyEnabled && AudioSource.SPOTIFY in tried && !spotifyUnavailable
         if (lookupPending || spotifyPending) return TrackSourceAction.WAIT
-        return when (nextTrackSource(tried, youtubeAllowed)) {
+        return when (nextTrackSource(tried, youtubeAllowed, flacReady = flacReady)) {
             AudioSource.SPOTIFY -> TrackSourceAction.PLAY_SPOTIFY
+            AudioSource.FLAC -> TrackSourceAction.LOOK_UP_FLAC
             AudioSource.YOUTUBE_MUSIC -> TrackSourceAction.LOOK_UP_YOUTUBE
             else -> if (spotifyEnabled && recoverWithWeb) TrackSourceAction.RECOVER_WITH_WEB else TrackSourceAction.EXHAUSTED
         }
