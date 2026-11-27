@@ -56,6 +56,7 @@ fun ClassicLyricsView(
     positionMs: State<Long>,
     modifier: Modifier = Modifier,
     showTranslation: Boolean = false,
+    reducedMotion: Boolean = false,
     onSeek: (Long) -> Unit,
 ) {
     val listState = remember(lyrics) { LazyListState() }
@@ -67,11 +68,15 @@ fun ClassicLyricsView(
         }
     }
 
-    LaunchedEffect(activeLine) {
+    LaunchedEffect(activeLine, reducedMotion) {
         if (activeLine < 0) return@LaunchedEffect
         val layout = listState.layoutInfo
         val viewport = layout.viewportSize.height
         if (viewport <= 0) return@LaunchedEffect
+        if (reducedMotion) {
+            listState.scrollToItem(activeLine, -viewport / 2)
+            return@LaunchedEffect
+        }
         val item = layout.visibleItemsInfo.find { it.index == activeLine }
         if (item == null) {
             listState.animateScrollToItem(activeLine, -viewport / 3)
@@ -121,7 +126,7 @@ fun ClassicLyricsView(
                 // sung brightening as it goes, the rest as quiet as the
                 // lines around it. Only this line reads the position, so
                 // only it redraws as the song moves.
-                val timed = lyrics.synced && index == activeLine && line.words.isNotEmpty()
+                val timed = !reducedMotion && lyrics.synced && index == activeLine && line.words.isNotEmpty()
                 val ranges = remember(line) { wordRanges(line) }
                 Text(
                     if (timed) {

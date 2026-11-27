@@ -35,8 +35,7 @@ import com.adamglin.phosphoricons.fill.YoutubeLogo
 import com.adamglin.phosphoricons.regular.CaretRight
 import app.sonar.R
 import app.sonar.backend.BackendId
-import app.sonar.ui.components.AppGlyph
-import app.sonar.ui.components.SonarWordmark
+import app.sonar.ui.components.SonarStackedLogo
 import app.sonar.ui.glass.pressable
 import app.sonar.ui.theme.Ink
 import app.sonar.ui.theme.InkDim
@@ -59,9 +58,7 @@ import app.sonar.ui.theme.InkDim
 @Composable
 fun BackendChoiceScreen(onChoose: (BackendId) -> Unit) {
     SetupScaffold(top = {}) {
-        AppIcon()
-        Spacer(Modifier.height(24.dp))
-        SonarWordmark(height = 26.dp)
+        SonarStackedLogo(height = 134.dp)
         Spacer(Modifier.height(28.dp))
         StepHeader(stringResource(R.string.backend_choice_title))
         ProseText(stringResource(R.string.backend_choice_subtitle))

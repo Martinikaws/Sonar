@@ -117,6 +117,7 @@ internal val SETTINGS_INDEX: List<SettingsEntry> = listOf(
     SettingsEntry("connected-device-label", R.string.connected_device_label, null, emptyList(), SettingsGroup.LISTENING),
 
     SettingsEntry("lyrics-source", R.string.lyrics_preferred_title, null, emptyList(), SettingsGroup.LYRICS),
+    SettingsEntry("lyrics-look", R.string.look_title, null, emptyList(), SettingsGroup.LYRICS),
     SettingsEntry("lyrics-folder", R.string.lyrics_folder_title, null, listOf(R.string.lyrics_folder_choose), SettingsGroup.LYRICS),
     SettingsEntry("spicy-lyrics", R.string.spicy_lyrics_title, null, listOf(R.string.spicy_lyrics_key), SettingsGroup.LYRICS),
 

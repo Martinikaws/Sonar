@@ -62,9 +62,8 @@ import com.adamglin.phosphoricons.regular.Devices
 import app.sonar.R
 import app.sonar.data.AppLanguages
 import app.sonar.ui.MainViewModel
-import app.sonar.ui.components.AppGlyph
 import app.sonar.ui.components.FilterChip
-import app.sonar.ui.components.SonarWordmark
+import app.sonar.ui.components.SonarStackedLogo
 import app.sonar.ui.theme.Ink
 import app.sonar.ui.theme.InkDim
 
@@ -193,9 +192,7 @@ private fun stepOf(index: Int): String = stringResource(R.string.onboarding_step
 
 @Composable
 private fun Welcome(language: String, onLanguage: (String) -> Unit) {
-    AppIcon()
-    Spacer(Modifier.height(24.dp))
-    SonarWordmark(height = 26.dp)
+    SonarStackedLogo(height = 134.dp)
     ProseText(stringResource(R.string.onboarding_welcome_1))
     // First screen, before a word of the setup: someone who cannot read this
     // page is exactly the person who needs the picker.

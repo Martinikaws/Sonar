@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -245,35 +244,6 @@ internal fun Modifier.setupCard(shape: Shape = GroupShape, fill: Float = 0.06f):
         .clip(shape)
         .background(Color.White.copy(alpha = fill))
         .border(0.75.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.22f), Color.White.copy(alpha = 0.06f))), shape)
-
-/**
- * The app's icon as the launcher shows it: the plate and the green wave, cut
- * to a rounded square. Built from the two layers of the adaptive icon, drawn
- * at the size that puts their visible middle (72 of 108) inside the shape.
- */
-@Composable
-internal fun AppIcon(size: androidx.compose.ui.unit.Dp = 84.dp) {
-    Box(
-        Modifier
-            .size(size)
-            .clip(RoundedCornerShape(size * 0.27f))
-            .border(0.75.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(size * 0.27f)),
-        contentAlignment = Alignment.Center,
-    ) {
-        val layer = Modifier.requiredSize(size * 108f / 72f)
-        androidx.compose.foundation.Image(
-            androidx.compose.ui.res.painterResource(app.sonar.R.mipmap.ic_launcher_background),
-            contentDescription = null,
-            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-            modifier = layer,
-        )
-        androidx.compose.foundation.Image(
-            androidx.compose.ui.res.painterResource(app.sonar.R.mipmap.ic_launcher_foreground),
-            contentDescription = null,
-            modifier = layer,
-        )
-    }
-}
 
 /** Running text: a step down from the ink, and still meant to be read. */
 internal val Prose: Color

@@ -129,6 +129,7 @@ import com.adamglin.phosphoricons.regular.ChatsCircle
 import com.adamglin.phosphoricons.regular.TelegramLogo
 import com.adamglin.phosphoricons.regular.Bug
 import app.sonar.R
+import app.sonar.ui.look.LookPicker
 import app.sonar.data.AppLanguages
 import app.sonar.backend.BackendId
 import app.sonar.data.CrossfadeSteps
@@ -615,6 +616,10 @@ fun SettingsScreen(
 
         "lyrics-source" -> {
             PreferredLyricsSection(showSpotify)
+        }
+
+        "lyrics-look" -> Section(stringResource(R.string.look_title)) {
+            LookPicker()
         }
 
         "lyrics-folder" -> {

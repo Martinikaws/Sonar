@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sonar.ui.glass.backdrop.Backdrop
 import app.sonar.R
+import app.sonar.ui.components.SonarStackedLogo
 import app.sonar.data.CatalogPlaylist
 import app.sonar.data.sortedByRecentlyOpened
 import app.sonar.data.withLocalFilesFirst
@@ -189,8 +190,7 @@ fun LibraryScreen(
         // are one state reached from two tabs, and a plain title here made
         // them read as two different apps.
         MainViewModel.UiState.LoggedOut -> Centered {
-            app.sonar.ui.components.AppGlyph(64.dp)
-            app.sonar.ui.components.SonarWordmark(height = 28.dp)
+            SonarStackedLogo(height = 104.dp)
             Text(
                 stringResource(R.string.unofficial_client),
                 style = MaterialTheme.typography.bodyMedium,

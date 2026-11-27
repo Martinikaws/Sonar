@@ -78,10 +78,9 @@ import app.sonar.data.CatalogTrack
 import app.sonar.data.SearchItem
 import app.sonar.data.sortedByRecentlyOpened
 import app.sonar.ui.MainViewModel
-import app.sonar.ui.components.AppGlyph
-import app.sonar.ui.components.AppLockup
+import app.sonar.ui.components.SonarHorizontalLogo
 import app.sonar.ui.components.Artwork
-import app.sonar.ui.components.SonarWordmark
+import app.sonar.ui.components.SonarStackedLogo
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
 import app.sonar.ui.glass.LiquidButton
@@ -216,8 +215,7 @@ fun HomeScreen(
 
     when (state) {
         MainViewModel.UiState.LoggedOut -> Centered {
-            AppGlyph(64.dp)
-            SonarWordmark(height = 28.dp)
+            SonarStackedLogo(height = 104.dp)
             Text(
                 stringResource(R.string.unofficial_client),
                 style = MaterialTheme.typography.bodyMedium,
@@ -755,13 +753,8 @@ private fun Header(
                 // reading at a glance; it shrinks a little as the header
                 // collapses rather than leaving, because a bar with nothing in
                 // it says nothing about where you are.
-                AppLockup(
-                    // Larger than the bare mark was: the glass around it is
-                    // part of the shape now, and the drawing inside has to stay
-                    // the size it was to read at a glance.
-                    iconSize = 44.dp,
-                    nameHeight = 22.dp,
-                    plate = backdrop,
+                SonarHorizontalLogo(
+                    height = 44.dp,
                     modifier = Modifier
                         .padding(top = 10.dp)
                         .graphicsLayer {
@@ -1343,8 +1336,7 @@ private fun YouTubeHome(
                 if (home.loading) {
                     CircularProgressIndicator(color = Ink, strokeWidth = 2.dp)
                 } else {
-                    AppGlyph(64.dp)
-                    SonarWordmark(height = 28.dp)
+                    SonarStackedLogo(height = 104.dp)
                     Text(
                         stringResource(R.string.youtube_home_empty),
                         style = MaterialTheme.typography.bodyMedium,

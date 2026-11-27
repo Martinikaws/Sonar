@@ -111,6 +111,7 @@ import app.sonar.ui.glass.backdrop.backdrops.rememberLayerBackdrop
 import app.sonar.ui.glass.backdrop.backdrops.rememberCombinedBackdrop
 import app.sonar.ui.glass.backdrop.drawBackdrop
 import app.sonar.R
+import app.sonar.ui.components.SonarStackedLogo
 import app.sonar.data.CanvasClip
 import app.sonar.data.Catalog
 import app.sonar.data.CatalogPlaylist
@@ -4158,8 +4159,7 @@ fun SonarApp(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
-                            app.sonar.ui.components.AppGlyph(64.dp)
-                            app.sonar.ui.components.SonarWordmark(height = 28.dp)
+                            SonarStackedLogo(height = 108.dp)
                             // Which source is being opened, named and marked:
                             // the whole point of the wait is that the app is
                             // becoming a different one, and a bare spinner says

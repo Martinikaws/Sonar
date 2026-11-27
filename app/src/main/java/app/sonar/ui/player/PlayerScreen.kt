@@ -126,6 +126,10 @@ import app.sonar.ui.components.Artwork
 import app.sonar.ui.glass.GlassBlendGroup
 import app.sonar.ui.glass.LiquidButton
 import app.sonar.ui.library.formatDuration
+import app.sonar.ui.look.Look
+import app.sonar.ui.look.LookBackdrop
+import app.sonar.ui.look.rememberLookReducedMotion
+import app.sonar.ui.look.rememberLookStore
 import app.sonar.ui.theme.softShadow
 import com.adamglin.phosphoricons.regular.MonitorPlay
 import com.adamglin.phosphoricons.regular.Gauge
@@ -3011,6 +3015,9 @@ private fun LyricsStage(
         (context.applicationContext as app.sonar.SonarApplication).preferences
     }
     val style by preferences.lyricsStyle.collectAsStateWithLifecycle()
+    val lookStore = rememberLookStore()
+    val look by lookStore.state.collectAsStateWithLifecycle()
+    val reducedMotion = look != Look.CLASSIC && rememberLookReducedMotion()
     var optionsOpen by remember(query?.uri) { androidx.compose.runtime.mutableStateOf(false) }
 
     // The words shown as late as the listener set for these headphones (#143):
@@ -3123,6 +3130,9 @@ private fun LyricsStage(
     }
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        if (lyrics != null && !loading && !optionsOpen) {
+            LookBackdrop(look, Modifier.matchParentSize(), trackKey = trackUri, reducedMotion = reducedMotion)
+        }
         when {
             optionsOpen && query != null -> LyricsOptionsPanel(
                 query = query,
@@ -3150,6 +3160,7 @@ private fun LyricsStage(
             ) {
                 ClassicLyricsView(
                     lyrics = shown ?: lyrics,
+                    reducedMotion = reducedMotion,
                     positionMs = heardMs,
                     showTranslation = translated || romanized,
                     onSeek = seekHeard,
@@ -3165,6 +3176,8 @@ private fun LyricsStage(
             ) {
                 LyricsView(
                     lyrics = shown ?: lyrics,
+                    look = look,
+                    reducedMotion = reducedMotion,
                     positionMs = heardMs,
                     isPlaying = isPlaying,
                     showTranslation = translated || romanized,

@@ -85,6 +85,8 @@ import androidx.compose.ui.zIndex
 import app.sonar.data.LyricLine
 import app.sonar.data.LyricWord
 import app.sonar.data.Lyrics
+import app.sonar.ui.look.Look
+import app.sonar.ui.look.SweptLyricLine
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.exp
@@ -147,23 +149,29 @@ fun LyricsView(
     modifier: Modifier = Modifier,
     /** Whether to read each line in the listener's language underneath it. */
     showTranslation: Boolean = false,
+    look: Look = Look.CLASSIC,
+    reducedMotion: Boolean = false,
     onSeek: (Long) -> Unit,
 ) {
     val listState = remember(lyrics) { LazyListState() }
-    val position by rememberSmoothPosition(positionMs, isPlaying)
+    val position by rememberSmoothPosition(positionMs, isPlaying && !reducedMotion)
 
     val activeLine = remember(lyrics, position) {
         if (!lyrics.synced) -1
         else lyrics.lines.indexOfLast { (it.startTimeMs ?: 0L) <= position }
     }
 
-    LaunchedEffect(activeLine) {
+    LaunchedEffect(activeLine, reducedMotion) {
         if (activeLine < 0) return@LaunchedEffect
         val layoutInfo = listState.layoutInfo
         val viewportHeight = layoutInfo.viewportSize.height
         if (viewportHeight <= 0) return@LaunchedEffect
 
         val viewportCentre = viewportHeight / 2
+        if (reducedMotion) {
+            listState.scrollToItem(activeLine, -viewportCentre + LineHeightPx)
+            return@LaunchedEffect
+        }
         val visibleItem = layoutInfo.visibleItemsInfo.find { it.index == activeLine }
 
         if (visibleItem == null) {
@@ -211,6 +219,7 @@ fun LyricsView(
             if (line.text.isBlank() || (line.text.trim() == "♪")) {
                 InterludeDotsItem(
                     isActive = isActive,
+                    reducedMotion = reducedMotion,
                     onClick = { line.startTimeMs?.let { onSeek(it) } },
                 )
             } else {
@@ -221,6 +230,8 @@ fun LyricsView(
                     distance = distance,
                     isActive = isActive,
                     unsynced = !lyrics.synced,
+                    look = look,
+                    reducedMotion = reducedMotion,
                     onClick = { line.startTimeMs?.let { onSeek(it) } },
                 )
             }
@@ -276,6 +287,8 @@ private fun LyricLineItem(
     distance: Int,
     isActive: Boolean,
     unsynced: Boolean,
+    look: Look,
+    reducedMotion: Boolean,
     onClick: () -> Unit,
 ) {
     val visualSettings = LocalLyricVisualSettings.current
@@ -342,7 +355,15 @@ private fun LyricLineItem(
                 .fillMaxWidth()
                 .graphicsLayer { clip = false },
         ) {
-            if (isActive && line.words.isNotEmpty()) {
+            if (isActive && look.usesSweep) {
+                SweptLyricLine(
+                    line = line,
+                    positionMs = { positionMs },
+                    style = lyicTextStyle(),
+                    color = Color.White,
+                    reducedMotion = reducedMotion,
+                )
+            } else if (isActive && line.words.isNotEmpty() && !reducedMotion) {
                 SyllableSyncLine(
                     line = line,
                     progressProvider = { positionMs },
@@ -1005,6 +1026,7 @@ fun InterludeDotsItem(
     isActive: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    reducedMotion: Boolean = false,
 ) {
     val springSpec = spring<Float>(
         dampingRatio = Spring.DampingRatioLowBouncy,
@@ -1023,16 +1045,18 @@ fun InterludeDotsItem(
         label = "interludeAlpha",
     )
 
-    val infiniteTransition = rememberInfiniteTransition(label = "interludePulse")
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 0.9f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(750, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "pulseAlpha",
-    )
+    val pulseAlpha = if (reducedMotion) 1f else {
+        val infiniteTransition = rememberInfiniteTransition(label = "interludePulse")
+        infiniteTransition.animateFloat(
+            initialValue = 0.4f,
+            targetValue = 0.9f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(750, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "pulseAlpha",
+        ).value
+    }
 
     Box(
         modifier = modifier
