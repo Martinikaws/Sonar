@@ -342,6 +342,14 @@ class PreferencesStore(context: Context) {
         prefs.edit().putBoolean(KEY_AUTOPLAY_INFINITE, value).apply()
     }
 
+    private val _youtubeFallback = MutableStateFlow(prefs.getBoolean(KEY_YOUTUBE_FALLBACK, true))
+    val youtubeFallback: StateFlow<Boolean> = _youtubeFallback.asStateFlow()
+
+    fun setYouTubeFallback(value: Boolean) {
+        _youtubeFallback.value = value
+        prefs.edit().putBoolean(KEY_YOUTUBE_FALLBACK, value).apply()
+    }
+
     private val _spotifyDj = MutableStateFlow(prefs.getBoolean(KEY_SPOTIFY_DJ, true))
 
     /**
@@ -503,6 +511,7 @@ class PreferencesStore(context: Context) {
         const val KEY_PAUSE_FOR_OTHER_APPS = "pause_for_other_apps"
         const val KEY_SPONSOR_BLOCK = "sponsor_block"
         const val KEY_AUTOPLAY_INFINITE = "autoplay_infinite"
+        const val KEY_YOUTUBE_FALLBACK = "youtubeFallback"
         const val KEY_SPOTIFY_DJ = "spotify_dj"
         const val KEY_TRIM_SILENCE = "trim_silence"
         const val KEY_SKIP_FADE = "skip_fade"

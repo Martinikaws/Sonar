@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="look_title">Lyrics look</string>
+    <string name="look_classic">Classic</string>
+    <string name="look_immersive">Immersive</string>
+    <string name="look_spotifusion">Spotifusion</string>
+    <string name="look_glassify">Glassify</string>
+    <string name="look_liquid_music">LiquidMusic</string>
+    <string name="look_starry_night">Starry Night</string>
+    <string name="look_cupertino">Cupertino</string>
+    <string name="look_squared">Squared</string>
+    <string name="look_sample">The city wakes up slowly</string>
+    <string name="look_sample_next">We follow the morning light</string>
+    <string name="look_preview_position">Preview playback position</string>
+</resources>

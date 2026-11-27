@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audio_sources_track_order">Sonar tries enabled audio sources in this order for each track when fallback is on.</string>
+    <string name="audio_source_flac_unavailable">Not available yet</string>
+    <string name="youtube_audio_fallback">YouTube Music fallback</string>
+    <string name="youtube_audio_fallback_summary">When Spotify cannot play a track, play the matching audio from YouTube Music instead.</string>
+</resources>

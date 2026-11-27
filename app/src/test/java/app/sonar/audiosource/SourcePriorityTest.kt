@@ -4,6 +4,7 @@ import app.sonar.audiosource.AudioSource.FLAC
 import app.sonar.audiosource.AudioSource.SPOTIFY
 import app.sonar.audiosource.AudioSource.YOUTUBE_MUSIC
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class SourcePriorityTest {
@@ -73,5 +74,34 @@ class SourcePriorityTest {
             priority.setEnabled(YOUTUBE_MUSIC, false).fallbacks(setOf(SPOTIFY), flacReady = false),
         )
         assertEquals(listOf(SPOTIFY), priority.move(YOUTUBE_MUSIC, 0).fallbacks(setOf(YOUTUBE_MUSIC), false))
+    }
+
+    @Test
+    fun trackTriesEachSourceOnceAndSkipsFlac() {
+        val priority = SourcePriority()
+        assertEquals(SPOTIFY, priority.nextTrackSource(emptySet(), youtubeAllowed = true))
+        assertNull(priority.nextTrackSource(setOf(SPOTIFY), youtubeAllowed = true, spotifyPending = true))
+        assertEquals(YOUTUBE_MUSIC, priority.nextTrackSource(setOf(SPOTIFY), youtubeAllowed = true))
+        assertNull(priority.nextTrackSource(setOf(SPOTIFY, YOUTUBE_MUSIC), youtubeAllowed = true))
+    }
+
+    @Test
+    fun youtubeFirstCanFallThroughToSpotifyAndNextTrackStartsFresh() {
+        val priority = SourcePriority().move(YOUTUBE_MUSIC, 0)
+        assertEquals(YOUTUBE_MUSIC, priority.nextTrackSource(emptySet(), youtubeAllowed = true))
+        assertEquals(SPOTIFY, priority.nextTrackSource(setOf(YOUTUBE_MUSIC), youtubeAllowed = true))
+        assertNull(priority.nextTrackSource(setOf(YOUTUBE_MUSIC, SPOTIFY), youtubeAllowed = true))
+        assertEquals(YOUTUBE_MUSIC, priority.nextTrackSource(emptySet(), youtubeAllowed = true))
+    }
+
+    @Test
+    fun trackSkipsYoutubeWhenUnavailableOrDisabled() {
+        val priority = SourcePriority().move(YOUTUBE_MUSIC, 0)
+        assertEquals(SPOTIFY, priority.nextTrackSource(emptySet(), youtubeAllowed = false))
+        assertNull(priority.nextTrackSource(setOf(SPOTIFY), youtubeAllowed = false))
+        assertNull(
+            priority.setEnabled(YOUTUBE_MUSIC, false)
+                .nextTrackSource(setOf(SPOTIFY), youtubeAllowed = true),
+        )
     }
 }

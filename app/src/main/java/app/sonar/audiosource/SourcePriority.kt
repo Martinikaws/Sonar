@@ -41,6 +41,18 @@ data class SourcePriority(
     fun fallbacks(tried: Set<AudioSource>, flacReady: Boolean): List<AudioSource> =
         effective().filter { it !in tried && (it != AudioSource.FLAC || flacReady) }
 
+    /** The next playable source for this attempt. FLAC has no playback route here. */
+    fun nextTrackSource(
+        tried: Set<AudioSource>,
+        youtubeAllowed: Boolean,
+        spotifyPending: Boolean = false,
+    ): AudioSource? {
+        if (spotifyPending) return null
+        return fallbacks(tried, flacReady = false).firstOrNull {
+            it != AudioSource.YOUTUBE_MUSIC || youtubeAllowed
+        }
+    }
+
     fun toJson(): String = JSONObject()
         .put("order", JSONArray(order.map { it.name }))
         .put("disabled", JSONArray(disabled.map { it.name }))

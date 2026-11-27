@@ -29,6 +29,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.yield
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.CancellationException
@@ -487,6 +488,7 @@ class PlaybackService : MediaLibraryService() {
             ) = scope.future {
                 val selection = ++selectionVersion
                 invalidateYouTubeLookup()
+                trackSources = null
                 val queue = browseTree.onSetMediaItems(
                     mediaSession, controller, mediaItems, startIndex, startPositionMs,
                 ).await()
@@ -582,6 +584,10 @@ class PlaybackService : MediaLibraryService() {
         // Only an explicit account-level refusal offers SDK recovery.
         scope.launch {
             app.sonar.backend.spotify.SpotifyWebPlayback.accountRefused.collect {
+                val owner = librespot
+                if (owner != null && tryTrackSource(owner, spotifyUnavailable = true, recoverWithWeb = true)) {
+                    return@collect
+                }
                 runCatching { moveToWebPlayback() }
                     .onFailure { android.util.Log.w(TAG, "SDK recovery failed", it) }
             }
@@ -1032,11 +1038,6 @@ class PlaybackService : MediaLibraryService() {
     private val sourceOrder get() = container.sourcePriority.priority.value.effective()
     private var selectionVersion = 0L
 
-    private fun flacReady(uri: String?): Boolean =
-        uri?.startsWith("spotify:track:") == true &&
-            (!downloadedHere(uri) || AudioSource.SPOTIFY !in sourceOrder) &&
-            !OfflineMode.active.value && SoloistEngine.isReady(this) && SoloistEngine.failed.value == null
-
     private fun spotifyPlayer(): PlayerKind {
         if (webPlaybackNeeded()) {
             if (app.sonar.playback.websdk.WebSdkRecovery.isConfigured(this)) return PlayerKind.SPOTIFY_WEB
@@ -1052,6 +1053,17 @@ class PlaybackService : MediaLibraryService() {
         if (backend != PlayerKind.SPOTIFY) return backend
         val uri = firstUri?.substringAfterLast('/').orEmpty()
         val order = sourceOrder
+        if (container.preferences.youtubeFallback.value && uri.startsWith("spotify:track:")) {
+            val firstSource = container.sourcePriority.priority.value.nextTrackSource(
+                emptySet(), youtubeAllowed = OfflineMode.reason.value != OfflineMode.Reason.MANUAL,
+            ) ?: return PlayerKind.SPOTIFY_UNAVAILABLE
+            // Keep the native Spotify queue as the owner across source changes.
+            if (firstSource == AudioSource.YOUTUBE_MUSIC) return PlayerKind.SPOTIFY
+            if (!initial && webPlaybackNeeded() &&
+                app.sonar.playback.websdk.WebSdkRecovery.isConfigured(this)
+            ) return PlayerKind.SPOTIFY_WEB
+            if (AudioSource.YOUTUBE_MUSIC in order) return PlayerKind.SPOTIFY
+        }
         if (order == listOf(AudioSource.SPOTIFY) || !uri.startsWith("spotify:track:")) {
             return when {
                 soloistWanted() && !downloadedHere(uri) -> PlayerKind.SOLOIST
@@ -1068,7 +1080,7 @@ class PlaybackService : MediaLibraryService() {
                             (!webPlaybackNeeded() || app.sonar.playback.websdk.WebSdkRecovery.isConfigured(this)))
                     ) return if (initial) PlayerKind.SPOTIFY else spotifyPlayer()
                 }
-                AudioSource.FLAC -> if (flacReady(uri)) return PlayerKind.SOLOIST
+                AudioSource.FLAC -> Unit
                 AudioSource.YOUTUBE_MUSIC -> if (!OfflineMode.active.value) {
                     val key = item?.let(YouTubePlayerFactory::spotifyTrackKey)
                         ?: YouTubePlayerFactory.catalogSpotifyTrackKey(uri)
@@ -1220,14 +1232,23 @@ class PlaybackService : MediaLibraryService() {
 
     private val ytAudio by lazy { app.sonar.audiosource.YtAudioForSpotify(cacheDir) }
 
-    private data class YouTubeAudioAttempt(
-        val owner: LibrespotPlayer,
-        val entryId: Long,
+    private class TrackSources(val owner: LibrespotPlayer, val entryId: Long) {
+        val tried = mutableSetOf<AudioSource>()
+        var spotifyUnavailable = false
+        var recoverWithWeb = false
+    }
+
+    private class YouTubeAudioAttempt(
+        val sources: TrackSources,
         val key: SpotifyTrackKey,
         val videoId: String,
-        val retried: Boolean = false,
-    )
+    ) {
+        var handlingError = false
+        val owner get() = sources.owner
+        val entryId get() = sources.entryId
+    }
 
+    private var trackSources: TrackSources? = null
     private var youtubeLookup: Job? = null
     private var youtubeAttempt: YouTubeAudioAttempt? = null
 
@@ -1236,30 +1257,51 @@ class PlaybackService : MediaLibraryService() {
         youtubeLookup = null
     }
 
-    private fun fallbackSource(owner: LibrespotPlayer, entry: PlayQueue.Track): AudioSource? {
-        if (!YOUTUBE_AUDIO_FALLBACK || player !== owner || handingOver || owner.isRemotePlayback ||
-            owner.currentQueueEntry !== entry || OfflineMode.reason.value == OfflineMode.Reason.MANUAL ||
-            !entry.uri.startsWith("spotify:track:")
-        ) return null
-        return container.sourcePriority.priority.value.fallbacks(
-            setOf(AudioSource.SPOTIFY), flacReady(entry.uri),
-        ).firstOrNull()
+    private fun youtubeAllowed(): Boolean =
+        container.preferences.youtubeFallback.value && OfflineMode.reason.value != OfflineMode.Reason.MANUAL
+
+    private fun tryTrackSource(
+        owner: LibrespotPlayer,
+        spotifyUnavailable: Boolean = false,
+        recoverWithWeb: Boolean = false,
+    ): Boolean {
+        if (!youtubeAllowed() || player !== owner || handingOver || owner.isRemotePlayback ||
+            !owner.playbackIntent
+        ) return false
+        val track = owner.currentQueueEntry ?: return false
+        if (!track.uri.startsWith("spotify:track:")) return false
+        val entryId = owner.currentQueueEntryId ?: return false
+        val sources = trackSources?.takeIf { it.owner === owner && it.entryId == entryId }
+            ?: TrackSources(owner, entryId).also {
+                invalidateYouTubeLookup()
+                trackSources = it
+            }
+        if (spotifyUnavailable ||
+            (OfflineMode.reason.value == OfflineMode.Reason.NO_SESSION && !downloadedHere(track.uri))
+        ) {
+            sources.spotifyUnavailable = true
+            sources.tried += AudioSource.SPOTIFY
+        }
+        val nextSource = container.sourcePriority.priority.value.nextTrackSource(
+            sources.tried,
+            youtubeAllowed = true,
+            spotifyPending = AudioSource.SPOTIFY in sources.tried && !sources.spotifyUnavailable,
+        )
+        when (nextSource) {
+            AudioSource.SPOTIFY -> sources.tried += AudioSource.SPOTIFY
+            AudioSource.YOUTUBE_MUSIC -> {
+                sources.tried += AudioSource.YOUTUBE_MUSIC
+                sources.recoverWithWeb = recoverWithWeb
+                lookUpYouTubeAudio(sources, track)
+            }
+            null -> if (youtubeLookup != null && recoverWithWeb) sources.recoverWithWeb = true
+            AudioSource.FLAC -> Unit
+        }
+        return youtubeLookup != null
     }
 
-    private fun fallBackToYouTubeAudio(owner: LibrespotPlayer, track: PlayQueue.Track) {
-        if (youtubeLookup != null) return
-        val entryId = owner.currentQueueEntryId ?: return
-        when (fallbackSource(owner, track)) {
-            AudioSource.FLAC -> {
-                SoloistEngine.start(this)
-                val items = (0 until owner.mediaItemCount).map(owner::getMediaItemAt)
-                handOver(PlayerKind.SOLOIST, items, owner.currentMediaItemIndex, owner.currentPosition, owner.playbackIntent)
-                return
-            }
-            AudioSource.YOUTUBE_MUSIC -> Unit
-            else -> return
-        }
-
+    private fun lookUpYouTubeAudio(sources: TrackSources, track: PlayQueue.Track) {
+        val owner = sources.owner
         youtubeLookup = scope.launch(start = CoroutineStart.LAZY) {
             val lookup = coroutineContext[Job]
             try {
@@ -1269,25 +1311,38 @@ class PlaybackService : MediaLibraryService() {
                     artists = track.artists.map { it.name }.ifEmpty { track.artist.split(", ") },
                     durationMs = track.durationMs,
                 )
-                val match = findYouTubeAudio(key) ?: return@launch
-                if (owner.currentQueueEntryId != entryId || fallbackSource(owner, track) != AudioSource.YOUTUBE_MUSIC) {
+                val match = findYouTubeAudio(key)
+                if (player !== owner || owner.currentQueueEntryId != sources.entryId ||
+                    trackSources !== sources || !youtubeAllowed() || owner.isRemotePlayback ||
+                    !owner.playbackIntent || AudioSource.YOUTUBE_MUSIC !in sourceOrder
+                ) return@launch
+                if (match == null) {
+                    if (sources.recoverWithWeb && AudioSource.SPOTIFY in sourceOrder) {
+                        youtubeLookup = null
+                        moveToWebPlayback()
+                    } else if (AudioSource.SPOTIFY !in sourceOrder) {
+                        owner.pause()
+                        owner.markFallbackEnded()
+                        showPlaybackRefused()
+                    } else if (!sources.spotifyUnavailable) {
+                        sources.tried += AudioSource.SPOTIFY
+                    }
                     return@launch
                 }
                 val original = owner.currentMediaItem?.takeIf { it.mediaId == track.uri } ?: return@launch
-                val playing = owner.playbackIntent
                 val position = owner.currentPosition.coerceAtLeast(0L)
 
-                // This swap parks Spotify synchronously. Detach the job before the swap invalidates lookups.
+                // The swap invalidates lookups and parks the queue owner.
                 youtubeLookup = null
                 handingOver = true
                 try {
                     swapPlayer(PlayerKind.SPOTIFY_YOUTUBE_AUDIO, restore = false)
-                    youtubeAttempt = YouTubeAudioAttempt(owner, entryId, key, match.videoId)
+                    youtubeAttempt = YouTubeAudioAttempt(sources, key, match.videoId)
                     player.setMediaItem(
                         original.buildUpon().setUri("${YouTubePlayerFactory.SPOTIFY_AUDIO_PREFIX}${match.videoId}").build(),
                         position,
                     )
-                    player.playWhenReady = playing
+                    player.playWhenReady = true
                     player.prepare()
                 } finally {
                     handedOverAt = System.currentTimeMillis()
@@ -1302,7 +1357,7 @@ class PlaybackService : MediaLibraryService() {
 
     private suspend fun findYouTubeAudio(key: SpotifyTrackKey): app.sonar.audiosource.YtMatch? =
         try {
-            ytAudio.findAudio(key)
+            withTimeoutOrNull(YOUTUBE_LOOKUP_TIMEOUT_MS) { ytAudio.findAudio(key) }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
@@ -1310,60 +1365,36 @@ class PlaybackService : MediaLibraryService() {
             null
         }
 
-    private suspend fun retryYouTubeAudio(
-        fallback: androidx.media3.common.Player,
-        failed: YouTubeAudioAttempt,
-    ) {
-        if (player !== fallback || youtubeAttempt !== failed || parkedSpotify !== failed.owner) return
-        if (failed.retried) {
-            leaveYouTubeAudio(fallback)
-            return
-        }
-
-        val retrying = failed.copy(retried = true)
-        youtubeAttempt = retrying
-        val match = try {
-            ytAudio.suppress(failed.videoId, failed.key.id)
-            findYouTubeAudio(failed.key)
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (error: Exception) {
-            android.util.Log.w(TAG, "YouTube Music replacement lookup failed", error)
-            null
-        }
-        if (player !== fallback || youtubeAttempt !== retrying || parkedSpotify !== failed.owner) return
-        val item = fallback.currentMediaItem
-        if (match == null || item == null || failed.owner.currentQueueEntryId != failed.entryId ||
-            failed.owner.isRemotePlayback
-        ) {
-            leaveYouTubeAudio(fallback)
-            return
-        }
-
-        youtubeAttempt = retrying.copy(videoId = match.videoId)
-        try {
-            fallback.setMediaItem(
-                item.buildUpon().setUri("${YouTubePlayerFactory.SPOTIFY_AUDIO_PREFIX}${match.videoId}").build(),
-                fallback.currentPosition.coerceAtLeast(0L),
-            )
-            fallback.prepare()
-        } catch (error: RuntimeException) {
-            android.util.Log.w(TAG, "YouTube Music replacement failed", error)
-            leaveYouTubeAudio(fallback)
-        }
+    private fun showPlaybackRefused() {
+        android.widget.Toast.makeText(this, app.sonar.R.string.playback_refused, android.widget.Toast.LENGTH_LONG).show()
     }
 
-    private suspend fun leaveYouTubeAudio(fallback: androidx.media3.common.Player) {
-        val attempt = youtubeAttempt ?: return
-        if (player !== fallback || parkedSpotify !== attempt.owner) return
+    private suspend fun leaveYouTubeAudio(
+        fallback: androidx.media3.common.Player,
+        attempt: YouTubeAudioAttempt,
+        failed: Boolean,
+    ) {
+        if (player !== fallback || youtubeAttempt !== attempt || parkedSpotify !== attempt.owner) return
         val playing = fallback.playWhenReady
-        youtubeAttempt = null
+        val owner = attempt.owner
         handingOver = true
         try {
             swapPlayer(PlayerKind.SPOTIFY, restore = false)
-            val owner = attempt.owner
             if (owner.isRemotePlayback || owner.currentQueueEntry == null) return
             if (owner.currentQueueEntryId == attempt.entryId) {
+                val nextSource = container.sourcePriority.priority.value.nextTrackSource(
+                    attempt.sources.tried, youtubeAllowed = false,
+                )
+                if (failed && nextSource == AudioSource.SPOTIFY) {
+                    attempt.sources.tried += AudioSource.SPOTIFY
+                    owner.playWhenReady = playing
+                    return
+                }
+                if (failed && playing && attempt.sources.recoverWithWeb && AudioSource.SPOTIFY in sourceOrder) {
+                    moveToWebPlayback()
+                    return
+                }
+                if (failed) showPlaybackRefused()
                 val next = owner.nextMediaItemIndex
                 if (next == androidx.media3.common.C.INDEX_UNSET || next == owner.currentMediaItemIndex) {
                     owner.markFallbackEnded()
@@ -1524,17 +1555,31 @@ class PlaybackService : MediaLibraryService() {
                 if (fallback) built.addListener(object : androidx.media3.common.Player.Listener {
                     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                         val failed = youtubeAttempt ?: return
+                        if (player !== built || failed.handlingError) return
+                        failed.handlingError = true
                         scope.launch {
                             yield()
-                            retryYouTubeAudio(built, failed)
+                            try {
+                                withTimeoutOrNull(YOUTUBE_LOOKUP_TIMEOUT_MS) {
+                                    ytAudio.suppress(failed.videoId, failed.key.id)
+                                    ytAudio.invalidate(failed.key.id)
+                                }
+                            } catch (cancelled: CancellationException) {
+                                throw cancelled
+                            } catch (error: Exception) {
+                                android.util.Log.w(TAG, "Could not invalidate failed YouTube Music audio", error)
+                            }
+                            leaveYouTubeAudio(built, failed, failed = true)
                         }
                     }
 
                     override fun onPlaybackStateChanged(state: Int) {
                         if (state == androidx.media3.common.Player.STATE_ENDED) {
+                            val attempt = youtubeAttempt ?: return
+                            if (attempt.handlingError) return
                             scope.launch {
                                 yield()
-                                leaveYouTubeAudio(built)
+                                leaveYouTubeAudio(built, attempt, failed = false)
                             }
                         }
                     }
@@ -1571,11 +1616,40 @@ class PlaybackService : MediaLibraryService() {
                     !restoringQueue && !handingOver && engineStarted && soloistWanted() &&
                     !app.sonar.playback.OfflineMode.active.value && !downloadedHere(uri)
             }
-            built.onCurrentUnavailable = { track -> fallBackToYouTubeAudio(built, track) }
-            built.onPlaybackAttemptChanged = { if (player === built) invalidateYouTubeLookup() }
+            built.onCurrentUnavailable = { track ->
+                if (built.currentQueueEntry === track) tryTrackSource(built, spotifyUnavailable = true)
+            }
             built.addListener(object : androidx.media3.common.Player.Listener {
-                override fun onMediaItemTransition(item: androidx.media3.common.MediaItem?, reason: Int) {
-                    if (player === built) invalidateYouTubeLookup()
+                override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
+                    if (player !== built) return
+                    if (trackSources?.entryId != built.currentQueueEntryId ||
+                        reason == androidx.media3.common.Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT
+                    ) {
+                        invalidateYouTubeLookup()
+                        trackSources = null
+                    }
+                    scope.launch {
+                        yield()
+                        tryTrackSource(built)
+                    }
+                }
+
+                override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                    if (!playWhenReady || player !== built) return
+                    scope.launch {
+                        yield()
+                        tryTrackSource(built)
+                    }
+                }
+
+                override fun onPlaybackStateChanged(state: Int) {
+                    if (player === built &&
+                        (state == androidx.media3.common.Player.STATE_IDLE ||
+                            state == androidx.media3.common.Player.STATE_ENDED)
+                    ) {
+                        invalidateYouTubeLookup()
+                        trackSources = null
+                    }
                 }
             })
             built.elsewhere = { items, index, position, playing ->
@@ -2877,7 +2951,7 @@ class PlaybackService : MediaLibraryService() {
          * when that source is enabled. Off until tried on a device: the
          * handover around a failing engine has not been heard yet.
          */
-        private const val YOUTUBE_AUDIO_FALLBACK = false
+        private const val YOUTUBE_LOOKUP_TIMEOUT_MS = 6_000L
 
         /** How long after a handover a change of song is the new player settling, not the music. */
         private const val HANDOVER_SETTLE_MS = 4_000L

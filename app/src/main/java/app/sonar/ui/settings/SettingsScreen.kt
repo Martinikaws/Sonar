@@ -495,7 +495,7 @@ fun SettingsScreen(
         }
 
         "audio-sources" -> {
-            AudioSourcesSection(soloistSetup)
+            AudioSourcesSection()
         }
 
         "equalizer" -> Section(null) {
@@ -1350,24 +1350,45 @@ private fun EngineSection(soloist: SoloistSetupUi) {
     }
 }
 
-/** Source preferences for initial player selection. */
 @Composable
-private fun AudioSourcesSection(soloist: SoloistSetupUi?) {
+private fun AudioSourcesSection() {
     val context = LocalContext.current
-    val store = remember(context) {
-        (context.applicationContext as app.sonar.SonarApplication).sourcePriority
-    }
+    val sonarApp = remember(context) { context.applicationContext as app.sonar.SonarApplication }
+    val store = sonarApp.sourcePriority
     val priority by store.priority.collectAsStateWithLifecycle()
-    val flacReady = soloist != null && soloist.chosen && soloist.savedKey.isNotEmpty() &&
-        soloist.installed && soloist.signedIn
+    val youtubeFallback by sonarApp.preferences.youtubeFallback.collectAsStateWithLifecycle()
 
     Section(stringResource(R.string.settings_group_sources)) {
         Text(
-            stringResource(R.string.fix2_audio_sources_order),
+            stringResource(R.string.audio_sources_track_order),
             style = MaterialTheme.typography.bodySmall,
             color = InkDim,
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
         )
+        RowDivider()
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 44.dp)
+                .toggleable(
+                    value = youtubeFallback,
+                    role = Role.Switch,
+                    onValueChange = sonarApp.preferences::setYouTubeFallback,
+                )
+                .padding(horizontal = 18.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.youtube_audio_fallback), style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    stringResource(R.string.youtube_audio_fallback_summary),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkDim,
+                )
+            }
+            Switch(checked = youtubeFallback, onCheckedChange = null)
+        }
         priority.order.forEachIndexed { index, source ->
             RowDivider()
             val label = stringResource(
@@ -1400,9 +1421,9 @@ private fun AudioSourcesSection(soloist: SoloistSetupUi?) {
                             style = MaterialTheme.typography.bodyLarge,
                             color = if (enabled) Ink else InkDim,
                         )
-                        if (source == app.sonar.audiosource.AudioSource.FLAC && enabled && !flacReady) {
+                        if (source == app.sonar.audiosource.AudioSource.FLAC) {
                             Text(
-                                stringResource(R.string.audio_source_flac_needs_soloist),
+                                stringResource(R.string.audio_source_flac_unavailable),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = InkDim,
                             )

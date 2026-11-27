@@ -100,7 +100,10 @@ internal val SETTINGS_INDEX: List<SettingsEntry> = listOf(
 
     SettingsEntry(
         "audio-sources", R.string.settings_group_sources, null,
-        listOf(R.string.audio_source_spotify, R.string.audio_source_flac, R.string.audio_source_youtube),
+        listOf(
+            R.string.audio_source_spotify, R.string.audio_source_flac, R.string.audio_source_youtube,
+            R.string.youtube_audio_fallback, R.string.youtube_audio_fallback_summary,
+        ),
         SettingsGroup.SOURCES,
     ),
 
