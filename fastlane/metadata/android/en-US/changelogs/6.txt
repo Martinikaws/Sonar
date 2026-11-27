@@ -1,0 +1,1 @@
+Sonar 1.0: Spotify as the catalog, with audio from Spotify, FLAC sources (Jamendo, Navidrome, Live Music Archive, Bandcamp imports) and YouTube Music in the order you choose. New logo and Lucide icons, lyric looks, import from Astral, and security hardening.
