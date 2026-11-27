@@ -34,13 +34,7 @@ class TokenStore(
     private val clientId: () -> String = { SpotifyOAuth.CLIENT_ID },
 ) {
 
-    private val prefs: SharedPreferences = EncryptedSharedPreferences.create(
-        context,
-        fileName,
-        MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-    )
+    private val prefs = encryptedPreferences(context, fileName)
 
     /**
      * Shared by every store over the same file, not owned by this instance.
@@ -175,3 +169,11 @@ class TokenStore(
         }
     }
 }
+
+internal fun encryptedPreferences(context: Context, fileName: String): SharedPreferences = EncryptedSharedPreferences.create(
+    context,
+    fileName,
+    MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
+    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+)

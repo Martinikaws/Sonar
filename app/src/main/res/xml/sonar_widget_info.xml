@@ -5,7 +5,7 @@
     android:minWidth="250dp"
     android:minHeight="40dp"
     android:minResizeWidth="100dp"
-    android:minResizeHeight="40dp"
+    android:minResizeHeight="44dp"
     android:previewLayout="@layout/widget_sonar"
     android:resizeMode="horizontal|vertical"
     android:targetCellWidth="4"

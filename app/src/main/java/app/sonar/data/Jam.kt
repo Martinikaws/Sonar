@@ -65,7 +65,7 @@ object Jam {
     @Volatile
     private var startedHere: String? = null
 
-    /** The token in a Jam link, as shared ("open.spotify.com/socialsession/…") or as a URI. */
+    /** A token pasted or scanned from within the Jam controls. */
     fun tokenIn(text: String?): String? =
         text?.let { Regex("""socialsession[/:]([A-Za-z0-9]{8,})""").find(it)?.groupValues?.get(1) }
 
@@ -161,12 +161,13 @@ object Jam {
                 .onSuccess { if (quiet) _error.value = null }
                 .onFailure {
                     val missing = it.message?.contains("404") == true
+                    val log = "$method ${redactJamTokens(path.substringBefore('?'))}"
                     if (quiet) {
                         // No Jam (404) is an answer; anything else is said in the log only.
-                        if (missing) _error.value = null else Log.i(TAG, "$method ${path.substringBefore('?')}: ${it.message}")
+                        if (missing) _error.value = null else Log.i(TAG, log)
                     } else {
-                        Log.w(TAG, "$method ${path.substringBefore('?')}: ${it.message}")
-                        _error.value = it.message
+                        Log.w(TAG, log)
+                        _error.value = it.message?.let(::redactJamTokens)
                     }
                 }
                 .getOrNull()
@@ -194,5 +195,5 @@ object Jam {
             ownedByMe = root.optBoolean("is_session_owner"),
             hostDevice = root.optJSONObject("host_device_info")?.optString("device_name")?.takeIf(String::isNotEmpty),
         )
-    }.onFailure { Log.w(TAG, "a session that could not be read: ${it.message}") }.getOrNull()
+    }.onFailure { Log.w(TAG, "a session that could not be read") }.getOrNull()
 }

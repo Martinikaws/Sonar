@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="scanfix_join_jam">Join this Spotify Jam?</string>
+    <string name="scanfix_join">Join</string>
+    <string name="scanfix_corresponding_source">Corresponding source code</string>
+    <string name="scanfix_version">%1$s %2$s</string>
+    <string name="scanfix_webview_version">Android WebView %1$s</string>
+    <string name="scanfix_lucide">Lucide (ISC) / Feather (MIT)</string>
+    <string name="scanfix_innertube">Metrolist InnerTube (GPL-3.0)</string>
+    <string name="scanfix_fonts">Inter and Instrument Serif (SIL OFL 1.1)</string>
+    <string name="scanfix_hue">Tint hue</string>
+    <string name="scanfix_on">On</string>
+    <string name="scanfix_off">Off</string>
+    <string name="scanfix_repeat_one">Repeat one</string>
+    <string name="scanfix_repeat_all">Repeat all</string>
+    <string name="scanfix_remote_playback">Playing on another device</string>
+    <string name="scanfix_local_playback">Local playback</string>
+</resources>

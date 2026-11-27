@@ -56,19 +56,19 @@ internal fun FlacProviderSettings(
     onPlay: (List<CatalogTrack>, Int) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    var enabled by remember(provider, sources) { mutableStateOf(sources.enabled(provider)) }
+    val massive = provider == FlacProvider.MASSIVE
+    var enabled by remember(provider, sources) { mutableStateOf(!massive && sources.enabled(provider)) }
     var query by remember { mutableStateOf("") }
     var tracks by remember { mutableStateOf<List<CatalogTrack>?>(null) }
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
-    val massive = provider == FlacProvider.MASSIVE
     var fields by remember(provider, sources) {
         val keys = when (provider) {
             FlacProvider.JAMENDO -> listOf(FlacField.CLIENT)
             FlacProvider.NAVIDROME -> listOf(FlacField.SERVER, FlacField.USER, FlacField.PASSWORD)
             FlacProvider.ARCHIVE -> listOf(FlacField.RECORDING)
             FlacProvider.BANDCAMP -> emptyList()
-            FlacProvider.MASSIVE -> listOf(FlacField.PARTNER_KEY)
+            FlacProvider.MASSIVE -> emptyList()
         }
         mutableStateOf(keys.associateWith(sources::field))
     }
@@ -78,7 +78,7 @@ internal fun FlacProviderSettings(
             fields.getValue(FlacField.USER).isNotBlank() && fields.getValue(FlacField.PASSWORD).isNotEmpty()
         FlacProvider.ARCHIVE -> archiveId(fields.getValue(FlacField.RECORDING)) != null
         FlacProvider.BANDCAMP -> true
-        FlacProvider.MASSIVE -> fields.getValue(FlacField.PARTNER_KEY).isNotBlank()
+        FlacProvider.MASSIVE -> false
     }
     val search: () -> Unit = {
         busy = true
@@ -139,18 +139,13 @@ internal fun FlacProviderSettings(
                 FlacField.USER -> R.string.flac_username
                 FlacField.PASSWORD -> R.string.flac_password
                 FlacField.RECORDING -> R.string.flac_recording
-                FlacField.PARTNER_KEY -> R.string.flac_partner_key
             }
-            val secret = field in setOf(FlacField.CLIENT, FlacField.PASSWORD, FlacField.PARTNER_KEY)
+            val secret = field in setOf(FlacField.CLIENT, FlacField.PASSWORD)
             OutlinedTextField(
                 value = value,
                 onValueChange = {
                     fields = fields + (field to it)
                     sources.setField(field, it)
-                    if (massive && it.isBlank()) {
-                        sources.setEnabled(provider, false)
-                        enabled = false
-                    }
                     tracks = null
                     failed = false
                 },

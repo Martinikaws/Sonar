@@ -78,6 +78,9 @@ import app.sonar.lyricsx.lyricSeekPosition
 import app.sonar.lyricsx.lyricsPosition
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.res.stringResource
@@ -2401,7 +2404,14 @@ private fun TopBar(
         }
         if (connectAvailable) {
             val jam by app.sonar.data.Jam.session.collectAsStateWithLifecycle()
-            GlassButton(backdrop, onClick = onOpenDevices) {
+            val label = stringResource(R.string.devices)
+            val deviceState = stringResource(
+                if (onAnotherDevice) R.string.scanfix_remote_playback else R.string.scanfix_local_playback,
+            )
+            GlassButton(backdrop, onClick = onOpenDevices, modifier = Modifier.semantics {
+                contentDescription = label
+                stateDescription = deviceState
+            }) {
                 // In a Jam, who is in it, in place of the icon: two pictures
                 // overlapping fit the disc, centred, as Spotify's own pill has
                 // them.
@@ -2412,7 +2422,7 @@ private fun TopBar(
                     }
                 } else Icon(
                     Lucide.MonitorSmartphone,
-                    contentDescription = stringResource(R.string.devices),
+                    contentDescription = null,
                     // Lit for as long as the music is coming out of another
                     // device, not only while its list is open: on this screen it
                     // is the one thing that says the buttons are reaching
@@ -2688,6 +2698,11 @@ internal fun Controls(
                     icon = Lucide.Shuffle,
                     description = stringResource(if (state.smartShuffle) R.string.smart_shuffle else R.string.shuffle_play),
                     active = state.shuffleEnabled,
+                    playbackState = stringResource(when {
+                        state.smartShuffle -> R.string.smart_shuffle
+                        state.shuffleEnabled -> R.string.scanfix_on
+                        else -> R.string.scanfix_off
+                    }),
                     smart = state.smartShuffle,
                     onClick = { if (togglesOn) onToggleShuffle() },
                 )
@@ -2774,6 +2789,11 @@ internal fun Controls(
                     },
                     description = stringResource(R.string.repeat),
                     active = state.repeatMode != Player.REPEAT_MODE_OFF,
+                    playbackState = stringResource(when (state.repeatMode) {
+                        Player.REPEAT_MODE_ONE -> R.string.scanfix_repeat_one
+                        Player.REPEAT_MODE_ALL -> R.string.scanfix_repeat_all
+                        else -> R.string.scanfix_off
+                    }),
                     onClick = { if (togglesOn) onCycleRepeat() },
                 )
             }
@@ -2869,9 +2889,10 @@ private fun RoundGlassButton(
 private fun GlassButton(
     backdrop: Backdrop,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    RoundGlassButton(backdrop = backdrop, size = 44.dp, onClick = onClick) { content() }
+    RoundGlassButton(backdrop = backdrop, size = 44.dp, modifier = modifier, onClick = onClick) { content() }
 }
 
 /** A control that opened the panel currently showing is coloured, not just lit. */
@@ -2890,10 +2911,11 @@ private fun ToggleIcon(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     description: String,
     active: Boolean,
+    playbackState: String,
     smart: Boolean = false,
     onClick: () -> Unit,
 ) {
-    IconButton(onClick = onClick) {
+    IconButton(onClick = onClick, modifier = Modifier.semantics { stateDescription = playbackState }) {
         Box(Modifier.size(if (smart) 28.dp else 22.dp)) {
         Icon(
             icon,

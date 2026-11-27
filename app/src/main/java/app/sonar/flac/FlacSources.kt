@@ -5,6 +5,7 @@ import android.content.Intent
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.OpenableColumns
+import app.sonar.auth.encryptedPreferences
 import app.sonar.audiosource.SpotifyTrackKey
 import app.sonar.data.CatalogTrack
 import app.sonar.playback.OfflineMode
@@ -24,19 +25,46 @@ import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-internal enum class FlacField { CLIENT, SERVER, USER, PASSWORD, RECORDING, PARTNER_KEY }
+internal enum class FlacField { CLIENT, SERVER, USER, PASSWORD, RECORDING }
 
 internal class FlacSources(private val context: Context) {
     private val prefs = context.getSharedPreferences("sonar_flac", Context.MODE_PRIVATE)
+
+    private val secretFields = setOf(FlacField.CLIENT, FlacField.USER, FlacField.PASSWORD)
+    private val secrets by lazy {
+        synchronized(FlacSources::class.java) {
+            val encrypted = encryptedPreferences(context, "sonar_flac_secrets")
+            val legacy = secretFields.map { it.name }.filter(prefs::contains)
+            if (legacy.isNotEmpty()) {
+                val saved = encrypted.edit().apply {
+                    legacy.filterNot(encrypted::contains).forEach { key ->
+                        putString(key, prefs.getString(key, null))
+                    }
+                }.commit()
+                if (saved) prefs.edit().apply { legacy.forEach { remove(it) } }.commit()
+            }
+            encrypted
+        }
+    }
+
+    init {
+        if (prefs.contains("PARTNER_KEY")) prefs.edit().remove("PARTNER_KEY").commit()
+        if (secretFields.any { prefs.contains(it.name) }) {
+            // Initialize the encrypted store now so legacy credentials are removed even without provider use.
+            secrets
+        }
+    }
+
+    private fun storage(field: FlacField) = if (field in secretFields) secrets else prefs
 
     fun enabled(provider: FlacProvider): Boolean = prefs.getBoolean(provider.name, false)
     fun setEnabled(provider: FlacProvider, enabled: Boolean) {
         prefs.edit().putBoolean(provider.name, enabled).apply()
     }
 
-    fun field(field: FlacField): String = prefs.getString(field.name, "").orEmpty()
+    fun field(field: FlacField): String = storage(field).getString(field.name, "").orEmpty()
     fun setField(field: FlacField, value: String) {
-        prefs.edit().putString(field.name, value).apply()
+        storage(field).edit().putString(field.name, value).apply()
     }
 
     fun available(): Boolean = FlacProvider.entries.any { ready(it, networkAllowed()) }

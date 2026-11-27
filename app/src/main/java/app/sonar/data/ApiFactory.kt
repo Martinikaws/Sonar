@@ -240,13 +240,9 @@ object ApiFactory {
                     .header("Authorization", "Bearer $token")
                     .build()
 
-                android.util.Log.i("SonarApi", "-> ${request.method} ${request.url} [candidate: ${candidate.name}]")
+                android.util.Log.i("SonarApi", "-> ${request.method} ${redactJamTokens(request.url.encodedPath)} [candidate: ${candidate.name}]")
                 var response = chain.proceed(request)
-                android.util.Log.i("SonarApi", "<- ${response.code} ${request.url} [candidate: ${candidate.name}]")
-                if (!response.isSuccessful) {
-                    val peek = runCatching { response.peekBody(512).string() }.getOrNull()
-                    android.util.Log.w("SonarApi", "<- error body: $peek")
-                }
+                android.util.Log.i("SonarApi", "<- ${response.code} ${redactJamTokens(request.url.encodedPath)} [candidate: ${candidate.name}]")
 
                 // If 401 Unauthorized, try forcing an immediate refresh on this token store once
                 if (response.code == 401 && candidate.store != null) {

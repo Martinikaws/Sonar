@@ -1,0 +1,1 @@
+Sonar 0.1.4 introduces a new Sonar icon for the launcher, notifications, and widgets.

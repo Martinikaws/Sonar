@@ -584,10 +584,10 @@ object SoloistEngine {
             override fun onMessage(webSocket: WebSocket, text: String) {
                 // Each kind of message once, the first time it comes.
                 runCatching { JSONObject(text).optString("type") }.getOrNull()?.let { type ->
-                    if (unread.add(type)) Log.i(TAG, "Soloist sends $type: ${text.take(300)}")
+                    if (unread.add(type)) Log.i(TAG, "Soloist sends $type")
                 }
                 runCatching { onEvent(JSONObject(text)) }
-                    .onFailure { Log.w(TAG, "event not understood: $text", it) }
+                    .onFailure { Log.w(TAG, "Soloist event not understood") }
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {

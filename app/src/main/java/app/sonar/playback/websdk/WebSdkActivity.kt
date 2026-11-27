@@ -133,7 +133,7 @@ class WebSdkActivity : ComponentActivity() {
                     if (!recovery) {
                         Tester(state)
                         val version = remember { WebView.getCurrentWebViewPackage()?.versionName.orEmpty() }
-                        Text("Android WebView $version", style = MaterialTheme.typography.bodySmall, color = InkDim,
+                        Text(stringResource(R.string.scanfix_webview_version, version), style = MaterialTheme.typography.bodySmall, color = InkDim,
                             modifier = Modifier.padding(top = 18.dp))
                     }
                     Spacer(Modifier.height(28.dp))

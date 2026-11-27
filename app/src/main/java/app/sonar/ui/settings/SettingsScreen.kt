@@ -132,7 +132,6 @@ import app.sonar.data.CrossfadeSteps
 import app.sonar.data.EffectQuality
 import app.sonar.data.Quality
 import app.sonar.ui.MainViewModel
-import app.sonar.ui.components.Artwork
 import app.sonar.ui.glass.LiquidButton
 import app.sonar.ui.theme.Ink
 import app.sonar.ui.theme.InkDim
@@ -884,23 +883,7 @@ fun SettingsScreen(
                         .padding(horizontal = 18.dp, vertical = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // GitHub serves the account picture at `<user>.png`, so the
-                    // avatar follows whatever it is set to rather than being a
-                    // copy checked in here.
-                    Artwork(
-                        url = "$GITHUB_URL.png",
-                        title = GITHUB_USER,
-                        modifier = Modifier
-                            .size(54.dp)
-                            .softShadow(CircleShape, elevation = 10.dp),
-                        corner = 27.dp,
-                        decodeSize = 54.dp,
-                    )
-                    Column(
-                        Modifier
-                            .weight(1f)
-                            .padding(start = 14.dp),
-                    ) {
+                    Column(Modifier.weight(1f)) {
                         Text(GITHUB_USER, style = MaterialTheme.typography.titleMedium)
                         Text(
                             GITHUB_URL.removePrefix("https://"),
@@ -929,7 +912,7 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text(
-                    "Sonar ${BuildConfig.VERSION_NAME}",
+                    stringResource(R.string.scanfix_version, stringResource(R.string.app_name), BuildConfig.VERSION_NAME),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                 )
@@ -945,7 +928,14 @@ fun SettingsScreen(
         }
 
         "about" -> {
+            val uriHandler = LocalUriHandler.current
             Section(stringResource(R.string.about)) {
+                ActionRow(
+                    label = stringResource(R.string.scanfix_corresponding_source),
+                    destructive = false,
+                    icon = Lucide.ArrowUpRight,
+                ) { uriHandler.openUri("https://github.com/Martinikaws/Sonar") }
+                RowDivider()
                 Licences()
                 RowDivider()
                 ReportRows(name = ready?.displayName, onSave = askToSaveReport)
@@ -2057,7 +2047,11 @@ private fun Licences() {
         }
         if (open) {
             val notices = LICENCES.map { (what, licence) -> "$what — $licence" }
-            (notices + stringResource(R.string.lucide_icon_notice)).forEach { notice ->
+            (notices + listOf(
+                stringResource(R.string.scanfix_lucide),
+                stringResource(R.string.scanfix_innertube),
+                stringResource(R.string.scanfix_fonts),
+            )).forEach { notice ->
                 Text(
                     notice,
                     style = MaterialTheme.typography.bodySmall,

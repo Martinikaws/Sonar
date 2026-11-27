@@ -4234,6 +4234,25 @@ fun SonarApp(
                     }
                 }
 
+                val notificationPermission = rememberLauncherForActivityResult(
+                    ActivityResultContracts.RequestPermission(),
+                ) {}
+                val onboardingFinished = backendChosen &&
+                    (onboarded || backend != app.sonar.backend.BackendId.SPOTIFY) && !showTutorial && !showYouTubeLogin
+                LaunchedEffect(onboardingFinished) {
+                    if (onboardingFinished && android.os.Build.VERSION.SDK_INT >= 33) {
+                        val permission = android.Manifest.permission.POST_NOTIFICATIONS
+                        val prompt = context.getSharedPreferences("sonar_notification_prompt", android.content.Context.MODE_PRIVATE)
+                        if (!prompt.getBoolean("requested", false) &&
+                            androidx.core.content.ContextCompat.checkSelfPermission(context, permission) !=
+                            android.content.pm.PackageManager.PERMISSION_GRANTED
+                        ) {
+                            prompt.edit().putBoolean("requested", true).apply()
+                            notificationPermission.launch(permission)
+                        }
+                    }
+                }
+
                 if (!backendChosen) {
                     BackendChoiceScreen(onChoose = preferences::setBackend)
                 } else if (

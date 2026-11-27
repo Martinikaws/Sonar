@@ -8,6 +8,9 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import app.sonar.BuildConfig
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,20 +31,13 @@ import java.io.File
  * forbid it — so there is nothing to deliver an update but the app itself. The
  * releases page is already the distribution channel; this reads it.
  *
- * Nothing here has to verify what it downloads. Android refuses an update
- * signed with a different key than the installed copy, so an APK that is not
- * the one built with the project's keystore simply fails to install. A hash
- * check on top would look reassuring and add nothing the platform does not
- * already enforce.
+ * Android checks signing identity when installing an update.
  */
 class Updater(context: Context) {
 
     private val app = context.applicationContext
     private val json = Json { ignoreUnknownKeys = true }
     private val client = OkHttpClient()
-
-    /** The last whole percent handed to the notification; see [download]. */
-    private var lastReported = -1
 
     private val _state = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = _state.asStateFlow()
@@ -137,20 +133,10 @@ class Updater(context: Context) {
             val body = json.parseToJsonElement(response.body?.string().orEmpty()) as? JsonObject
                 ?: return null
             val tag = body["tag_name"]?.jsonPrimitive?.content?.removePrefix("v") ?: return null
-            val apks = (body["assets"] as? JsonArray)
-                ?.filterIsInstance<JsonObject>()
-                ?.filter { it["name"]?.jsonPrimitive?.content?.endsWith(".apk") == true }
-                .orEmpty()
-            // One APK per ABI and a universal one: the phone's own first, in
-            // the order it prefers them, then the universal, then whatever
-            // there is, for a release that ships a single APK.
-            fun named(part: String) = apks.firstOrNull {
-                it["name"]?.jsonPrimitive?.content?.contains(part) == true
-            }
-            val asset = android.os.Build.SUPPORTED_ABIS.firstNotNullOfOrNull(::named)
-                ?: named("universal")
-                ?: apks.firstOrNull()
-                ?: return null
+            val assets = (body["assets"] as? JsonArray).orEmpty().filterIsInstance<JsonObject>()
+            val byName = assets.associateBy { it["name"]?.jsonPrimitive?.content }
+            val name = selectSonarAsset(tag, byName.keys.filterNotNull(), Build.SUPPORTED_ABIS.asList())
+            val asset = byName[name] ?: return null
             val url = asset["browser_download_url"]?.jsonPrimitive?.content ?: return null
             val size = asset["size"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
             val notes = body["body"]?.jsonPrimitive?.content.orEmpty().trim()
@@ -197,46 +183,59 @@ class Updater(context: Context) {
         _state.value = State.Downloading(null)
         onProgress(null)
 
-        val apk = runCatching {
-            withContext(Dispatchers.IO) { download(update, onProgress) }
-        }.getOrElse {
-            android.util.Log.w(TAG, "download failed: $it")
-            _state.value = State.Failed(it.message ?: "download")
-            return
-        }
-
-        runCatching { withContext(Dispatchers.IO) { commit(apk) } }
-            .onSuccess { _state.value = State.Installing }
-            .onFailure {
-                android.util.Log.w(TAG, "install failed: $it")
-                apk.delete()
-                _state.value = State.Failed(it.message ?: "install")
+        var stage = "download"
+        try {
+            withContext(Dispatchers.IO) {
+                val apk = File(app.cacheDir, "update.apk")
+                try {
+                    val job = currentCoroutineContext()
+                    download(update, apk, onProgress) { job.ensureActive() }
+                    job.ensureActive()
+                    stage = "install"
+                    commit(apk)
+                } finally {
+                    apk.delete()
+                }
             }
+            _state.value = State.Installing
+        } catch (cancelled: CancellationException) {
+            if (stage == "download") _state.value = State.Failed("download cancelled")
+            throw cancelled
+        } catch (failure: Exception) {
+            android.util.Log.w(TAG, "$stage failed", failure)
+            _state.value = State.Failed(failure.message ?: stage)
+        }
     }
 
-    private fun download(update: State.Available, onProgress: (Float?) -> Unit): File {
-        // cacheDir, not filesDir: once the installer has read it the file is
-        // dead weight, and twenty megabytes is worth letting the system reclaim
-        // if the install never happens.
-        val target = File(app.cacheDir, "update.apk")
-        target.delete()
-        lastReported = -1
+    private fun download(
+        update: State.Available,
+        target: File,
+        onProgress: (Float?) -> Unit,
+        checkActive: () -> Unit,
+    ) {
+        requireUpdateSize(update.bytes)
+        var lastReported = -1
 
         val request = Request.Builder().url(update.url).build()
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) error("HTTP ${response.code}")
             val body = response.body ?: error("empty body")
             val total = body.contentLength().takeIf { it > 0 } ?: update.bytes
+            requireUpdateSize(total)
             var written = 0L
 
             body.byteStream().use { input ->
                 target.outputStream().use { output ->
                     val buffer = ByteArray(64 * 1024)
                     while (true) {
-                        val read = input.read(buffer)
+                        checkActive()
+                        val remaining = MAX_UPDATE_BYTES - written
+                        val read = input.read(buffer, 0, minOf(buffer.size.toLong(), remaining + 1).toInt())
+                        checkActive()
                         if (read < 0) break
-                        output.write(buffer, 0, read)
                         written += read
+                        requireUpdateSize(written)
+                        output.write(buffer, 0, read)
                         if (total > 0) {
                             val progress = written.toFloat() / total
                             _state.value = State.Downloading(progress)
@@ -254,10 +253,11 @@ class Updater(context: Context) {
                 }
             }
         }
-        return target
     }
 
     private fun commit(apk: File) {
+        val archive = app.packageManager.getPackageArchiveInfo(apk.path, 0)
+        check(archive?.packageName == "app.sonar") { "Unexpected update package" }
         val installer = app.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(
             PackageInstaller.SessionParams.MODE_FULL_INSTALL,
@@ -278,7 +278,6 @@ class Updater(context: Context) {
                 ).intentSender,
             )
         }
-        apk.delete()
     }
 
     /** Whether the user has allowed this app to install packages at all. */

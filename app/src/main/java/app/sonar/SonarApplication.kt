@@ -108,6 +108,11 @@ class SonarApplication : Application(), ImageLoaderFactory {
         val offlineScope = kotlinx.coroutines.CoroutineScope(
             kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default,
         )
+        offlineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { flacSources }.onFailure {
+                android.util.Log.w("SonarFlac", "Could not migrate FLAC credentials")
+            }
+        }
         app.sonar.playback.SessionKeeper.attach(offlineScope) {
             preferences.backend.value == app.sonar.backend.BackendId.SPOTIFY && spotifySignedIn &&
                 !preferences.spotifyFreeAccount.value

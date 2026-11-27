@@ -13,13 +13,17 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
+import app.sonar.R
 import app.sonar.data.CatalogTrack
+import app.sonar.ui.components.GlassActionSheet
+import app.sonar.ui.components.GlassActionSheetAction
 import app.sonar.playback.PlaybackService
 
 /**
@@ -68,6 +72,8 @@ class MainActivity : ComponentActivity() {
     /** The screen's fastest mode while the app is on screen; see the class. */
     private val touchRefreshRate = TouchRefreshRate(this)
 
+    private var pendingJam by mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Transparent bars; SonarTheme sets the icon colour, because it is the
@@ -115,6 +121,17 @@ class MainActivity : ComponentActivity() {
                     openPlayer = openPlayer,
                     link = link,
                 )
+                GlassActionSheet(
+                    visible = pendingJam != null,
+                    onDismiss = { pendingJam = null },
+                    title = stringResource(R.string.scanfix_join_jam),
+                ) {
+                    GlassActionSheetAction(label = stringResource(R.string.scanfix_join), onClick = {
+                        val token = pendingJam
+                        pendingJam = null
+                        token?.let(::joinJam)
+                    })
+                }
             }
         }
     }
@@ -271,15 +288,15 @@ class MainActivity : ComponentActivity() {
         // A Jam link shared to Sonar ("Share" → Sonar): the way in that needs
         // no setting changed for Sonar to open Spotify's links.
         if (intent.action == android.content.Intent.ACTION_SEND) {
-            app.sonar.data.Jam.tokenIn(intent.getStringExtra(android.content.Intent.EXTRA_TEXT))?.let(::joinJam)
+            app.sonar.data.jamInviteToken(intent.getStringExtra(android.content.Intent.EXTRA_TEXT))?.let { pendingJam = it }
             return
         }
         if (intent.action != android.content.Intent.ACTION_VIEW) return
-        val uri = app.sonar.data.SpotifyLink.parse(intent.data) ?: return
-        app.sonar.data.Jam.tokenIn(uri)?.let {
-            joinJam(it)
+        app.sonar.data.jamInviteToken(intent.dataString)?.let {
+            pendingJam = it
             return
         }
+        val uri = app.sonar.data.SpotifyLink.parse(intent.data) ?: return
         link = LinkRequest(uri, (link?.n ?: 0) + 1)
     }
 

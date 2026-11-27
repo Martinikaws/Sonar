@@ -72,9 +72,9 @@ open class SonarWidget : AppWidgetProvider() {
      */
     private fun press(context: Context, action: String) {
         val pending = goAsync()
-        val app = context.applicationContext
-        val token = SessionToken(app, ComponentName(app, PlaybackService::class.java))
-        val future = MediaController.Builder(app, token).buildAsync()
+        val applicationContext = context.applicationContext
+        val token = SessionToken(applicationContext, ComponentName(applicationContext, PlaybackService::class.java))
+        val future = MediaController.Builder(applicationContext, token).buildAsync()
         future.addListener({
             val controller = runCatching { future.get() }.getOrNull()
             try {
@@ -129,22 +129,22 @@ open class SonarWidget : AppWidgetProvider() {
 
         /** Draws every Sonar widget again from what is kept. */
         fun refresh(context: Context) {
-            val app = context.applicationContext
-            val manager = AppWidgetManager.getInstance(app)
-            val ids = manager.getAppWidgetIds(ComponentName(app, SonarWidget::class.java)) +
-                manager.getAppWidgetIds(ComponentName(app, Tile::class.java))
+            val sonarApplication = context.applicationContext as SonarApplication
+            val manager = AppWidgetManager.getInstance(sonarApplication)
+            val ids = manager.getAppWidgetIds(ComponentName(sonarApplication, SonarWidget::class.java)) +
+                manager.getAppWidgetIds(ComponentName(sonarApplication, Tile::class.java))
             if (ids.isEmpty()) return
             drawing?.cancel()
             drawing = scope.launch {
-                val now = stored(app)
-                val backend = (app as SonarApplication).preferences.backend.value
-                val playlists = app.widgetPlaylists.recent(backend).take(PLAYLIST_SLOTS)
-                val density = app.resources.displayMetrics.density
-                val cover = now?.artworkUri?.let { load(app, it, 512) }
-                val covers = playlists.map { entry -> entry.artworkUrl?.let { load(app, it, 192) } }
+                val now = stored(sonarApplication)
+                val backend = sonarApplication.preferences.backend.value
+                val playlists = sonarApplication.widgetPlaylists.recent(backend).take(PLAYLIST_SLOTS)
+                val density = sonarApplication.resources.displayMetrics.density
+                val cover = now?.artworkUri?.let { load(sonarApplication, it, 512) }
+                val covers = playlists.map { entry -> entry.artworkUrl?.let { load(sonarApplication, it, 192) } }
                 ids.forEach { id ->
                     val options = manager.getAppWidgetOptions(id)
-                    val views = build(app, options, now, cover, playlists, covers, density)
+                    val views = build(sonarApplication, options, now, cover, playlists, covers, density)
                     runCatching { manager.updateAppWidget(id, views) }
                 }
             }
@@ -175,7 +175,7 @@ open class SonarWidget : AppWidgetProvider() {
             COLUMN(R.layout.widget_sonar_column),
             /** Narrow and not so tall: the same, smaller, and no playlists. */
             COLUMN_TIGHT(R.layout.widget_sonar_column_tight),
-            /** Two by two: the cover large, the song under it, the controls stacked beside. */
+            /** Two by two: the song above the transport controls. */
             TILE(R.layout.widget_sonar_tile),
         }
 
@@ -189,9 +189,8 @@ open class SonarWidget : AppWidgetProvider() {
          * needs [INLINE_WIDTH]; below that the buttons go under the song.
          */
         private fun shapeFor(widthDp: Int, heightDp: Int): Shape = when {
-            // Too narrow for three buttons side by side, and tall enough to be
-            // a square rather than a strip.
-            widthDp < TILE_WIDTH && heightDp >= TILE_MIN_HEIGHT -> Shape.TILE
+            widthDp in TILE_MIN_WIDTH until TILE_WIDTH && heightDp >= TILE_MIN_HEIGHT -> Shape.TILE
+            widthDp < TILE_MIN_WIDTH -> Shape.COMPACT
             heightDp < TALL_HEIGHT -> if (widthDp >= INLINE_WIDTH) Shape.ROW else Shape.COMPACT
             widthDp >= INLINE_WIDTH -> Shape.LARGE
             heightDp < COLUMN_HEIGHT -> Shape.COLUMN_TIGHT
@@ -242,17 +241,24 @@ open class SonarWidget : AppWidgetProvider() {
             }
             val playing = now?.playing == true
             views.setImageViewResource(R.id.widget_toggle, if (playing) R.drawable.ic_pip_pause else R.drawable.ic_pip_play)
-            views.setContentDescription(R.id.widget_toggle, context.getString(if (playing) R.string.pause else R.string.play))
-
-            views.setOnClickPendingIntent(R.id.widget_logo, openApp(context, player = false))
+            val toggleTarget = when (shape) {
+                Shape.COMPACT, Shape.COLUMN_TIGHT, Shape.TILE -> R.id.widget_toggle_target
+                else -> R.id.widget_toggle
+            }
+            val logoTarget = when (shape) {
+                Shape.TILE, Shape.ROW, Shape.COMPACT -> R.id.widget_logo_target
+                else -> R.id.widget_logo
+            }
+            views.setContentDescription(toggleTarget, context.getString(if (playing) R.string.pause else R.string.play))
+            views.setOnClickPendingIntent(logoTarget, openApp(context, player = false))
             views.setOnClickPendingIntent(R.id.widget_now, openApp(context, player = true))
-            views.setOnClickPendingIntent(R.id.widget_toggle, control(context, ACTION_TOGGLE))
-            views.setOnClickPendingIntent(R.id.widget_next, control(context, ACTION_NEXT))
+            views.setOnClickPendingIntent(toggleTarget, control(context, ACTION_TOGGLE))
+            views.setOnClickPendingIntent(R.id.widget_next_target, control(context, ACTION_NEXT))
             if (shape != Shape.COMPACT) {
-                views.setOnClickPendingIntent(R.id.widget_previous, control(context, ACTION_PREVIOUS))
+                views.setOnClickPendingIntent(R.id.widget_previous_target, control(context, ACTION_PREVIOUS))
             } else {
                 // The mark only where it leaves the title room to be read.
-                views.setViewVisibility(R.id.widget_logo, if (widthDp >= COMPACT_LOGO_WIDTH) View.VISIBLE else View.GONE)
+                views.setViewVisibility(logoTarget, if (widthDp >= COMPACT_LOGO_WIDTH) View.VISIBLE else View.GONE)
             }
 
             if (shape == Shape.LARGE || shape == Shape.COLUMN) {
@@ -316,6 +322,7 @@ open class SonarWidget : AppWidgetProvider() {
         private val SLOTS = intArrayOf(R.id.widget_playlist_0, R.id.widget_playlist_1, R.id.widget_playlist_2, R.id.widget_playlist_3)
 
         /** Narrower than this, a widget tall enough for it is the square. */
+        private const val TILE_MIN_WIDTH = 132
         private const val TILE_WIDTH = 220
         private const val TILE_MIN_HEIGHT = 110
 

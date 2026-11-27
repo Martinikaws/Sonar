@@ -239,10 +239,11 @@ object Report {
      * addresses, tokens, codes from a sign-in redirect.
      */
     internal fun redact(text: String, names: List<String>): String {
+        val clean = app.sonar.data.redactJamTokens(text)
         val found = NAME_SOURCES.flatMap { pattern ->
-            pattern.findAll(text).map { it.groupValues[1] }.toList()
+            pattern.findAll(clean).map { it.groupValues[1] }.toList()
         }
-        var out = text
+        var out = clean
         (found + names)
             .map { it.trim() }
             .filter { it.length >= MIN_NAME }

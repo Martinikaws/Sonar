@@ -58,14 +58,21 @@
         android:gravity="center"
         android:orientation="horizontal">
 
-        <ImageView
-            android:id="@+id/widget_previous"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
-            android:background="@drawable/widget_button"
-            android:contentDescription="@string/previous"
-            android:padding="12dp"
-            android:src="@drawable/ic_widget_previous" />
+        <FrameLayout
+            android:id="@+id/widget_previous_target"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:contentDescription="@string/previous">
+            <ImageView
+                android:id="@+id/widget_previous"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:background="@drawable/widget_button"
+                android:padding="12dp"
+                android:src="@drawable/ic_widget_previous" />
+        </FrameLayout>
 
         <ImageView
             android:id="@+id/widget_toggle"
@@ -78,13 +85,20 @@
             android:src="@drawable/ic_pip_play"
             android:tint="#FF111114" />
 
-        <ImageView
-            android:id="@+id/widget_next"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
-            android:background="@drawable/widget_button"
-            android:contentDescription="@string/next"
-            android:padding="12dp"
-            android:src="@drawable/ic_widget_next" />
+        <FrameLayout
+            android:id="@+id/widget_next_target"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:contentDescription="@string/next">
+            <ImageView
+                android:id="@+id/widget_next"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:background="@drawable/widget_button"
+                android:padding="12dp"
+                android:src="@drawable/ic_widget_next" />
+        </FrameLayout>
     </LinearLayout>
 </LinearLayout>

@@ -208,17 +208,35 @@ class MediaBrowseTree(
             (uri.startsWith(MvYouTubeBackend.TRACK_PREFIX) && app.youtubeAccount.isSignedIn)
         )
 
+    private fun trustedController(session: MediaSession, controller: MediaSession.ControllerInfo): Boolean {
+        val packageName = controller.packageName
+        if (packageName == app.packageName && controller.uid == android.os.Process.myUid()) return true
+        if (controller.isTrusted) return true
+
+        // Media3's car helpers identify package names. Verify their installed UID and system status.
+        if (!session.isAutoCompanionController(controller) && !session.isAutomotiveController(controller) &&
+            packageName !in SYSTEM_MEDIA_PACKAGES
+        ) return false
+        val info = try {
+            app.packageManager.getApplicationInfo(packageName, 0)
+        } catch (_: android.content.pm.PackageManager.NameNotFoundException) {
+            return false
+        }
+        return info.uid == controller.uid && info.flags and SYSTEM_APP_FLAGS != 0
+    }
+
     override fun onConnect(
         session: MediaSession,
         controller: MediaSession.ControllerInfo,
     ): MediaSession.ConnectionResult {
-        val commands = MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS
-            .buildUpon()
+        val trusted = trustedController(session, controller)
+        val commands = (if (trusted) MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS
+            else MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS).buildUpon()
             .add(SessionCommand(CMD_SHUFFLE, Bundle.EMPTY))
             .add(SessionCommand(MvSmartShuffle.COMMAND, Bundle.EMPTY))
             .add(SessionCommand(CMD_REPEAT, Bundle.EMPTY))
             .add(SessionCommand(CMD_RADIO, Bundle.EMPTY))
-            .add(SessionCommand(CMD_LIKE, Bundle.EMPTY))
+            .apply { if (trusted) add(SessionCommand(CMD_LIKE, Bundle.EMPTY)) }
             .build()
 
         return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
@@ -267,6 +285,9 @@ class MediaBrowseTree(
                 return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
             }
             CMD_LIKE -> {
+                if (!trustedController(session, controller)) {
+                    return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_PERMISSION_DENIED))
+                }
                 toggleLike(session)
                 return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
             }
@@ -713,6 +734,12 @@ class MediaBrowseTree(
     }
 
     private companion object {
+        private val SYSTEM_MEDIA_PACKAGES = setOf(
+            "android", "com.android.systemui", "com.android.bluetooth",
+            "com.google.android.bluetooth", "com.google.android.googlequicksearchbox",
+        )
+        private const val SYSTEM_APP_FLAGS = android.content.pm.ApplicationInfo.FLAG_SYSTEM or
+            android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP
         const val TAG = "MediaBrowseTree"
 
         /** The two modes the car cannot reach through the standard transport. */

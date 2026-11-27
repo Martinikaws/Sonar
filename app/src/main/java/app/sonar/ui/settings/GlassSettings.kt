@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -592,9 +595,21 @@ private fun TintRow(
         val hues = remember {
             List(HUE_STOPS) { Color(android.graphics.Color.HSVToColor(floatArrayOf(it * 360f / (HUE_STOPS - 1), 0.8f, 1f))) }
         }
+        val hueLabel = stringResource(R.string.scanfix_hue)
         BoxWithConstraints(
             Modifier
                 .fillMaxWidth()
+                .semantics {
+                    contentDescription = hueLabel
+                    progressBarRangeInfo = ProgressBarRangeInfo(shown, 0f..360f)
+                    setProgress { requested ->
+                        val next = requested.coerceIn(0f, 360f)
+                        if (next == shown) false else {
+                            onHue(next)
+                            true
+                        }
+                    }
+                }
                 .padding(top = 8.dp, bottom = 2.dp)
                 .height(30.dp),
         ) {

@@ -259,25 +259,19 @@ fun YouTubeLoginScreen(account: YouTubeAccount, onDone: () -> Unit) {
                     WebView(context).apply {
                         webViewClient = object : WebViewClient() {
                             override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
+                                if (!isYouTubeLoginNavigation(url)) {
+                                    view.stopLoading()
+                                    return
+                                }
                                 url?.let { android.net.Uri.parse(it).host }?.let { host = it }
                             }
 
-                            // Anything that is not a web page, which the WebView
-                            // can only show as an error. Google sends some phones
-                            // on from music.youtube.com to the YouTube Music app,
-                            // as an `intent://` link to the Play Store, and the
-                            // sign-in ended on "Webpage not available" with the
-                            // account already signed in behind it (#110). The
-                            // link is left alone and the page it came from is
-                            // checked instead.
                             override fun shouldOverrideUrlLoading(
                                 view: WebView,
                                 request: android.webkit.WebResourceRequest,
                             ): Boolean {
-                                val scheme = request.url.scheme?.lowercase()
-                                if (scheme == "http" || scheme == "https") return false
-                                android.util.Log.i(TAG, "not following a $scheme link")
-                                finishIfSignedIn(view, view.url)
+                                if (isYouTubeLoginNavigation(request.url.toString())) return false
+                                if (request.isForMainFrame) finishIfSignedIn(view, view.url)
                                 return true
                             }
 
@@ -291,7 +285,7 @@ fun YouTubeLoginScreen(account: YouTubeAccount, onDone: () -> Unit) {
                                 // any number of pages — password, 2FA, account
                                 // picker — and this is the one state that means it
                                 // finished.
-                                val signedIn = url?.contains("music.youtube.com") == true &&
+                                val signedIn = isYouTubeLoginCompletion(url) && isYouTubeLoginCompletion(view.url) &&
                                     CookieManager.getInstance().getCookie(MUSIC_URL)
                                         .orEmpty().isNotBlank()
                                 if (!signedIn || completing) return
@@ -303,6 +297,9 @@ fun YouTubeLoginScreen(account: YouTubeAccount, onDone: () -> Unit) {
                                     "(function(){try{var c=window.yt.config_;" +
                                         "return [c.VISITOR_DATA||'',c.DATASYNC_ID||''];}catch(e){return ['',''];}})()",
                                 ) { result ->
+                                    if (webViewHolder[0] !== view || !isYouTubeLoginCompletion(view.url)) {
+                                        return@evaluateJavascript
+                                    }
                                     val ids = runCatching { org.json.JSONArray(result) }.getOrNull()
                                     complete(
                                         visitorData = ids?.optString(0).orEmpty(),
@@ -319,9 +316,16 @@ fun YouTubeLoginScreen(account: YouTubeAccount, onDone: () -> Unit) {
                             }
                         }
                         settings.javaScriptEnabled = true
+                        settings.allowFileAccess = false
+                        settings.allowContentAccess = false
                         webViewHolder[0] = this
                         loadUrl(SIGN_IN_URL)
                     }
+                },
+                onRelease = { view ->
+                    webViewHolder[0] = null
+                    view.stopLoading()
+                    view.destroy()
                 },
             )
             // The account being checked, once Google has let it in: a moment
