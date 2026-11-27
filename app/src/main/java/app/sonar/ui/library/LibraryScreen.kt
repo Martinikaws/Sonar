@@ -102,6 +102,7 @@ import com.composables.icons.lucide.Grid2x2
 import com.composables.icons.lucide.List
 import com.composables.icons.lucide.Pin
 import com.composables.icons.lucide.Plus
+import com.composables.icons.lucide.Radio
 
 /** How the playlists are arranged. */
 private enum class Layout { GRID, LIST }
@@ -179,6 +180,7 @@ fun LibraryScreen(
     /** Signed out of Spotify: the other source, and the settings; see SignedOutOptions. */
     onUseYouTube: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
+    onOpenRadio: (() -> Unit)? = null,
     listeningEvents: List<app.sonar.data.ListeningEvent>? = null,
     /** Whether those were played from Spotify, rather than YouTube Music. */
     listeningFromSpotify: Boolean = true,
@@ -420,6 +422,7 @@ fun LibraryScreen(
                         canEdit = canEdit,
                         onCreatePlaylist = onCreatePlaylist,
                         onOpenRecap = if (listeningEvents != null) ({ recapOpen = true }) else null,
+                        onOpenRadio = onOpenRadio,
                     )
                 }
                 if (!sideways) heading()
@@ -667,6 +670,7 @@ private fun Header(
     canEdit: Boolean,
     onCreatePlaylist: () -> Unit,
     onOpenRecap: (() -> Unit)? = null,
+    onOpenRadio: (() -> Unit)? = null,
 ) {
     Column(
         Modifier
@@ -709,6 +713,17 @@ private fun Header(
             // neighbour and the two melt like drops.
             app.sonar.ui.glass.GlassBlendGroup(backdrop = backdrop) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (onOpenRadio != null) {
+                        LiquidButton(
+                            onClick = onOpenRadio, backdrop = backdrop,
+                            modifier = Modifier.padding(end = 8.dp).size(42.dp),
+                            contentHeight = 42.dp, contentPadding = 0.dp,
+                        ) {
+                            Icon(Lucide.Radio,
+                                contentDescription = stringResource(R.string.radio_title),
+                                tint = Ink, modifier = Modifier.size(20.dp))
+                        }
+                    }
                     if (onOpenRecap != null) {
                         LiquidButton(
                             onClick = onOpenRecap, backdrop = backdrop,

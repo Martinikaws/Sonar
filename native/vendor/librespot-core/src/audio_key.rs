@@ -190,9 +190,24 @@ fn report_refusal(refused: bool) {
     {
         PLAYBACK_REFUSED.store(true, Ordering::SeqCst);
         report(Refusal::Account);
-    } else if !PLAYBACK_REFUSED.swap(true, Ordering::SeqCst) {
+    } else {
+        // Said for every refused playback key, not once per run: the app moves
+        // each refused track to another source as it is refused, and the next
+        // track needs telling too. The app keeps the notice to once itself.
+        PLAYBACK_REFUSED.store(true, Ordering::SeqCst);
         report(Refusal::Refused);
     }
+}
+
+/// How recent the player's ask has to be for a key request to be a listener
+/// waiting for a song rather than a download.
+const PLAYBACK_ASKING: Duration = Duration::from_secs(5);
+
+/// A listener waiting on a key is better served by an answer now than by the
+/// hold-off running out: the app plays the song from another source instead
+/// and tries Spotify again on the next one. Downloads still wait.
+fn playback_is_asking() -> bool {
+    since_playback_request().is_some_and(|ago| ago < PLAYBACK_ASKING)
 }
 
 const FIRST_COOL_OFF: Duration = Duration::from_secs(3);
@@ -282,6 +297,12 @@ impl AudioKeyManager {
                     .cool_off_until
                     .and_then(|until| until.checked_duration_since(Instant::now()))
             }) {
+                // LOCAL PATCH: playback fails fast instead of waiting it out.
+                if playback_is_asking() {
+                    debug!("audio key on hold for {wait:?}, not waiting for playback");
+                    report_refusal(true);
+                    return Err(AudioKeyError::AesKey.into());
+                }
                 debug!("waiting {wait:?} before asking for another audio key");
                 tokio::time::sleep(wait).await;
             }
@@ -322,7 +343,7 @@ impl AudioKeyManager {
                         });
                         report_refusal(true);
                     }
-                    if !transient || attempt + 1 == ATTEMPTS {
+                    if !transient || attempt + 1 == ATTEMPTS || playback_is_asking() {
                         return Err(e);
                     }
                     debug!("audio key attempt {} failed, retrying", attempt + 1);

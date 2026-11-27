@@ -500,6 +500,17 @@ fun SettingsScreen(
             }
         }
 
+        "hidden-content" -> Section(null) {
+            PageRow(stringResource(R.string.hidden_settings_title), stringResource(R.string.hidden_settings_summary)) {
+                goTo(SettingsPage.Hidden)
+            }
+        }
+        "local-playlists" -> Section(null) {
+            PageRow(stringResource(R.string.hidden_local_title), stringResource(R.string.hidden_local_summary)) {
+                goTo(SettingsPage.LocalPlaylists)
+            }
+        }
+
         "equalizer" -> Section(null) {
             PageRow(
                 stringResource(R.string.equalizer),
@@ -1037,6 +1048,14 @@ fun SettingsScreen(
             backdrop = backdrop,
             contentPadding = contentPadding,
             header = { heading(shown) },
+        )
+
+        SettingsPage.Hidden -> app.sonar.library.HiddenContentPage(
+            sonarApp.hiddenContent, listPadding, header = { heading(shown) },
+        )
+
+        SettingsPage.LocalPlaylists -> app.sonar.library.LocalPlaylistsPage(
+            sonarApp.localPlaylists, onPlayFlac, listPadding, header = { heading(shown) },
         )
 
         SettingsPage.Flac -> LazyColumn(Modifier.fillMaxSize(), contentPadding = listPadding) {

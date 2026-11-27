@@ -35,6 +35,8 @@ internal enum class SettingsPage(@StringRes val title: Int) {
     Glass(R.string.glass),
     WebApi(R.string.web_api),
     Flac(R.string.flac_settings),
+    Hidden(R.string.hidden_settings_title),
+    LocalPlaylists(R.string.hidden_local_title),
 }
 
 /** What choosing an entry does: it is drawn in the list, or it opens a page. */
@@ -146,6 +148,17 @@ internal val SETTINGS_INDEX: List<SettingsEntry> = listOf(
     SettingsEntry(
         "cleanup", R.string.storage_cleanup, null,
         listOf(R.string.app_clear_list_cache, R.string.app_clear_cache), SettingsGroup.CLEANUP,
+    ),
+
+    SettingsEntry(
+        "hidden-content", R.string.hidden_settings_title, R.string.hidden_settings_summary,
+        listOf(R.string.hidden_songs, R.string.hidden_artists), SettingsGroup.LISTENING,
+        SettingsAction.Open(SettingsPage.Hidden),
+    ),
+    SettingsEntry(
+        "local-playlists", R.string.hidden_local_title, R.string.hidden_local_summary,
+        listOf(R.string.hidden_local_new), SettingsGroup.LISTENING,
+        SettingsAction.Open(SettingsPage.LocalPlaylists),
     ),
 
     SettingsEntry("language", R.string.language, null, listOf(R.string.system_language), SettingsGroup.LANGUAGE),

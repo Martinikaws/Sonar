@@ -1063,7 +1063,8 @@ class PlaybackService : MediaLibraryService() {
 
     private suspend fun selectPlayer(item: MediaItem?, initial: Boolean): PlayerKind {
         val firstUri = item?.mediaId
-        if (firstUri != null && (app.sonar.data.LocalLibrary.isLocal(firstUri) || FlacSources.owns(firstUri))) {
+        if (firstUri != null && (app.sonar.data.LocalLibrary.isLocal(firstUri) || FlacSources.owns(firstUri) ||
+                app.sonar.radio.RadioPlayback.owns(firstUri))) {
             return PlayerKind.LOCAL
         }
         val backend = kindFor(container.preferences.backend.value)

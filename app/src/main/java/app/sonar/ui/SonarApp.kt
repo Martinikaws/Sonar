@@ -78,6 +78,8 @@ import com.composables.icons.lucide.Pencil
 import com.composables.icons.lucide.Pin
 import com.composables.icons.lucide.Play
 import com.composables.icons.lucide.Plus
+import com.composables.icons.lucide.X
+import com.composables.icons.lucide.ListMusic
 import com.composables.icons.lucide.Radio
 import com.composables.icons.lucide.Search
 import com.composables.icons.lucide.SquarePlay
@@ -747,6 +749,8 @@ fun SonarApp(
         (context.applicationContext as app.sonar.SonarApplication).libraryOrganization
     }
     val organization by organizationStore.state.collectAsStateWithLifecycle()
+    val globallyHidden by (context.applicationContext as app.sonar.SonarApplication).hiddenContent.state
+        .collectAsStateWithLifecycle()
     val playlistOrder by viewModel.playlistOrder.collectAsStateWithLifecycle()
     val pinnedPlaylists by viewModel.pinnedPlaylists.collectAsStateWithLifecycle()
     val likedTracks by viewModel.likedTracks.collectAsStateWithLifecycle()
@@ -2115,6 +2119,7 @@ fun SonarApp(
                                     preferences.setBackend(app.sonar.backend.BackendId.YOUTUBE_MUSIC)
                                 },
                                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                                onOpenRadio = { navController.navigate(app.sonar.radio.RADIO_ROUTE) },
                                 onOpenArtist = { artist ->
                                     viewModel.openContext(
                                         artist.uri,
@@ -2154,6 +2159,14 @@ fun SonarApp(
                                     viewModel.refresh()
                                     viewModel.loadYouTubeHome(force = true)
                                 },
+                            )
+                        }
+
+                        composable(app.sonar.radio.RADIO_ROUTE) {
+                            app.sonar.radio.RadioScreen(
+                                player = player,
+                                contentPadding = listPadding,
+                                onBack = { navController.popBackStack() },
                             )
                         }
 
@@ -2333,8 +2346,12 @@ fun SonarApp(
                                                 viewModel.canRemoveFrom(page.uri),
                                         )
                                     },
-                                    hiddenUris = organization.hiddenTracks[page.uri].orEmpty(),
-                                    onRestoreHiddenTrack = { organizationStore.setHidden(page.uri.orEmpty(), it, false) },
+                                    hiddenUris = organization.hiddenTracks[page.uri].orEmpty() +
+                                        globallyHidden.songs.map { it.uri },
+                                    onRestoreHiddenTrack = {
+                                        organizationStore.setHidden(page.uri.orEmpty(), it, false)
+                                        (context.applicationContext as app.sonar.SonarApplication).hiddenContent.showSong(it)
+                                    },
                                     storedSort = (trackOrders[page.uri] ?: viewModel.defaultTrackOrder).sort,
                                     onSortChange = { viewModel.setTrackSort(page.uri, it) },
                                     onToggleMix = viewModel::toggleMix,
@@ -3910,6 +3927,11 @@ fun SonarApp(
                 LaunchedEffect(trackMenu) { trackMenu?.let { lastMenu = it } }
                 val menu = trackMenu ?: lastMenu
                 val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+                val sonarApplication = context.applicationContext as app.sonar.SonarApplication
+                var localAddTrack by remember { mutableStateOf<CatalogTrack?>(null) }
+                localAddTrack?.let {
+                    app.sonar.library.AddToLocalPlaylistDialog(sonarApplication.localPlaylists, it) { localAddTrack = null }
+                }
                 TrackSheet(
                     visible = trackMenu != null,
                     title = menu?.track?.name.orEmpty(),
@@ -3934,6 +3956,23 @@ fun SonarApp(
                         TrackSheetAction(stringResource(R.string.play), Lucide.Play) {
                             trackMenu = null
                             onPlay(listOf(menu.track), 0, null, false, "", 0L)
+                        }
+                        if (!menu.track.isEpisode) {
+                            TrackSheetAction(stringResource(R.string.hidden_hide_song), Lucide.X) {
+                                sonarApplication.hiddenContent.hideSong(menu.track)
+                                trackMenu = null
+                            }
+                            // Only an artist with an address can be banned; a bare name could not be matched.
+                            menu.track.artistUri?.let { artistUri ->
+                                TrackSheetAction(stringResource(R.string.hidden_ban_artist), Lucide.X) {
+                                    sonarApplication.hiddenContent.banArtist(artistUri, menu.track.artists.firstOrNull()?.name ?: menu.track.artist)
+                                    trackMenu = null
+                                }
+                            }
+                            TrackSheetAction(stringResource(R.string.hidden_add_local), Lucide.ListMusic) {
+                                localAddTrack = menu.track
+                                trackMenu = null
+                            }
                         }
                         TrackSheetAction(stringResource(R.string.add_to_queue), Lucide.ListOrdered) {
                             trackMenu = null

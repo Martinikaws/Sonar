@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="radio_title">Live radio</string>
+    <string name="radio_search_hint">Search stations</string>
+    <string name="radio_favorites">Favorites</string>
+    <string name="radio_recent">Recently played</string>
+    <string name="radio_popular">Popular</string>
+    <string name="radio_results">Results</string>
+    <string name="radio_no_results">No stations found.</string>
+    <string name="radio_error">The station directory did not answer. Check your connection.</string>
+    <string name="radio_unplayable">%1$d stations are not shown because their stream is not encrypted.</string>
+    <string name="radio_play">Play %1$s</string>
+    <string name="radio_favorite">Add to favorites</string>
+    <string name="radio_unfavorite">Remove from favorites</string>
+</resources>

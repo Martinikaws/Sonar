@@ -372,6 +372,13 @@ class MainActivity : ComponentActivity() {
     ) {
         val player = controller ?: return
 
+        // Hidden songs and banned artists are skipped, except the track that was tapped.
+        val tappedUri = tracks.getOrNull(index)?.uri
+        @Suppress("NAME_SHADOWING")
+        val tracks = (application as app.sonar.SonarApplication).hiddenContent.state.value.filter(tracks, tappedUri)
+        @Suppress("NAME_SHADOWING")
+        val index = tracks.indexOfFirst { it.uri == tappedUri }.coerceAtLeast(0)
+
         // An episode picks up where the listener left it, from whichever list
         // it was tapped in; see EpisodeProgress.
         val tapped = tracks.getOrNull(index)
@@ -472,8 +479,9 @@ class MainActivity : ComponentActivity() {
     /**
      * Appends multiple tracks to the end of the queue (used for continuous Autoplay).
      */
-    private fun enqueueAll(tracks: List<CatalogTrack>) {
+    private fun enqueueAll(all: List<CatalogTrack>) {
         val player = controller ?: return
+        val tracks = (application as app.sonar.SonarApplication).hiddenContent.state.value.filter(all)
         if (tracks.isEmpty()) return
         val wasEmpty = player.mediaItemCount == 0
         val items = tracks.map { toMediaItem(it, playNext = false) }

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="radio_title">Radio in diretta</string>
+    <string name="radio_search_hint">Cerca stazioni</string>
+    <string name="radio_favorites">Preferite</string>
+    <string name="radio_recent">Ascoltate di recente</string>
+    <string name="radio_popular">Popolari</string>
+    <string name="radio_results">Risultati</string>
+    <string name="radio_no_results">Nessuna stazione trovata.</string>
+    <string name="radio_error">L\'elenco delle stazioni non risponde. Controlla la connessione.</string>
+    <string name="radio_unplayable">%1$d stazioni non sono mostrate perché il loro flusso non è cifrato.</string>
+    <string name="radio_play">Riproduci %1$s</string>
+    <string name="radio_favorite">Aggiungi ai preferiti</string>
+    <string name="radio_unfavorite">Rimuovi dai preferiti</string>
+</resources>

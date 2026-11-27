@@ -220,6 +220,8 @@ class SonarApplication : Application(), ImageLoaderFactory {
     val pinnedPlaylists: app.sonar.data.PinnedPlaylistStore by lazy {
         app.sonar.data.PinnedPlaylistStore(this)
     }
+    val hiddenContent by lazy { app.sonar.library.HiddenContentStore(this) }
+    val localPlaylists by lazy { app.sonar.library.LocalPlaylistStore(this) }
     /** How the library was left looking: grid or list, and the sort. */
     val libraryOrganization by lazy { LibraryOrganizationStore(this) }
 

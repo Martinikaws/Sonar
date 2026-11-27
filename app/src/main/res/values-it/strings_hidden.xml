@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hidden_settings_title">Brani e artisti nascosti</string>
+    <string name="hidden_settings_summary">Saltati in coda e nelle radio</string>
+    <string name="hidden_songs">Brani nascosti</string>
+    <string name="hidden_songs_empty">Nessun brano nascosto.</string>
+    <string name="hidden_artists">Artisti bloccati</string>
+    <string name="hidden_artists_empty">Nessun artista bloccato.</string>
+    <string name="hidden_unhide">Mostra</string>
+    <string name="hidden_unban">Sblocca</string>
+    <string name="hidden_hide_song">Nascondi questo brano</string>
+    <string name="hidden_ban_artist">Non riprodurre questo artista</string>
+    <string name="hidden_local_title">Playlist sul dispositivo</string>
+    <string name="hidden_local_summary">Restano solo su questo telefono</string>
+    <string name="hidden_local_new">Nuova playlist</string>
+    <string name="hidden_local_empty">Ancora nessuna playlist sul dispositivo.</string>
+    <string name="hidden_local_tracks_empty">Questa playlist è vuota.</string>
+    <string name="hidden_local_count">%1$d brani</string>
+    <string name="hidden_playlist_name">Nome della playlist</string>
+    <string name="hidden_add_local">Aggiungi a una playlist del dispositivo</string>
+    <string name="hidden_create">Crea</string>
+    <string name="hidden_open">Apri</string>
+    <string name="hidden_rename">Rinomina</string>
+    <string name="hidden_delete">Elimina</string>
+    <string name="hidden_remove">Rimuovi</string>
+</resources>

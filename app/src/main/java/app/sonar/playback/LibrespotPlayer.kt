@@ -1746,6 +1746,11 @@ class LibrespotPlayer(
             app.sonar.playback.websdk.WebSdkRecovery.refresh(appContext)
             return
         }
+        // A song waiting on a refused key moves to another source now rather than
+        // after the engine's own retries; the next song asks Spotify again.
+        if (app.sonar.audiosource.shouldFallBackOnKeyRefusal(what, playbackIntent, playbackState == Player.STATE_READY)) {
+            queue.items.getOrNull(queue.currentIndex)?.let { onCurrentUnavailable?.invoke(it) }
+        }
         val account = what == 2L || keyNotes.getBoolean(ACCOUNT_REFUSED, false)
         if (what == 2L) {
             keyNotes.edit().putBoolean(ACCOUNT_REFUSED, true).apply()
