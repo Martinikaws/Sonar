@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="flac_settings">Sorgenti FLAC</string>
+    <string name="flac_settings_summary">Configura i servizi lossless e riproduci i file FLAC importati</string>
+    <string name="flac_jamendo">Jamendo</string>
+    <string name="flac_navidrome">Navidrome / OpenSubsonic</string>
+    <string name="flac_archive">Live Music Archive</string>
+    <string name="flac_bandcamp">Importazioni Bandcamp</string>
+    <string name="flac_massive">MassiveMusic / 7digital</string>
+    <string name="flac_client_id">ID client Jamendo</string>
+    <string name="flac_server">Indirizzo HTTPS del server</string>
+    <string name="flac_username">Nome utente</string>
+    <string name="flac_password">Password</string>
+    <string name="flac_recording">ID o link della registrazione nell\'archivio</string>
+    <string name="flac_partner_key">Chiave di accesso partner</string>
+    <string name="flac_massive_description">Per riprodurre brani interi servono un accordo commerciale e un\'integrazione con licenza per Sonar.</string>
+    <string name="flac_massive_access">Vedi l\'accesso per sviluppatori di MassiveMusic</string>
+    <string name="flac_search_query">Brano o artista</string>
+    <string name="flac_search">Cerca</string>
+    <string name="flac_load_recording">Carica registrazione</string>
+    <string name="flac_import">Importa i file FLAC acquistati</string>
+    <string name="flac_show_imports">Mostra i file importati</string>
+    <string name="flac_loading">Caricamento…</string>
+    <string name="flac_error">Impossibile caricare i brani FLAC. Controlla le impostazioni della sorgente o i file selezionati.</string>
+    <string name="flac_empty">Nessun brano FLAC trovato</string>
+    <string name="flac_play">Riproduci brano</string>
+</resources>

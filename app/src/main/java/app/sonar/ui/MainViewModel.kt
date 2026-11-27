@@ -2651,6 +2651,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         // LibrarySnapshot. Only online: offline the page is the downloads.
         val snapshot = readLibrarySnapshot()
         _state.value = snapshot ?: UiState.Connecting
+        if (webOnlyCatalog()) {
+            loadFreeLibrary()
+            return@launch
+        }
         if (!awaitEngine()) {
             // No session, so Spotify's shelves are not coming from this load.
             homeShelvesSettled.value = true
@@ -2704,6 +2708,39 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     if (_state.value !is UiState.LoggedOut) refresh()
                 }
             }
+    }
+
+    /** A signed-in Free account: Spotify refuses it the native session, so the catalogue is the Web API alone. */
+    private fun webOnlyCatalog(): Boolean =
+        app.sonar.backend.FreeCatalog.webOnly(container.preferences.spotifyFreeAccount.value, container.spotifySignedIn)
+
+    /**
+     * The library of a Free account, from the Web API, with nothing waiting on the native session.
+     *
+     * Whatever cannot be read leaves a shorter library rather than an error page: the page is
+     * always Ready, with at least the phone's own music, and the notice says browsing is reduced.
+     */
+    private suspend fun loadFreeLibrary() {
+        // No native shelves are coming, so Home draws its own page rather than an outline.
+        homeShelvesSettled.value = true
+        val listed = runCatching { withTimeout(LIBRARY_TIMEOUT_MS) { playlists() } }
+            .onFailure {
+                if (it is CancellationException && it !is kotlinx.coroutines.TimeoutCancellationException) throw it
+                android.util.Log.w(TAG, "free library unavailable: ${describe(it)}")
+            }
+            .getOrNull()
+        val current = _state.value as? UiState.Ready
+        _state.value = UiState.Ready(
+            displayName = current?.displayName.orEmpty(),
+            playlists = listed ?: withLocalFiles(emptyList()),
+            avatarUrl = current?.avatarUrl,
+        )
+        (_state.value as? UiState.Ready)?.let { keepLibrarySnapshot(it) }
+        loadProfile()
+        loadFeed()
+        loadFollowedArtists()
+        loadSavedAlbums()
+        loadSavedShows()
     }
 
     /**
@@ -3106,7 +3143,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             // Spotify's own lists answer 404 to an application in development
             // mode. Whose it is still matters — it is what hides "Edit" — and
             // the playlist service says.
-            ?: return PlaylistDetails(description = null, mine = Catalog.playlistMine(uri), owner = null)
+            ?: return PlaylistDetails(description = null, mine = if (webOnlyCatalog()) null else Catalog.playlistMine(uri), owner = null)
         val owner = dto.owner?.id
         // Asked for here if the profile has not been read yet, rather than
         // left unknown for the page.
@@ -5044,7 +5081,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
         // The access point carries the art for the lists Spotify generates,
         // which is where the Web API answers 404.
-        if (kind == DetailKind.PLAYLIST) return Catalog.playlistCover(uri)
+        if (kind == DetailKind.PLAYLIST && !webOnlyCatalog()) return Catalog.playlistCover(uri)
 
         // An album's cover is on every one of its tracks, which is the way in
         // when the user has not registered an application of their own.
@@ -5687,6 +5724,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return webApiSavedTracks(base, showProgress)
         }
 
+        if (webOnlyCatalog() && uri.startsWith("spotify:album:")) {
+            return container.activeBackend.tracksOf(uri)
+        }
+
         if (!uri.startsWith("spotify:playlist:")) return null
         gatewayTracks(base, showProgress) { offset ->
             container.gateway.playlistTracks(uri, offset)
@@ -5805,6 +5846,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         uri: String,
         showProgress: Boolean,
     ): List<CatalogTrack> {
+        // A Free account has no native session to ask: an empty list, not a wait.
+        if (webOnlyCatalog()) return emptyList()
         val uris = Catalog.contextTrackUris(uri)
         if (uris.isEmpty()) return emptyList()
 
@@ -6574,7 +6617,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
 
         // Last resort: native contextTracks
-        val nativeTracks = runCatching {
+        val nativeTracks = if (webOnlyCatalog()) emptyList() else runCatching {
             Catalog.tracks(Catalog.contextTrackUris(uri).take(10))
         }.getOrDefault(emptyList()).take(5)
 

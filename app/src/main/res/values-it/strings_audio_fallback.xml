@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audio_sources_track_order">Se il ripiego è attivo, Sonar prova le sorgenti audio abilitate in quest\'ordine per ogni brano.</string>
+    <string name="audio_source_flac_unavailable">Non ancora disponibile</string>
+    <string name="youtube_audio_fallback">Ripiego su YouTube Music</string>
+    <string name="youtube_audio_fallback_summary">Sperimentale. Prova Spotify e le corrispondenze su YouTube Music nell\'ordine scelto per le sorgenti.</string>
+</resources>

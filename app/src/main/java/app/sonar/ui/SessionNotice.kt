@@ -47,6 +47,8 @@ fun SessionExpiredNotice(
     body: Int = R.string.web_api_expired_body,
     action: Int? = R.string.web_api_expired_action,
     dismiss: Int = R.string.later,
+    /** An extra line under the body, for a notice that has two things to say. */
+    note: Int? = null,
 ) {
     AnimatedVisibility(
         visible = visible,
@@ -75,6 +77,13 @@ fun SessionExpiredNotice(
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.75f),
                 )
+                if (note != null) {
+                    Text(
+                        stringResource(note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.75f),
+                    )
+                }
                 Row(
                     Modifier.fillMaxWidth().padding(top = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(20.dp),

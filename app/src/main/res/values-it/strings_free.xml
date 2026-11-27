@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="free_notice_title">Account Spotify Free</string>
+    <string name="free_notice_body">Con il tuo account, Sonar riproduce su YouTube Music le corrispondenze disponibili per i brani di Spotify.</string>
+    <string name="free_notice_enable">Attiva il ripiego</string>
+    <string name="free_notice_dismiss">Ho capito</string>
+</resources>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="look_title">Aspetto dei testi</string>
+    <string name="look_classic">Classico</string>
+    <string name="look_immersive">Immersivo</string>
+    <string name="look_spotifusion">Spotifusion</string>
+    <string name="look_glassify">Glassify</string>
+    <string name="look_liquid_music">LiquidMusic</string>
+    <string name="look_starry_night">Notte stellata</string>
+    <string name="look_cupertino">Cupertino</string>
+    <string name="look_squared">Squadrato</string>
+    <string name="look_sample">La città si sveglia piano</string>
+    <string name="look_sample_next">Seguiamo la luce del mattino</string>
+    <string name="look_preview_position">Posizione di riproduzione nell\'anteprima</string>
+</resources>

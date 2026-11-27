@@ -106,9 +106,7 @@
 - Every control, the tab bar, the player, the sheets and the menus are made of
   one refracting glass. Blur, refraction and tint are adjustable, with a lighter
   mode for slower phones.
-- Twelve languages: English, Italian, Spanish, French, German, Portuguese,
-  Russian, Turkish, Hindi, Korean, Japanese and Vietnamese, chosen independently
-  of the phone's own.
+- Choose English or Italiano independently of the phone's language.
 
 ## Download
 

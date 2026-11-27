@@ -761,4 +761,23 @@
     <string name="jam_join_failed">Impossibile entrare nella Jam</string>
     <string name="jam_scan">Scansiona il QR di una Jam</string>
     <string name="jam_of">Jam di %1$s</string>
+
+    <string name="app_name">Sonar</string>
+    <string name="settings_group_sources">Sorgenti audio</string>
+    <string name="settings_group_sources_summary">Da dove arriva l\'audio dei brani di Spotify</string>
+    <string name="audio_source_spotify">Spotify</string>
+    <string name="audio_source_flac">FLAC (Soloist)</string>
+    <string name="audio_source_youtube">YouTube Music</string>
+    <string name="audio_source_flac_needs_soloist">Configura Soloist nelle impostazioni del motore.</string>
+    <string name="audio_source_move_up">Sposta %1$s in alto</string>
+    <string name="audio_source_move_down">Sposta %1$s in basso</string>
+    <string name="autoplay">Riproduzione automatica</string>
+    <string name="autoplay_infinite_title">Riproduzione automatica infinita</string>
+    <string name="autoplay_infinite_summary">Riproduci brani simili al termine della coda</string>
+    <string name="trim_silence">Salta il silenzio</string>
+    <string name="trim_silence_summary">Salta il silenzio a fine brano durante la dissolvenza</string>
+    <string name="mood_mixes">Mix per umore</string>
+    <string name="settings_search_hint">Cerca nelle impostazioni</string>
+    <string name="settings_search_empty">Nessuna impostazione corrisponde a “%1$s”</string>
+    <string name="settings_search_clear">Cancella ricerca</string>
 </resources>

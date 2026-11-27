@@ -53,6 +53,10 @@ android {
     compileSdk = 37
     ndkVersion = ndkVersionForCargo
 
+    androidResources {
+        localeFilters += listOf("en", "it")
+    }
+
     defaultConfig {
         applicationId = "app.sonar"
         // cpal's Android host is AAudio, which the ndk crate gates at API 26.

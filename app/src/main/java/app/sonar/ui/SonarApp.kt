@@ -2397,6 +2397,7 @@ fun SonarApp(
                     body = R.string.free_notice_body,
                     action = if (youtubeFallback) null else R.string.free_notice_enable,
                     dismiss = R.string.free_notice_dismiss,
+                    note = R.string.free_web_notice_note,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .padding(top = statusBar + 8.dp),

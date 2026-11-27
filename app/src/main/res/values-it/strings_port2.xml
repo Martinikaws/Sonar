@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="lyrics_tools_labels">
+        <item>Strumenti per i testi</item>
+        <item>Scarto del brano</item>
+        <item>Anticipa</item>
+        <item>Ritarda</item>
+        <item>Ripristina sincronizzazione</item>
+        <item>Tocca per risincronizzare</item>
+        <item>Tocca un verso quando lo senti iniziare.</item>
+        <item>Condividi il verso corrente</item>
+        <item>Seleziona i versi da condividere</item>
+        <item>Condividi testo</item>
+        <item>Diagnostica dei testi</item>
+        <item>Fonte visualizzata</item>
+        <item>Nessun tentativo registrato per questo brano.</item>
+        <item>Ha risposto</item>
+        <item>Nessun risultato</item>
+        <item>Non riuscito</item>
+        <item>Tempo scaduto</item>
+        <item>Chiudi</item>
+        <item>ms</item>
+        <item>Sconosciuto</item>
+    </string-array>
+</resources>

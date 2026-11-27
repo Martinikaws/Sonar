@@ -28,7 +28,7 @@ class LanguageStore(context: Context) {
     private val app = context.applicationContext
     private val prefs = app.getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE)
 
-    private val _tag = MutableStateFlow(prefs.getString(KEY_LANGUAGE, null).orEmpty())
+    private val _tag = MutableStateFlow(supportedTag(prefs.getString(KEY_LANGUAGE, null).orEmpty()))
 
     /** The chosen tag, or empty for the system's. */
     val tag: StateFlow<String> = _tag.asStateFlow()
@@ -43,10 +43,11 @@ class LanguageStore(context: Context) {
         val chosen = _tag.value
         if (chosen.isNotEmpty()) return chosen.substringBefore('-')
         val locale = systemLocale()
-        return locale.language.takeIf { it.isNotEmpty() } ?: "en"
+        return supportedTag(locale.language).ifEmpty { "en" }
     }
 
-    fun set(tag: String) {
+    fun set(requestedTag: String) {
+        val tag = supportedTag(requestedTag)
         _tag.value = tag
         prefs.edit().putString(KEY_LANGUAGE, tag).apply()
         tellEngine()
@@ -127,6 +128,9 @@ class LanguageStore(context: Context) {
             android.content.res.Resources.getSystem().configuration.locale
         }
 
+    private fun supportedTag(tag: String): String =
+        tag.takeIf { value -> AppLanguages.any { it.first == value } }.orEmpty()
+
     private companion object {
         const val FILE_NAME = "sonar_language"
         const val KEY_LANGUAGE = "language"
@@ -134,7 +138,7 @@ class LanguageStore(context: Context) {
 }
 
 /**
- * The languages Square is translated into.
+ * The languages Sonar is translated into.
  *
  * Kept next to the store rather than in the screen that draws them: the same
  * list has to match res/xml/locales_config.xml, and one list is easier to keep
@@ -145,14 +149,4 @@ val AppLanguages: List<Pair<String, String>> = listOf(
     "" to "",
     "en" to "English",
     "it" to "Italiano",
-    "es" to "Español",
-    "fr" to "Français",
-    "de" to "Deutsch",
-    "pt" to "Português",
-    "ru" to "Русский",
-    "tr" to "Türkçe",
-    "hi" to "हिन्दी",
-    "ko" to "한국어",
-    "ja" to "日本語",
-    "vi" to "Tiếng Việt",
 )

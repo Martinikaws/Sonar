@@ -182,6 +182,15 @@ interface SpotifyApi {
     @GET("v1/albums/{id}")
     suspend fun album(@Path("id") albumId: String): AlbumDto
 
+    /** An album's tracks, for Free accounts that cannot resolve it through the access point. */
+    @GET("v1/albums/{id}/tracks")
+    suspend fun albumTracks(
+        @Path("id") albumId: String,
+        @Query("limit") limit: Int = 50,
+        @Query("offset") offset: Int = 0,
+        @Query("market") market: String? = null,
+    ): PageDto<TrackDto>
+
     /**
      * One track, for the record it is on.
      *

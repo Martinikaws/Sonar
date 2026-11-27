@@ -50,7 +50,12 @@ class SpotifyBackend(private val container: SonarApplication) : MusicBackend {
      * session every catalogue call would fail against.
      */
     override val isReady: Boolean
-        get() = container.spotifySignedIn && NativeBridge.isConnected
+        get() = container.spotifySignedIn &&
+            (NativeBridge.isConnected || (webOnly && container.webApi.isReady))
+
+    /** A Free account: the native session is refused, so catalogue reads use the Web API. */
+    private val webOnly: Boolean
+        get() = FreeCatalog.webOnly(container.preferences.spotifyFreeAccount.value, container.spotifySignedIn)
 
     override suspend fun refreshAuth() {
         if (!container.spotifySignedIn) {
@@ -116,6 +121,9 @@ class SpotifyBackend(private val container: SonarApplication) : MusicBackend {
      * a screen of its own, with the same purple cover Spotify's own clients use.
      */
     private suspend fun likedSongs(): CatalogPlaylist? {
+        if (webOnly) {
+            return FreeCatalog.likedSongs(container.getString(app.sonar.R.string.liked_songs), LIKED_SONGS_COVER)
+        }
         val uri = withContext(Dispatchers.IO) {
             runCatching { NativeBridge.collectionUri() }.getOrDefault("")
         }
@@ -139,18 +147,18 @@ class SpotifyBackend(private val container: SonarApplication) : MusicBackend {
         }
 
     private suspend fun rootlist(): List<CatalogPlaylist> =
-        runCatching { Catalog.playlists() }
+        runCatching {
+            // Never waits on a session that Spotify refuses to a Free account.
+            if (webOnly) error("free account")
+            Catalog.playlists()
+        }
             .recoverCatching {
                 check(container.webApi.isReady) { it.message ?: "rootlist non disponibile" }
                 container.api.playlists(limit = WEB_API_LIBRARY_PAGE).items.map { dto ->
-                    CatalogPlaylist(
-                        uri = dto.uri,
-                        name = dto.name,
-                        subtitle = dto.owner?.displayName ?: dto.owner?.id,
-                        artworkUrl = dto.images.firstOrNull()?.url,
-                    )
+                    FreeCatalog.playlist(dto)
                 }
             }
+            .recoverCatching { if (webOnly) emptyList() else throw it }
             .getOrThrow()
 
     /**
@@ -176,7 +184,7 @@ class SpotifyBackend(private val container: SonarApplication) : MusicBackend {
                     app.sonar.data.SpotifyWebArtist.fetch(id, container.sharedHttpClient, container.resources)?.tracks
                 }.getOrNull()?.takeIf { it.isNotEmpty() }
 
-                webTracks ?: Catalog.tracks(Catalog.contextTrackUris(uri).take(10))
+                webTracks ?: if (webOnly) emptyList() else Catalog.tracks(Catalog.contextTrackUris(uri).take(10))
             }
         }
 
@@ -189,6 +197,8 @@ class SpotifyBackend(private val container: SonarApplication) : MusicBackend {
             container.gateway.readAll { offset -> container.gateway.playlistTracks(uri, offset) }
                 ?: if (container.webApi.isReady) {
                     webApiPlaylistTracks(uri.substringAfterLast(':'))
+                } else if (webOnly) {
+                    emptyList()
                 } else {
                     Catalog.tracks(Catalog.contextTrackUris(uri))
                 }
@@ -204,7 +214,27 @@ class SpotifyBackend(private val container: SonarApplication) : MusicBackend {
                 savedTracks()
             }
 
+        webOnly && uri.startsWith("spotify:album:") -> webApiAlbumTracks(uri.substringAfterLast(':'))
+
+        // Nothing else resolves without the native session, which a Free account does not get.
+        webOnly -> emptyList()
+
         else -> Catalog.tracks(Catalog.contextTrackUris(uri))
+    }
+
+    /** An album's tracks through the Web API, with the record put back on each. */
+    suspend fun webApiAlbumTracks(id: String): List<CatalogTrack> {
+        if (!container.webApi.isReady) return emptyList()
+        val album = FreeCatalog.orElse(null) { container.api.album(id) }
+        val items = mutableListOf<app.sonar.data.TrackDto>()
+        while (true) {
+            val page = FreeCatalog.orElse(null) {
+                container.api.albumTracks(id, limit = WEB_API_LIBRARY_PAGE, offset = items.size, market = container.userCountry)
+            } ?: break
+            items += page.items
+            if (page.items.isEmpty() || items.size >= page.total) break
+        }
+        return FreeCatalog.albumTracks(album, items)
     }
 
     /** Everything the account has saved, newest first, a page at a time. */
