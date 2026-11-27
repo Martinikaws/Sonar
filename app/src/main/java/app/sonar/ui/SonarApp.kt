@@ -985,6 +985,9 @@ fun SonarApp(
     /** False only until the source has been picked once; see BackendChoiceScreen. */
     val backendChosen by preferences.backendChosen.collectAsStateWithLifecycle()
     val backend by preferences.backend.collectAsStateWithLifecycle()
+    val freeNoticePending by preferences.freeAccountNoticePending.collectAsStateWithLifecycle()
+    val youtubeFallback by preferences.youtubeFallback.collectAsStateWithLifecycle()
+    val showFreeNotice = freeNoticePending && backend == app.sonar.backend.BackendId.SPOTIFY
     val youtubeHome by viewModel.youtubeHome.collectAsStateWithLifecycle()
     val sourceNew by viewModel.sourceNew.collectAsStateWithLifecycle()
     val sourceRadio by viewModel.sourceRadio.collectAsStateWithLifecycle()
@@ -2396,7 +2399,23 @@ fun SonarApp(
                 // Out here for the same reason as the bars below: it refracts
                 // `pageBackdrop`, so it cannot be drawn inside it.
                 SessionExpiredNotice(
-                    visible = webApi.expired && !webApi.connecting,
+                    visible = showFreeNotice,
+                    backdrop = pageBackdrop,
+                    onReconnect = {
+                        preferences.setYouTubeFallback(true)
+                        preferences.dismissFreeAccountNotice()
+                    },
+                    onDismiss = preferences::dismissFreeAccountNotice,
+                    title = R.string.free_notice_title,
+                    body = R.string.free_notice_body,
+                    action = if (youtubeFallback) null else R.string.free_notice_enable,
+                    dismiss = R.string.free_notice_dismiss,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = statusBar + 8.dp),
+                )
+                SessionExpiredNotice(
+                    visible = !showFreeNotice && webApi.expired && !webApi.connecting,
                     backdrop = pageBackdrop,
                     onReconnect = viewModel::connectWebApi,
                     onDismiss = viewModel::dismissWebApiExpiry,
@@ -2405,7 +2424,7 @@ fun SonarApp(
                         .padding(top = statusBar + 8.dp),
                 )
                 SessionExpiredNotice(
-                    visible = youtubeExpired && !youtubeExpiryDismissed && !showYouTubeLogin &&
+                    visible = !showFreeNotice && youtubeExpired && !youtubeExpiryDismissed && !showYouTubeLogin &&
                         !(webApi.expired && !webApi.connecting),
                     backdrop = pageBackdrop,
                     onReconnect = { showYouTubeLogin = true },

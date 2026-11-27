@@ -351,6 +351,26 @@ class PreferencesStore(context: Context) {
         prefs.edit().putBoolean(KEY_YOUTUBE_FALLBACK, value).apply()
     }
 
+    private val _spotifyFreeAccount = MutableStateFlow(prefs.getBoolean("spotifyFreeAccount", false))
+    val spotifyFreeAccount: StateFlow<Boolean> = _spotifyFreeAccount.asStateFlow()
+    private val _freeAccountNoticePending = MutableStateFlow(prefs.getBoolean("freeAccountNoticePending", false))
+    val freeAccountNoticePending: StateFlow<Boolean> = _freeAccountNoticePending.asStateFlow()
+
+    fun setSpotifyFreeAccount(value: Boolean) {
+        if (_spotifyFreeAccount.value == value) return
+        prefs.edit()
+            .putBoolean("spotifyFreeAccount", value)
+            .putBoolean("freeAccountNoticePending", value)
+            .apply()
+        _spotifyFreeAccount.value = value
+        _freeAccountNoticePending.value = value
+    }
+
+    fun dismissFreeAccountNotice() {
+        prefs.edit().putBoolean("freeAccountNoticePending", false).apply()
+        _freeAccountNoticePending.value = false
+    }
+
     private val _spotifyDj = MutableStateFlow(prefs.getBoolean(KEY_SPOTIFY_DJ, true))
 
     /**

@@ -109,7 +109,8 @@ class SonarApplication : Application(), ImageLoaderFactory {
             kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default,
         )
         app.sonar.playback.SessionKeeper.attach(offlineScope) {
-            preferences.backend.value == app.sonar.backend.BackendId.SPOTIFY && spotifySignedIn
+            preferences.backend.value == app.sonar.backend.BackendId.SPOTIFY && spotifySignedIn &&
+                !preferences.spotifyFreeAccount.value
         }
         app.sonar.playback.NetworkWatch(this, offlineScope).start()
         offlineScope.launch {

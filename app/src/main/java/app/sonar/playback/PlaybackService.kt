@@ -16,6 +16,7 @@ import app.sonar.auth.SpotifyOAuth
 import app.sonar.auth.TokenStore
 import app.sonar.data.CatalogTrack
 import app.sonar.audiosource.AudioSource
+import app.sonar.audiosource.chooseTrackSource
 import app.sonar.audiosource.SpotifyTrackKey
 import app.sonar.audiosource.TrackSourceAction
 import app.sonar.backend.youtube.YouTubePlayerFactory
@@ -575,7 +576,9 @@ class PlaybackService : MediaLibraryService() {
                 .drop(1)
                 .collect { on ->
                     NativeBridge.setConnectHidden(on)
-                    if (container.preferences.backend.value != app.sonar.backend.BackendId.SPOTIFY) return@collect
+                    if (container.preferences.backend.value != app.sonar.backend.BackendId.SPOTIFY ||
+                        container.preferences.spotifyFreeAccount.value
+                    ) return@collect
                     if (on && playerKind == PlayerKind.SPOTIFY &&
                         sourceOrder == listOf(AudioSource.SPOTIFY)
                     ) {
@@ -590,6 +593,7 @@ class PlaybackService : MediaLibraryService() {
         // Only an explicit account-level refusal offers SDK recovery.
         scope.launch {
             app.sonar.backend.spotify.SpotifyWebPlayback.accountRefused.collect {
+                if (container.preferences.spotifyFreeAccount.value) return@collect
                 val owner = librespot
                 if (owner != null && tryTrackSource(owner, spotifyUnavailable = true, recoverWithWeb = true)) {
                     return@collect
@@ -1063,11 +1067,14 @@ class PlaybackService : MediaLibraryService() {
         val backend = kindFor(container.preferences.backend.value)
         if (backend != PlayerKind.SPOTIFY) return backend
         val uri = firstUri?.substringAfterLast('/').orEmpty()
+        val freeAccount = container.preferences.spotifyFreeAccount.value
+        val youtubeFallback = container.preferences.youtubeFallback.value
+        val onlinePlaybackAllowed = OfflineMode.reason.value != OfflineMode.Reason.MANUAL
+        if (freeAccount) return freeSpotifyPlayer()
         val order = sourceOrder
-        if (container.preferences.youtubeFallback.value && uri.startsWith("spotify:track:")) {
-            val firstSource = container.sourcePriority.priority.value.nextTrackSource(
-                emptySet(), youtubeAllowed = OfflineMode.reason.value != OfflineMode.Reason.MANUAL,
-            ) ?: return PlayerKind.SPOTIFY_UNAVAILABLE
+        if (youtubeFallback && uri.startsWith("spotify:track:")) {
+            val firstSource = chooseTrackSource(order, freeAccount, youtubeFallback, onlinePlaybackAllowed)
+                ?: return PlayerKind.SPOTIFY_UNAVAILABLE
             // Keep the native Spotify queue as the owner across source changes.
             if (firstSource == AudioSource.YOUTUBE_MUSIC) return PlayerKind.SPOTIFY
             if (!initial && webPlaybackNeeded() &&
@@ -1094,11 +1101,7 @@ class PlaybackService : MediaLibraryService() {
                 AudioSource.FLAC -> if (!container.preferences.youtubeFallback.value && flacReady(uri)) {
                     return PlayerKind.SOLOIST
                 }
-                AudioSource.YOUTUBE_MUSIC -> if (!OfflineMode.active.value) {
-                    val key = item?.let(YouTubePlayerFactory::spotifyTrackKey)
-                        ?: YouTubePlayerFactory.catalogSpotifyTrackKey(uri)
-                    if (key != null && findYouTubeAudio(key) != null) return PlayerKind.SPOTIFY_VIA_YOUTUBE
-                }
+                AudioSource.YOUTUBE_MUSIC -> Unit // Handled by the per-track fallback above.
             }
         }
         return when {
@@ -1117,7 +1120,18 @@ class PlaybackService : MediaLibraryService() {
     private fun audioKind(): PlayerKind {
         routedAudioBeforeVideo?.let { if (playerKind == PlayerKind.VIDEO) return it }
         val kind = kindFor(container.preferences.backend.value)
-        return if (kind == PlayerKind.SPOTIFY && soloistWanted()) PlayerKind.SOLOIST else kind
+        if (kind != PlayerKind.SPOTIFY) return kind
+        if (container.preferences.spotifyFreeAccount.value) return freeSpotifyPlayer()
+        return if (soloistWanted()) PlayerKind.SOLOIST else kind
+    }
+
+    private fun freeSpotifyPlayer(): PlayerKind {
+        val source = chooseTrackSource(
+            sourceOrder, freeAccount = true, youtubeFallback = container.preferences.youtubeFallback.value,
+            onlinePlaybackAllowed = OfflineMode.reason.value != OfflineMode.Reason.MANUAL,
+        )
+        return if (source == AudioSource.YOUTUBE_MUSIC) PlayerKind.SPOTIFY_VIA_YOUTUBE
+        else PlayerKind.SPOTIFY_UNAVAILABLE
     }
 
     @Volatile
@@ -1430,7 +1444,7 @@ class PlaybackService : MediaLibraryService() {
                     artists = track.artists.map { it.name }.ifEmpty { track.artist.split(", ") },
                     durationMs = track.durationMs,
                 )
-                val match = findYouTubeAudio(key, timed = true)
+                val match = findYouTubeAudio(key)
                 if (player !== owner || owner.currentQueueEntryId != sources.entryId ||
                     trackSources !== sources || owner.isRemotePlayback
                 ) return@launch
@@ -1495,13 +1509,9 @@ class PlaybackService : MediaLibraryService() {
         youtubeLookup?.start()
     }
 
-    private suspend fun findYouTubeAudio(
-        key: SpotifyTrackKey,
-        timed: Boolean = false,
-    ): app.sonar.audiosource.YtMatch? =
+    private suspend fun findYouTubeAudio(key: SpotifyTrackKey): app.sonar.audiosource.YtMatch? =
         try {
-            if (timed) withTimeoutOrNull(YOUTUBE_LOOKUP_TIMEOUT_MS) { ytAudio.findAudio(key) }
-            else ytAudio.findAudio(key)
+            withTimeoutOrNull(YOUTUBE_LOOKUP_TIMEOUT_MS) { ytAudio.findAudio(key) }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
@@ -1568,11 +1578,13 @@ class PlaybackService : MediaLibraryService() {
 
     private fun soloistWanted(): Boolean =
         container.preferences.backend.value == app.sonar.backend.BackendId.SPOTIFY &&
+            !container.preferences.spotifyFreeAccount.value &&
             sourceOrder == listOf(AudioSource.SPOTIFY) &&
             app.sonar.playback.soloist.SoloistEngine.isEnabled(this)
 
     private fun webPlaybackNeeded(): Boolean =
         container.preferences.backend.value == app.sonar.backend.BackendId.SPOTIFY &&
+            !container.preferences.spotifyFreeAccount.value &&
             app.sonar.backend.spotify.SpotifyWebPlayback.needed(this)
 
     private data class PendingWebPlayback(
@@ -2071,10 +2083,12 @@ class PlaybackService : MediaLibraryService() {
             selectionVersion != selection || engine.currentQueueEntryId != entryId
         ) return
 
-        if (engine.playbackIntent && engine.mediaItemCount > 0) {
+        if (engine.mediaItemCount > 0 &&
+            (engine.playbackIntent || container.preferences.spotifyFreeAccount.value)
+        ) {
             handOver(
                 wanted, (0 until engine.mediaItemCount).map(engine::getMediaItemAt),
-                engine.currentMediaItemIndex, engine.currentPosition, playing = true,
+                engine.currentMediaItemIndex, engine.currentPosition, playing = engine.playbackIntent,
             )
         } else {
             swapPlayer(wanted, restore = true)
@@ -2392,13 +2406,17 @@ class PlaybackService : MediaLibraryService() {
      */
     private fun connectEngine(restoreQueue: Boolean = true) = scope.launch {
         // Guards against the repeated ACTION_CONNECT the UI may send: the native
-        // side rejects a second start, and that error would look like a login
-        // failure and clear a perfectly good session.
+        // side rejects a second start.
         if (engineStarted || !container.spotifySignedIn) return@launch
         // Nothing to authenticate against while another backend is playing, and
         // starting the engine would take the audio device out from under it.
-        val engine = librespot ?: return@launch
+        if (container.preferences.backend.value != app.sonar.backend.BackendId.SPOTIFY) return@launch
+        val engine = librespot ?: parkedSpotify ?: return@launch
         val selectionAtConnect = selectionVersion
+        if (container.preferences.spotifyFreeAccount.value) {
+            routeInitialQueue(engine, selectionAtConnect)
+            return@launch
+        }
         engineStarted = true
 
         // Before the engine plays anything. The player asks this store on every
@@ -2486,27 +2504,15 @@ class PlaybackService : MediaLibraryService() {
         }.onFailure { error ->
             engineStarted = false
             android.util.Log.e(TAG, "engine start failed: $error", error)
-            // Not up at all, which on no data is ordinary: the keeper starts it
-            // again when there is a chance it works. A refused account below
-            // signs out, and the keeper then finds nothing wanted.
-            app.sonar.playback.OfflineMode.setNoSession(true)
-            SessionKeeper.sessionMissing()
-            // Only a refused account ends the session here. Everything else the
-            // handshake can fail with — no network, an access point that is
-            // busy, a dealer that dropped — is temporary, and signing the user
-            // out over it costs them their session for a failure that would
-            // have fixed itself on the next attempt. A refresh token Spotify
-            // really has revoked is cleared by TokenStore before it gets here.
             if (error.message?.contains(PREMIUM_REQUIRED) == true) {
-                // Back to the login screen, with a reason. Staying signed in
-                // would leave an app that looks connected and plays nothing.
-                tokens.clear()
+                // The native handshake may already have cached this account's credential.
                 app.sonar.auth.EngineCredentials.clear(this@PlaybackService)
-                android.widget.Toast.makeText(
-                    this@PlaybackService,
-                    getString(app.sonar.R.string.premium_required),
-                    android.widget.Toast.LENGTH_LONG,
-                ).show()
+                container.preferences.setSpotifyFreeAccount(true)
+                OfflineMode.setNoSession(false)
+                routeInitialQueue(engine, selectionVersion)
+            } else {
+                OfflineMode.setNoSession(true)
+                SessionKeeper.sessionMissing()
             }
         }.onSuccess {
             // Started is not the same as connected any more. With music on the
@@ -2528,7 +2534,14 @@ class PlaybackService : MediaLibraryService() {
             app.sonar.data.LocalFileBindings.push()
             // Up with no session: try again for as long as there is a network.
             if (offline) SessionKeeper.sessionMissing()
-            if (restoreQueue) {
+            if (!offline && playerKind == PlayerKind.SPOTIFY_VIA_YOUTUBE && parkedSpotify === engine) {
+                val items = (0 until player.mediaItemCount).map(player::getMediaItemAt)
+                if (items.isEmpty()) swapPlayer(PlayerKind.SPOTIFY, restore = false)
+                else handOver(
+                    PlayerKind.SPOTIFY, items, player.currentMediaItemIndex,
+                    player.currentPosition, playing = player.playWhenReady,
+                )
+            } else if (restoreQueue) {
                 val spotifyOnly = sourceOrder == listOf(AudioSource.SPOTIFY)
                 if (spotifyOnly) restoreQueue()
                 routeInitialQueue(engine, selectionAtConnect)

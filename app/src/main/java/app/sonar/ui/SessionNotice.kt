@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,6 +45,8 @@ fun SessionExpiredNotice(
     modifier: Modifier = Modifier,
     title: Int = R.string.web_api_expired_title,
     body: Int = R.string.web_api_expired_body,
+    action: Int? = R.string.web_api_expired_action,
+    dismiss: Int = R.string.later,
 ) {
     AnimatedVisibility(
         visible = visible,
@@ -77,21 +80,27 @@ fun SessionExpiredNotice(
                     horizontalArrangement = Arrangement.spacedBy(20.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        stringResource(R.string.web_api_expired_action),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
-                        modifier = Modifier.pressable(onClick = onReconnect),
-                    )
-                    Text(
-                        stringResource(R.string.later),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color.White.copy(alpha = 0.6f),
-                        modifier = Modifier.pressable(onClick = onDismiss),
-                    )
+                    if (action != null) {
+                        NoticeAction(action, onReconnect, primary = true)
+                    }
+                    NoticeAction(dismiss, onDismiss, primary = false)
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun NoticeAction(label: Int, onClick: () -> Unit, primary: Boolean) {
+    androidx.compose.foundation.layout.Box(
+        modifier = Modifier.sizeIn(minWidth = 44.dp, minHeight = 44.dp).pressable(onClick = onClick),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Text(
+            stringResource(label),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = if (primary) FontWeight.SemiBold else null,
+            color = Color.White.copy(alpha = if (primary) 1f else 0.6f),
+        )
     }
 }

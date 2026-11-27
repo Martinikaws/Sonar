@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="free_notice_title">Spotify Free account</string>
+    <string name="free_notice_body">Sonar uses YouTube Music to play available matches for Spotify tracks on your account.</string>
+    <string name="free_notice_enable">Turn on fallback</string>
+    <string name="free_notice_dismiss">Got it</string>
+</resources>

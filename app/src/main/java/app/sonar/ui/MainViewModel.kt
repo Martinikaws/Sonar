@@ -2438,6 +2438,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             _state.value = UiState.Loading
             runCatching { SpotifyOAuth.authorize(getApplication()) }
                 .onSuccess {
+                    container.preferences.setSpotifyFreeAccount(false)
                     container.tokenStore.save(it)
                     // The service was created before this session existed, so it has
                     // to be told to authenticate the native engine now.
@@ -2465,6 +2466,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         loginJob?.cancel()
         SpotifyOAuth.cancelActiveAuthorization()
         container.tokenStore.clear()
+        container.preferences.setSpotifyFreeAccount(false)
         resetFollowedReleases()
         container.webApi.disconnect()
         container.spotifySdkAccount.disconnect()
@@ -7006,11 +7008,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      */
     private suspend fun awaitEngine(): Boolean = withTimeoutOrNull(ENGINE_TIMEOUT_MS) {
         while (!NativeBridge.isConnected) {
-            // The service clears the session when Spotify rejects it. Without
-            // this check the UI would sit on "connecting" for the full timeout
-            // and then report a connection problem, when the real answer is
-            // that the user has to log in again.
-            if (!container.spotifySignedIn) return@withTimeoutOrNull false
+            // Free accounts keep OAuth, but the native catalog session is unavailable.
+            if (!container.spotifySignedIn || container.preferences.spotifyFreeAccount.value) {
+                return@withTimeoutOrNull false
+            }
             // An engine that came up offline is never going to report itself
             // connected, and waiting for it to is thirty seconds of spinner on
             // a phone that has the music already. There is a player behind this
