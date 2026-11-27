@@ -156,7 +156,7 @@ internal val SETTINGS_INDEX: List<SettingsEntry> = listOf(
     ),
     SettingsEntry("links", R.string.spotify_links, null, listOf(R.string.open_by_default), SettingsGroup.SYSTEM),
 
-    SettingsEntry("author", R.string.developed_by, null, listOf(R.string.support_development), SettingsGroup.ABOUT),
+    SettingsEntry("author", R.string.fix2_upstream_credit, null, emptyList(), SettingsGroup.ABOUT),
     SettingsEntry("update", R.string.check_for_updates, null, listOf(R.string.version), SettingsGroup.ABOUT),
     SettingsEntry(
         "about", R.string.about, null,

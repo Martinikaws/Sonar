@@ -1261,35 +1261,40 @@ class PlaybackService : MediaLibraryService() {
         }
 
         youtubeLookup = scope.launch(start = CoroutineStart.LAZY) {
-            val key = SpotifyTrackKey(
-                id = track.uri.substringAfterLast(':'),
-                title = track.title,
-                artists = track.artists.map { it.name }.ifEmpty { track.artist.split(", ") },
-                durationMs = track.durationMs,
-            )
-            val match = findYouTubeAudio(key) ?: return@launch
-            if (owner.currentQueueEntryId != entryId || fallbackSource(owner, track) != AudioSource.YOUTUBE_MUSIC) {
-                return@launch
-            }
-            val original = owner.currentMediaItem?.takeIf { it.mediaId == track.uri } ?: return@launch
-            val playing = owner.playbackIntent
-            val position = owner.currentPosition.coerceAtLeast(0L)
-
-            // This swap parks Spotify synchronously. Detach the job before the swap invalidates lookups.
-            youtubeLookup = null
-            handingOver = true
+            val lookup = coroutineContext[Job]
             try {
-                swapPlayer(PlayerKind.SPOTIFY_YOUTUBE_AUDIO, restore = false)
-                youtubeAttempt = YouTubeAudioAttempt(owner, entryId, key, match.videoId)
-                player.setMediaItem(
-                    original.buildUpon().setUri("${YouTubePlayerFactory.SPOTIFY_AUDIO_PREFIX}${match.videoId}").build(),
-                    position,
+                val key = SpotifyTrackKey(
+                    id = track.uri.substringAfterLast(':'),
+                    title = track.title,
+                    artists = track.artists.map { it.name }.ifEmpty { track.artist.split(", ") },
+                    durationMs = track.durationMs,
                 )
-                player.playWhenReady = playing
-                player.prepare()
+                val match = findYouTubeAudio(key) ?: return@launch
+                if (owner.currentQueueEntryId != entryId || fallbackSource(owner, track) != AudioSource.YOUTUBE_MUSIC) {
+                    return@launch
+                }
+                val original = owner.currentMediaItem?.takeIf { it.mediaId == track.uri } ?: return@launch
+                val playing = owner.playbackIntent
+                val position = owner.currentPosition.coerceAtLeast(0L)
+
+                // This swap parks Spotify synchronously. Detach the job before the swap invalidates lookups.
+                youtubeLookup = null
+                handingOver = true
+                try {
+                    swapPlayer(PlayerKind.SPOTIFY_YOUTUBE_AUDIO, restore = false)
+                    youtubeAttempt = YouTubeAudioAttempt(owner, entryId, key, match.videoId)
+                    player.setMediaItem(
+                        original.buildUpon().setUri("${YouTubePlayerFactory.SPOTIFY_AUDIO_PREFIX}${match.videoId}").build(),
+                        position,
+                    )
+                    player.playWhenReady = playing
+                    player.prepare()
+                } finally {
+                    handedOverAt = System.currentTimeMillis()
+                    handingOver = false
+                }
             } finally {
-                handedOverAt = System.currentTimeMillis()
-                handingOver = false
+                if (youtubeLookup === lookup) youtubeLookup = null
             }
         }
         youtubeLookup?.start()

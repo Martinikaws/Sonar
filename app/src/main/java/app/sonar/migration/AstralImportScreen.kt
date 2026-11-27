@@ -1,6 +1,7 @@
 package app.sonar.migration
 
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -30,7 +31,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,7 +46,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import app.sonar.R
+import java.io.Serializable
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Regular
 import com.adamglin.phosphoricons.regular.ArrowLeft
@@ -55,26 +61,67 @@ import kotlinx.coroutines.launch
 
 internal const val ASTRAL_IMPORT_ROUTE = "astral-import"
 
-private sealed interface ImportState {
-    data object Idle : ImportState
-    data object Importing : ImportState
-    data class Done(val result: AstralImport.Result) : ImportState
-    data class Error(val message: String) : ImportState
+internal sealed interface ImportOutcome : Serializable {
+    data class Done(val result: AstralImport.Result) : ImportOutcome
+    data class Error(val message: Int) : ImportOutcome
+}
+
+internal class AstralImportViewModel : ViewModel() {
+    var busy by mutableStateOf(false)
+        private set
+    var outcome by mutableStateOf<ImportOutcome?>(null)
+        private set
+
+    fun clearOutcome() {
+        outcome = null
+    }
+
+    fun importDocument(context: Context, uri: Uri, secret: CharArray) {
+        if (busy) {
+            secret.fill('\u0000')
+            return
+        }
+        outcome = null
+        busy = true
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            try {
+                outcome = ImportOutcome.Done(AstralImport.importDocument(context, uri, secret))
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: BadPaddingException) {
+                outcome = ImportOutcome.Error(R.string.fix2_import_bad_passphrase)
+            } catch (_: InvalidAstralExport) {
+                outcome = ImportOutcome.Error(R.string.fix2_import_invalid)
+            } catch (_: AstralExportTooLarge) {
+                outcome = ImportOutcome.Error(R.string.fix2_import_too_large)
+            } catch (_: Exception) {
+                outcome = ImportOutcome.Error(R.string.fix2_import_failed)
+            } finally {
+                secret.fill('\u0000')
+                busy = false
+            }
+        }
+    }
 }
 
 @Composable
 internal fun AstralImportScreen(onBack: () -> Unit) {
+    val model: AstralImportViewModel = viewModel()
+    val busy = model.busy
+    val completed = model.outcome
     val context = LocalContext.current.applicationContext
     val focus = LocalFocusManager.current
-    val scope = rememberCoroutineScope()
-    var document by remember { mutableStateOf<Uri?>(null) }
+    var document by rememberSaveable { mutableStateOf<Uri?>(null) }
     var passphrase by remember { mutableStateOf("") }
-    var state by remember { mutableStateOf<ImportState>(ImportState.Idle) }
-    val busy = state == ImportState.Importing
+    var savedOutcome by rememberSaveable { mutableStateOf<ImportOutcome?>(null) }
+    if (completed != null && completed != savedOutcome) {
+        SideEffect { savedOutcome = completed }
+    }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             document = uri
-            state = ImportState.Idle
+            model.clearOutcome()
+            savedOutcome = null
         }
     }
 
@@ -93,7 +140,7 @@ internal fun AstralImportScreen(onBack: () -> Unit) {
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("Choose the .snmig file Astral exported, then enter its passphrase.")
+            Text(stringResource(R.string.fix2_import_instructions))
             Button(
                 enabled = !busy,
                 modifier = Modifier.heightIn(min = 48.dp),
@@ -101,19 +148,20 @@ internal fun AstralImportScreen(onBack: () -> Unit) {
                     try {
                         picker.launch(arrayOf("*/*"))
                     } catch (_: ActivityNotFoundException) {
-                        state = ImportState.Error("The file picker is unavailable. Enable a document picker and try again.")
+                        model.clearOutcome()
+                        savedOutcome = ImportOutcome.Error(R.string.fix2_import_picker_unavailable)
                     }
                 },
             ) {
-                Text(if (document == null) "Choose Astral export" else "Choose a different export")
+                Text(stringResource(if (document == null) R.string.fix2_import_choose else R.string.fix2_import_choose_other))
             }
-            if (document != null) Text("Export selected")
+            if (document != null) Text(stringResource(R.string.fix2_import_selected))
             OutlinedTextField(
                 value = passphrase,
                 onValueChange = { passphrase = it },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !busy,
-                label = { Text("Export passphrase") },
+                label = { Text(stringResource(R.string.fix2_import_passphrase)) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -126,71 +174,58 @@ internal fun AstralImportScreen(onBack: () -> Unit) {
                     focus.clearFocus()
                     val secret = passphrase.toCharArray()
                     passphrase = ""
-                    state = ImportState.Importing
-                    scope.launch(start = CoroutineStart.UNDISPATCHED) {
-                        try {
-                            state = ImportState.Done(AstralImport.importDocument(context, uri, secret))
-                        } catch (cancelled: CancellationException) {
-                            throw cancelled
-                        } catch (_: BadPaddingException) {
-                            state = ImportState.Error(
-                                "The passphrase is incorrect or the export is damaged. " +
-                                    "Re-enter the passphrase or make a new export in Astral.",
-                            )
-                        } catch (_: InvalidAstralExport) {
-                            state = ImportState.Error("Choose a complete .snmig export made by Astral. This file is invalid or unsupported.")
-                        } catch (_: AstralExportTooLarge) {
-                            state = ImportState.Error("This export exceeds Sonar's import limits. Try a smaller export from Astral.")
-                        } catch (_: Exception) {
-                            state = ImportState.Error(
-                                "Import could not finish. Some changes may have been saved. " +
-                                    "Check that the file is accessible and try again.",
-                            )
-                        } finally {
-                            secret.fill('\u0000')
-                        }
-                    }
+                    savedOutcome = ImportOutcome.Error(R.string.fix2_import_interrupted)
+                    model.importDocument(context, uri, secret)
                 },
             ) {
-                Text("Import")
+                Text(stringResource(R.string.fix2_import_action))
             }
 
-            when (val status = state) {
-                ImportState.Idle -> Unit
-                ImportState.Importing -> Text(
-                    "Importing…", Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                )
-                is ImportState.Error -> Text(
-                    status.message,
+            if (busy) {
+                Text(
+                    stringResource(R.string.fix2_import_progress),
                     Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                    color = MaterialTheme.colorScheme.error,
                 )
-                is ImportState.Done -> ImportSummary(status.result)
+            } else {
+                when (val status = completed ?: savedOutcome) {
+                    null -> Unit
+                    is ImportOutcome.Error -> Text(
+                        stringResource(status.message),
+                        Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    is ImportOutcome.Done -> ImportSummary(status.result)
+                }
             }
-            Text("Downloads do not migrate and must be downloaded again.")
+            Text(stringResource(R.string.fix2_import_downloads))
         }
     }
 }
 
 @Composable
 private fun ImportSummary(result: AstralImport.Result) {
-    val (files, skippedFiles, settings, skippedSettings, skippedPreferenceFiles, cookies, skippedCookies, skippedRecords) =
-        result
     Column(
         Modifier.semantics { liveRegion = LiveRegionMode.Polite },
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("Import complete", Modifier.semantics { heading() }, style = MaterialTheme.typography.titleMedium)
-        Text("Files imported $files, skipped $skippedFiles.")
         Text(
-            "Settings imported $settings, skipped $skippedSettings in checked files. " +
-                "$skippedPreferenceFiles preference files supplied no settings.",
+            stringResource(R.string.fix2_import_complete),
+            Modifier.semantics { heading() },
+            style = MaterialTheme.typography.titleMedium,
         )
-        Text("WebView cookies accepted $cookies, skipped $skippedCookies. $skippedRecords cookie records were skipped.")
-        Text(
-            "Use Sonar sign-in for Spotify. Open YouTube Music sign-in to finish connecting your account. " +
-                "The service may ask you to sign in again.",
-        )
-        Text("Unsupported data, install-bound keys, Web Storage and folder permissions do not migrate.")
+        Text(stringResource(R.string.fix2_import_files_count, result.filesImported, result.filesSkipped))
+        Text(stringResource(
+            R.string.fix2_import_settings_count,
+            result.preferencesImported, result.preferencesSkipped, result.preferenceFilesSkipped,
+        ))
+        Text(stringResource(
+            R.string.fix2_import_cookies_count,
+            result.cookiesAccepted, result.cookiesSkipped, result.cookieRecordsSkipped,
+        ))
+        if (result.cookiesSkippedForExistingSession > 0) {
+            Text(stringResource(R.string.fix2_import_session_preserved, result.cookiesSkippedForExistingSession))
+        }
+        Text(stringResource(R.string.fix2_import_sign_in))
+        Text(stringResource(R.string.fix2_import_unsupported_data))
     }
 }

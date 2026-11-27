@@ -347,7 +347,6 @@
     <string name="settings_group_sound_summary">Source, quality and effects</string>
     <string name="settings_group_sources">Audio sources</string>
     <string name="settings_group_sources_summary">Where the sound of a Spotify track comes from</string>
-    <string name="audio_sources_note">Tried from the top. If a source cannot play a track, the next one enabled below it is tried.</string>
     <string name="audio_source_spotify">Spotify</string>
     <string name="audio_source_flac">FLAC (Soloist)</string>
     <string name="audio_source_youtube">YouTube Music</string>

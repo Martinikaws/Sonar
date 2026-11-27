@@ -52,6 +52,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.shape.CircleShape
@@ -289,12 +292,19 @@ fun LibraryScreen(
                     .distinctBy { it.uri }
                     .inCustomLibraryOrder(customOrder) { it.uri }
             }
+            val showOrganization = filter == Filter.ALL || filter == Filter.PLAYLISTS
+            val visibleFolders = if (showOrganization && folder == null) {
+                organization.folders.filter { it.name.contains(query.trim(), ignoreCase = true) }
+            } else emptyList()
+            val visibleArtists = if (filter == Filter.ALL && folder == null) {
+                artists.filter { it.title.contains(query.trim(), ignoreCase = true) }
+            } else emptyList()
             val organizationControls: @Composable () -> Unit = {
                 LibraryOrganizationControls(
-                    organization = organization,
                     store = organizationStore,
                     folder = folder,
                     query = query,
+                    visibleFolders = visibleFolders,
                     movablePlaylists = movableAtLevel,
                     onOpenFolder = {
                         openFolderId = it
@@ -337,6 +347,13 @@ fun LibraryScreen(
                     // draw, it crashes. Spotify can hand the same playlist back
                     // twice, and a paged list can repeat an item across pages.
                     .distinctBy { it.uri }
+            }
+
+            val emptyMessage = when {
+                playlists.isNotEmpty() || visibleFolders.isNotEmpty() || visibleArtists.isNotEmpty() -> null
+                query.isNotBlank() -> R.string.fix2_library_no_results
+                folder != null -> R.string.fix2_library_empty_folder
+                else -> null
             }
 
             // The month in music takes the library's place while it is open,
@@ -459,15 +476,21 @@ fun LibraryScreen(
                             }
                         }
 
-                        if (filter == Filter.ALL || filter == Filter.PLAYLISTS) {
+                        if (showOrganization) {
                             item(span = { GridItemSpan(maxLineSpan) }, key = "organization") {
                                 organizationControls()
                             }
                         }
 
-                        if (artists.isNotEmpty() && filter == Filter.ALL) {
+                        if (visibleArtists.isNotEmpty()) {
                             item(span = { GridItemSpan(maxLineSpan) }, key = "artists") {
-                                ArtistShelf(artists, onOpenArtist)
+                                ArtistShelf(visibleArtists, onOpenArtist)
+                            }
+                        }
+
+                        if (emptyMessage != null) {
+                            item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
+                                LibraryEmptyMessage(stringResource(emptyMessage))
                             }
                         }
 
@@ -524,12 +547,16 @@ fun LibraryScreen(
                             }
                         }
 
-                        if (filter == Filter.ALL || filter == Filter.PLAYLISTS) {
+                        if (showOrganization) {
                             item(key = "organization") { organizationControls() }
                         }
 
-                        if (artists.isNotEmpty() && filter == Filter.ALL) {
-                            item(key = "artists") { ArtistShelf(artists, onOpenArtist) }
+                        if (visibleArtists.isNotEmpty()) {
+                            item(key = "artists") { ArtistShelf(visibleArtists, onOpenArtist) }
+                        }
+
+                        if (emptyMessage != null) {
+                            item(key = "empty") { LibraryEmptyMessage(stringResource(emptyMessage)) }
                         }
 
                         items(playlists, key = { "pl_${it.uri}" }) { playlist ->
@@ -576,7 +603,7 @@ fun LibraryScreen(
                     app.sonar.ui.components.GlassMenuDivider()
                     app.sonar.ui.components.GlassMenuItem(
                         stringResource(R.string.sort_descending),
-                        selected = descending,
+                        checked = descending,
                         onClick = {
                             descending = !descending
                             view.descending = descending
@@ -589,6 +616,17 @@ fun LibraryScreen(
             }
         }
     }
+}
+
+@Composable
+private fun LibraryEmptyMessage(message: String) {
+    Text(
+        message,
+        style = MaterialTheme.typography.bodyMedium,
+        color = InkDim,
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+            .semantics { liveRegion = LiveRegionMode.Polite },
+    )
 }
 
 /** Where a menu hanging off the sort button's right edge goes. */

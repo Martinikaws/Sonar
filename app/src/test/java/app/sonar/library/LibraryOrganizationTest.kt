@@ -5,10 +5,34 @@ import app.sonar.data.CatalogTrack
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LibraryOrganizationTest {
+    @Test
+    fun damagedSnapshotRetainsValidEntries() {
+        val snapshot = requireNotNull(decodeLibraryOrganization(Json, """
+            {
+                "folders": [{"id":"folder","name":"Keep"},{"id":"broken"}],
+                "membership": {"playlist":"folder","broken":[]},
+                "orders": {"folder":["playlist",false,"another"],"broken":0},
+                "hiddenTracks": {"playlist":["track",null],"broken":{}}
+            }
+        """.trimIndent()))
+        assertTrue(snapshot.damaged)
+        assertEquals(
+            LibraryOrganization(
+                folders = listOf(LibraryFolder("folder", "Keep")),
+                membership = mapOf("playlist" to "folder"),
+                orders = mapOf("folder" to listOf("playlist", "another")),
+                hiddenTracks = mapOf("playlist" to setOf("track")),
+            ),
+            snapshot.organization,
+        )
+        assertNull(decodeLibraryOrganization(Json, "{"))
+    }
+
     @Test
     fun customOrderShowsNewPlaylistsFirstAndIgnoresAbsentUris() {
         val catalog = listOf("old-a", "new-a", "old-b", "new-b")

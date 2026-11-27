@@ -164,7 +164,7 @@ class YtAudioForSpotify internal constructor(
     }
 }
 
-internal const val MATCHER_VERSION = 2
+internal const val MATCHER_VERSION = 3
 private const val MIN_MATCH_SCORE = 0.85
 
 private fun cacheKeyPrefix(spotifyId: String) = "$MATCHER_VERSION:${spotifyId.length}:$spotifyId:"
@@ -187,6 +187,10 @@ private val creditOrRemaster = Regex(
     RegexOption.IGNORE_CASE,
 )
 private val versionTags = listOf(
+    Regex("""\bclean\b"""),
+    Regex("""\bexplicit\b"""),
+    Regex("""\bedit\b"""),
+    Regex("""\bradio edit\b"""),
     Regex("""\blive\b"""),
     Regex("""\bcover\b"""),
     Regex("""\bkaraoke\b"""),

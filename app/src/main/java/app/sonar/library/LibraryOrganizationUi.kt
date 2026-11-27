@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -43,11 +44,6 @@ import com.adamglin.phosphoricons.regular.X
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
-fun LibrarySort.displayName(): String = when (this) {
-    LibrarySort.CUSTOM -> "Custom"
-    LibrarySort.CREATOR -> "Creator"
-}
-
 @Composable
 fun PlaylistTrackSortItems(
     selected: PlaylistTrackSort,
@@ -60,7 +56,7 @@ fun PlaylistTrackSortItems(
         GlassMenuItem(label(option), selected = option == selected, onClick = { onSort(option) })
     }
     GlassMenuDivider()
-    GlassMenuItem(stringResource(R.string.sort_descending), selected = descending, onClick = onToggleDescending)
+    GlassMenuItem(stringResource(R.string.sort_descending), checked = descending, onClick = onToggleDescending)
 }
 
 /** Pass the complete movable set at the current level, in ascending custom order. */
@@ -71,12 +67,14 @@ fun PlaylistReorderDialog(
     onDismiss: () -> Unit,
 ) {
     val listState = rememberLazyListState()
+    val moveUp = stringResource(R.string.fix2_library_move_up)
+    val moveDown = stringResource(R.string.fix2_library_move_down)
     val reorderState = rememberReorderableLazyListState(listState) { from, to ->
         val fromUri = from.key as? String ?: return@rememberReorderableLazyListState
         val toUri = to.key as? String ?: return@rememberReorderableLazyListState
         onMove(fromUri, toUri)
     }
-    LibraryListDialog("Reorder playlists", onDismiss) {
+    LibraryListDialog(stringResource(R.string.fix2_library_reorder), onDismiss) {
         LazyColumn(state = listState, modifier = Modifier.heightIn(max = 360.dp)) {
             items(playlists, key = { it.uri }) { playlist ->
                 ReorderableItem(reorderState, key = playlist.uri) { _ ->
@@ -92,11 +90,11 @@ fun PlaylistReorderDialog(
                         Box(
                             Modifier.size(44.dp).draggableHandle().semantics {
                                 customActions = buildList {
-                                    if (previous != null) add(CustomAccessibilityAction("Move up") {
+                                    if (previous != null) add(CustomAccessibilityAction(moveUp) {
                                         onMove(playlist.uri, previous.uri)
                                         true
                                     })
-                                    if (next != null) add(CustomAccessibilityAction("Move down") {
+                                    if (next != null) add(CustomAccessibilityAction(moveDown) {
                                         onMove(playlist.uri, next.uri)
                                         true
                                     })
@@ -104,7 +102,7 @@ fun PlaylistReorderDialog(
                             },
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(PhosphorIcons.Regular.DotsSixVertical, "Reorder ${playlist.name}")
+                            Icon(PhosphorIcons.Regular.DotsSixVertical, stringResource(R.string.fix2_library_reorder_item, playlist.name))
                         }
                     }
                 }
@@ -116,10 +114,10 @@ fun PlaylistReorderDialog(
 
 @Composable
 fun LibraryOrganizationControls(
-    organization: LibraryOrganization,
     store: LibraryOrganizationStore,
     folder: LibraryFolder?,
     query: String,
+    visibleFolders: List<LibraryFolder>,
     movablePlaylists: List<CatalogPlaylist>,
     onOpenFolder: (String?) -> Unit,
     onChooseCustom: () -> Unit,
@@ -128,19 +126,18 @@ fun LibraryOrganizationControls(
     val dismiss = { dialog = null }
     Column {
         if (folder == null) {
-            if (query.isBlank()) LibraryChoiceRow("New folder") { dialog = "name" }
-            organization.folders.filter { it.name.contains(query.trim(), ignoreCase = true) }
-                .forEach { item -> LibraryChoiceRow(item.name) { onOpenFolder(item.id) } }
+            if (query.isBlank()) LibraryChoiceRow(stringResource(R.string.fix2_library_new_folder)) { dialog = "name" }
+            visibleFolders.forEach { item -> LibraryChoiceRow(item.name) { onOpenFolder(item.id) } }
         } else {
-            LibraryChoiceRow("Back to library") { onOpenFolder(null) }
+            LibraryChoiceRow(stringResource(R.string.fix2_library_back)) { onOpenFolder(null) }
             Text(folder.name, Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
             if (query.isBlank()) {
-                LibraryChoiceRow("Rename folder") { dialog = "name" }
-                LibraryChoiceRow("Delete folder") { dialog = "delete" }
+                LibraryChoiceRow(stringResource(R.string.fix2_library_rename_folder)) { dialog = "name" }
+                LibraryChoiceRow(stringResource(R.string.fix2_library_delete_folder)) { dialog = "delete" }
             }
         }
         if (query.isBlank() && movablePlaylists.size > 1) {
-            LibraryChoiceRow("Reorder playlists") { dialog = "reorder" }
+            LibraryChoiceRow(stringResource(R.string.fix2_library_reorder)) { dialog = "reorder" }
         }
     }
     when (dialog) {
@@ -181,12 +178,12 @@ fun LibraryFolderNameDialog(
     var name by rememberSaveable(folder?.id) { mutableStateOf(folder?.name.orEmpty()) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (folder == null) "New folder" else "Rename folder") },
+        title = { Text(stringResource(if (folder == null) R.string.fix2_library_new_folder else R.string.fix2_library_rename_folder)) },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Folder name") },
+                label = { Text(stringResource(R.string.fix2_library_folder_name)) },
                 singleLine = true,
             )
         },
@@ -199,7 +196,7 @@ fun LibraryFolderNameDialog(
                 },
                 enabled = name.isNotBlank(),
                 modifier = Modifier.heightIn(min = 44.dp),
-            ) { Text("Save") }
+            ) { Text(stringResource(R.string.fix2_library_save)) }
         },
     )
 }
@@ -212,11 +209,11 @@ fun LibraryFolderDeleteDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Delete ${folder.name}?") },
-        text = { Text("Its playlists will return to the library.") },
+        title = { Text(stringResource(R.string.fix2_library_delete_named, folder.name)) },
+        text = { Text(stringResource(R.string.fix2_library_delete_note)) },
         dismissButton = { LibraryDialogButton(stringResource(android.R.string.cancel), onDismiss) },
         confirmButton = {
-            LibraryDialogButton("Delete") {
+            LibraryDialogButton(stringResource(R.string.fix2_library_delete)) {
                 onDelete()
                 onDismiss()
             }
@@ -231,11 +228,11 @@ fun PlaylistFolderDialog(
     onMove: (String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    LibraryListDialog("Move to folder", onDismiss) {
+    LibraryListDialog(stringResource(R.string.fix2_library_move_to_folder), onDismiss) {
         LazyColumn(Modifier.heightIn(max = 360.dp)) {
             if (currentFolderId != null) {
                 item {
-                    LibraryChoiceRow("Library") {
+                    LibraryChoiceRow(stringResource(R.string.library)) {
                         onMove(null)
                         onDismiss()
                     }
@@ -253,7 +250,7 @@ fun PlaylistFolderDialog(
 
 @Composable
 fun HidePlaylistTrackItem(onHide: () -> Unit) {
-    TrackSheetAction("Hide from this playlist", PhosphorIcons.Regular.X, onClick = onHide)
+    TrackSheetAction(stringResource(R.string.fix2_library_hide_track), PhosphorIcons.Regular.X, onClick = onHide)
 }
 
 @Composable
@@ -263,14 +260,14 @@ fun HiddenPlaylistTracksDialog(
     onRestore: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    LibraryListDialog("Hidden songs", onDismiss) {
+    LibraryListDialog(stringResource(R.string.fix2_library_hidden_songs), onDismiss) {
         val hidden = tracks.filter { it.uri in hiddenUris }.distinctBy { it.uri }
         if (hidden.isEmpty()) {
-            Text("No hidden songs in this playlist.")
+            Text(stringResource(R.string.fix2_library_no_hidden))
         } else {
             LazyColumn(Modifier.heightIn(max = 360.dp)) {
                 items(hidden, key = { it.uri }) { track ->
-                    LibraryChoiceRow("Show ${track.name}") { onRestore(track.uri) }
+                    LibraryChoiceRow(stringResource(R.string.fix2_library_show_track, track.name)) { onRestore(track.uri) }
                 }
             }
         }
@@ -280,7 +277,7 @@ fun HiddenPlaylistTracksDialog(
 @Composable
 fun LibraryChoiceRow(label: String, onClick: () -> Unit) {
     Box(
-        Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable(onClick = onClick)
+        Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         contentAlignment = Alignment.CenterStart,
     ) {
@@ -294,7 +291,7 @@ private fun LibraryListDialog(title: String, onDismiss: () -> Unit, content: @Co
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = content,
-        confirmButton = { LibraryDialogButton("Done", onDismiss) },
+        confirmButton = { LibraryDialogButton(stringResource(R.string.fix2_library_done), onDismiss) },
     )
 }
 
@@ -312,7 +309,7 @@ fun HiddenPlaylistTracksControl(
     var open by rememberSaveable { mutableStateOf(false) }
     val restorable = tracks.map { it.uri }.toSet().intersect(hiddenUris)
     if (restorable.isEmpty()) return
-    LibraryChoiceRow("Hidden songs") { open = true }
+    LibraryChoiceRow(stringResource(R.string.fix2_library_hidden_songs)) { open = true }
     if (open) {
         HiddenPlaylistTracksDialog(
             tracks, restorable,
@@ -327,5 +324,5 @@ fun HiddenPlaylistTracksControl(
 
 @Composable
 fun MovePlaylistToFolderItem(onMove: () -> Unit) {
-    TrackSheetAction("Move to folder", PhosphorIcons.Regular.FolderSimple, onClick = onMove)
+    TrackSheetAction(stringResource(R.string.fix2_library_move_to_folder), PhosphorIcons.Regular.FolderSimple, onClick = onMove)
 }

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fix2_audio_sources_order">This order determines which audio source Sonar tries first. Automatic fallback to YouTube Music is not enabled yet.</string>
+    <string name="fix2_upstream_credit">Upstream credit</string>
+
+    <string name="fix2_swatch_system">System accent color</string>
+    <string name="fix2_swatch_red">Red</string>
+    <string name="fix2_swatch_orange">Orange</string>
+    <string name="fix2_swatch_yellow">Yellow</string>
+    <string name="fix2_swatch_green">Green</string>
+    <string name="fix2_swatch_cyan">Cyan</string>
+    <string name="fix2_swatch_blue">Blue</string>
+    <string name="fix2_swatch_violet">Violet</string>
+    <string name="fix2_swatch_magenta">Magenta</string>
+
+    <string name="fix2_import_instructions">Choose the .snmig file Astral exported, then enter its passphrase.</string>
+    <string name="fix2_import_picker_unavailable">The file picker is unavailable. Enable a document picker and try again.</string>
+    <string name="fix2_import_choose">Choose Astral export</string>
+    <string name="fix2_import_choose_other">Choose a different export</string>
+    <string name="fix2_import_selected">Export selected</string>
+    <string name="fix2_import_passphrase">Export passphrase</string>
+    <string name="fix2_import_action">Import</string>
+    <string name="fix2_import_progress">Importing&#8230;</string>
+    <string name="fix2_import_bad_passphrase">The passphrase is incorrect or the export is damaged. Re-enter the passphrase or make a new export in Astral.</string>
+    <string name="fix2_import_invalid">Choose a complete .snmig export made by Astral. This file is invalid or unsupported.</string>
+    <string name="fix2_import_too_large">This export exceeds Sonar\'s import limits. Try a smaller export from Astral.</string>
+    <string name="fix2_import_failed">Import could not finish. Some changes may have been saved. Check that the file is accessible and try again.</string>
+    <string name="fix2_import_interrupted">Import was interrupted. Some changes may have been saved.</string>
+    <string name="fix2_import_downloads">Downloads do not migrate and must be downloaded again.</string>
+    <string name="fix2_import_complete">Import complete</string>
+    <string name="fix2_import_files_count">Files imported: %1$d. Skipped: %2$d.</string>
+    <string name="fix2_import_settings_count">Settings imported: %1$d. Settings skipped in checked files: %2$d. Preference files with no imported settings: %3$d.</string>
+    <string name="fix2_import_cookies_count">WebView cookies accepted: %1$d. Cookies skipped: %2$d. Cookie records skipped: %3$d.</string>
+    <string name="fix2_import_session_preserved">Cookies skipped to keep existing WebView sessions: %1$d.</string>
+    <string name="fix2_import_sign_in">Use Sonar sign-in for Spotify. Open YouTube Music sign-in to finish connecting your account. The service may ask you to sign in again.</string>
+    <string name="fix2_import_unsupported_data">Unsupported data, install-bound keys, Web Storage and folder permissions do not migrate.</string>
+
+    <string name="fix2_library_empty_folder">This folder is empty.</string>
+    <string name="fix2_library_no_results">No matching items in your library.</string>
+    <string name="fix2_library_reorder">Reorder playlists</string>
+    <string name="fix2_library_reorder_item">Reorder %1$s</string>
+    <string name="fix2_library_move_up">Move up</string>
+    <string name="fix2_library_move_down">Move down</string>
+    <string name="fix2_library_new_folder">New folder</string>
+    <string name="fix2_library_back">Back to library</string>
+    <string name="fix2_library_rename_folder">Rename folder</string>
+    <string name="fix2_library_delete_folder">Delete folder</string>
+    <string name="fix2_library_folder_name">Folder name</string>
+    <string name="fix2_library_save">Save</string>
+    <string name="fix2_library_delete_named">Delete %1$s?</string>
+    <string name="fix2_library_delete_note">Its playlists will return to the library.</string>
+    <string name="fix2_library_delete">Delete</string>
+    <string name="fix2_library_move_to_folder">Move to folder</string>
+    <string name="fix2_library_hide_track">Hide from this playlist</string>
+    <string name="fix2_library_hidden_songs">Hidden songs</string>
+    <string name="fix2_library_no_hidden">No hidden songs in this playlist.</string>
+    <string name="fix2_library_show_track">Show %1$s</string>
+    <string name="fix2_library_done">Done</string>
+
+    <string name="fix2_lyrics_timing">%1$s: %2$d %3$s</string>
+    <string name="fix2_lyrics_provider">%1$s: %2$s</string>
+    <string name="fix2_lyrics_attempt">%1$s: %2$s (%3$d %4$s)</string>
+</resources>

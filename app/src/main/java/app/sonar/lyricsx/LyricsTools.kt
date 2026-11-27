@@ -23,8 +23,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import app.sonar.R
 import app.sonar.backend.lyrics.LyricsQuery
 import app.sonar.backend.lyrics.LyricsSource
 import app.sonar.data.Lyrics
@@ -90,7 +92,7 @@ internal fun LyricsToolsButton(
                 Page.TOOLS -> LazyColumn(Modifier.heightIn(max = 360.dp)) {
                     if (lyrics?.synced == true) {
                         item {
-                            Text("${label(Label.TIMING)}: $trackOffsetMs ${label(Label.MILLISECONDS)}")
+                            Text(stringResource(R.string.fix2_lyrics_timing, label(Label.TIMING), trackOffsetMs, label(Label.MILLISECONDS)))
                         }
                         item {
                             LyricsToolAction(label(Label.EARLIER), trackOffsetMs > -TrackLyricsOffsets.LIMIT_MS) {
@@ -160,7 +162,7 @@ internal fun LyricsToolsButton(
                         LyricsSource.entries.firstOrNull { it.name == name }?.label ?: name
                     } ?: label(Label.UNKNOWN)
                     LazyColumn(Modifier.heightIn(max = 360.dp)) {
-                        item { Text("${label(Label.CURRENT_PROVIDER)}: $shown") }
+                        item { Text(stringResource(R.string.fix2_lyrics_provider, label(Label.CURRENT_PROVIDER), shown)) }
                         if (attempts.isEmpty()) item { Text(label(Label.NO_ATTEMPTS)) }
                         for (source in LyricsSource.entries) {
                             val attempt = attempts[source] ?: continue
@@ -171,7 +173,10 @@ internal fun LyricsToolsButton(
                                     LyricsLookupOutcome.FAILED -> Label.FAILED
                                     LyricsLookupOutcome.TIMED_OUT -> Label.TIMED_OUT
                                 })
-                                Text("${source.label}: $status (${attempt.elapsedMs} ${label(Label.MILLISECONDS)})")
+                                Text(stringResource(
+                                    R.string.fix2_lyrics_attempt, source.label, status,
+                                    attempt.elapsedMs, label(Label.MILLISECONDS),
+                                ))
                             }
                         }
                     }

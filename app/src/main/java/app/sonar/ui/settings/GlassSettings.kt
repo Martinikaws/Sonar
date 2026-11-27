@@ -4,6 +4,15 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -544,6 +553,7 @@ private fun androidx.compose.foundation.layout.RowScope.PreviewTab(
  * The circle on the left is the way back to no colour at all, and the strength
  * below it only appears once there is a colour to weaken; see #29.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TintRow(
     hue: Float,
@@ -641,17 +651,23 @@ private fun TintRow(
         }
         // The handful worth a tap, and the phone's own accent beside them: the
         // strip has every colour, but nobody drags to find plain red.
-        Row(
-            Modifier.padding(top = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        FlowRow(
+            Modifier.padding(top = 6.dp).selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val accent = Color(LocalContext.current.getColor(android.R.color.system_accent1_400))
-                Swatch(colour = accent, selected = fromSystem, onClick = onSystem)
-            }
-            PRESET_HUES.forEach { preset ->
                 Swatch(
+                    label = stringResource(R.string.fix2_swatch_system),
+                    colour = accent,
+                    selected = fromSystem,
+                    onClick = onSystem,
+                )
+            }
+            PRESET_HUES.forEach { (preset, label) ->
+                Swatch(
+                    label = stringResource(label),
                     colour = Color(android.graphics.Color.HSVToColor(floatArrayOf(preset, 0.8f, 1f))),
                     selected = !fromSystem && on && kotlin.math.abs(hue - preset) < 1f,
                     onClick = { onHue(preset) },
@@ -674,17 +690,22 @@ private fun TintRow(
 
 /** One colour to tap, lit while it is the one in use. */
 @Composable
-private fun Swatch(colour: Color, selected: Boolean, onClick: () -> Unit) {
+private fun Swatch(label: String, colour: Color, selected: Boolean, onClick: () -> Unit) {
     Box(
-        Modifier
-            .size(26.dp)
-            .clip(ContinuousCapsule())
-            .background(if (selected) Ink else Color.Transparent)
-            .padding(if (selected) 3.dp else 0.dp)
-            .clip(ContinuousCapsule())
-            .background(colour)
-            .clickable(onClick = onClick),
-    )
+        Modifier.size(44.dp)
+            .selectable(selected, role = Role.RadioButton, onClick = onClick)
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            Modifier.size(26.dp)
+                .clip(ContinuousCapsule())
+                .background(if (selected) Ink else Color.Transparent)
+                .padding(if (selected) 3.dp else 0.dp)
+                .clip(ContinuousCapsule())
+                .background(colour),
+        )
+    }
 }
 
 /**
@@ -702,7 +723,16 @@ private const val TINT_WRITE_MS = 250L
 private const val HUE_STOPS = 13
 
 /** Red, orange, yellow, green, cyan, blue, violet, magenta. */
-private val PRESET_HUES = listOf(0f, 32f, 52f, 130f, 186f, 220f, 268f, 310f)
+private val PRESET_HUES = listOf(
+    0f to R.string.fix2_swatch_red,
+    32f to R.string.fix2_swatch_orange,
+    52f to R.string.fix2_swatch_yellow,
+    130f to R.string.fix2_swatch_green,
+    186f to R.string.fix2_swatch_cyan,
+    220f to R.string.fix2_swatch_blue,
+    268f to R.string.fix2_swatch_violet,
+    310f to R.string.fix2_swatch_magenta,
+)
 
 /**
  * One number, with what it currently is.
@@ -768,7 +798,8 @@ private fun GlassSwitch(
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable { onChange(!checked) }
+            .heightIn(min = 44.dp)
+            .toggleable(checked, role = Role.Switch, onValueChange = onChange)
             .padding(start = 18.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -777,7 +808,7 @@ private fun GlassSwitch(
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.bodyLarge)
         }
-        PlainToggle(checked = checked, onChange = onChange)
+        PlainToggle(checked = checked)
     }
 }
 
@@ -893,7 +924,8 @@ internal fun SettingsChoiceRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .heightIn(min = 44.dp)
+            .selectable(selected, role = Role.RadioButton, onClick = onClick)
             .padding(horizontal = 18.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -973,7 +1005,7 @@ internal fun PlainSlider(
 
 /** The same trade as [PlainSlider], for a switch. */
 @Composable
-internal fun PlainToggle(checked: Boolean, onChange: (Boolean) -> Unit) {
+internal fun PlainToggle(checked: Boolean, onChange: ((Boolean) -> Unit)? = null) {
     val accent = settingsAccent()
     val knob by androidx.compose.animation.core.animateDpAsState(
         if (checked) 22.dp else 2.dp,
@@ -984,7 +1016,7 @@ internal fun PlainToggle(checked: Boolean, onChange: (Boolean) -> Unit) {
             .size(width = 46.dp, height = 28.dp)
             .clip(ContinuousCapsule())
             .background(if (checked) accent else Ink.copy(alpha = 0.22f))
-            .clickable { onChange(!checked) },
+            .then(if (onChange == null) Modifier else Modifier.toggleable(checked, role = Role.Switch, onValueChange = onChange)),
     ) {
         Box(
             Modifier

@@ -93,9 +93,9 @@ jobs:
             apk=app/build/outputs/apk/release/app-$abi-release.apk
             certs=$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$apk")
             echo "$certs"
-            digest=$(echo "$certs" | sed -n 's/^Signer.*certificate SHA-256 digest: //p' | head -n 1)
-            if [ "$digest" != "376ed791858a16498876d15e17aa2e50b9ec8423f469721c0d885303fcaf71ff" ]; then
-              echo "::error::$abi signed with ${digest:-nothing}, not the release key"
+            mapfile -t digests < <(sed -n 's/^Signer #[0-9][0-9]* certificate SHA-256 digest: //p' <<< "$certs")
+            if [[ ${#digests[@]} -ne 1 || "${digests[0]}" != "376ed791858a16498876d15e17aa2e50b9ec8423f469721c0d885303fcaf71ff" ]]; then
+              echo "::error::$abi must have exactly one signer with the pinned release certificate"
               exit 1
             fi
             cp "$apk" "sonar-${{ steps.version.outputs.name }}-$abi.apk"

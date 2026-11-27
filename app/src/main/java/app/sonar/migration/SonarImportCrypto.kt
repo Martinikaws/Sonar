@@ -14,7 +14,8 @@ internal class InvalidAstralExport : IOException("Invalid Astral export")
 internal class AstralExportTooLarge : IOException("Astral export exceeds import limits")
 
 internal object SonarImportCrypto {
-    const val MAX_ZIP_BYTES = 64 * 1024 * 1024
+    // GCM providers can hold both the ciphertext and plaintext during authentication.
+    const val MAX_ZIP_BYTES = 16 * 1024 * 1024
     private val magic = "SNMIG1".toByteArray(Charsets.US_ASCII)
     private const val HEADER_BYTES = 34
     private const val TAG_BYTES = 16

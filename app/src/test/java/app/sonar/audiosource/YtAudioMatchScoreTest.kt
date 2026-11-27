@@ -54,6 +54,16 @@ class YtAudioMatchScoreTest {
     }
 
     @Test
+    fun editionMarkersMustAgreeInBothDirections() {
+        val track = wanted.copy(title = "When the Signal Calls")
+        for (marker in listOf("Clean", "Explicit", "Remix", "Live", "Edit", "Instrumental", "Radio Edit")) {
+            val alternate = track.copy(title = track.title + " ($marker)")
+            assertEquals(marker, 0.0, score(song(title = alternate.title), track), 0.0)
+            assertEquals(marker, 0.0, score(song(title = track.title), alternate), 0.0)
+        }
+    }
+
+    @Test
     fun reorderedTitleTokensLoseCredit() {
         val track = wanted.copy(title = "When the Midnight Signal Calls Us Home")
         val reordered = score(song(title = "When the Signal Midnight Calls Us Home"), track)

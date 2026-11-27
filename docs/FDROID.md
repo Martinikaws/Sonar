@@ -14,7 +14,7 @@ reproducibility check. Docker and fdroidserver are not installed on this host.
 
 English listing assets are in `fastlane/metadata/android/en-US`. The current
 release is 2.4.5, versionCode 46. Screenshots and icon are copied from the
-existing documentation. Donation URL: https://ko-fi.com/lelonio.
+existing documentation.
 
 ## Review questions
 

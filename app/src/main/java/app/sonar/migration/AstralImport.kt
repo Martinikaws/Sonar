@@ -10,6 +10,7 @@ import java.io.ByteArrayOutputStream
 import java.io.EOFException
 import java.io.File
 import java.io.IOException
+import java.io.Serializable
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.file.FileAlreadyExistsException
@@ -20,6 +21,7 @@ import java.util.zip.ZipInputStream
 import kotlin.coroutines.resume
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -42,7 +44,8 @@ internal object AstralImport {
         val cookiesAccepted: Int,
         val cookiesSkipped: Int,
         val cookieRecordsSkipped: Int,
-    )
+        val cookiesSkippedForExistingSession: Int,
+    ) : Serializable
 
     private val mutex = Mutex()
     private val settings = mapOf<String, Map<String, (PreferencesStore, Boolean) -> Unit>>(
@@ -75,6 +78,7 @@ internal object AstralImport {
     private data class Preference(val apply: (PreferencesStore, Boolean) -> Unit, val value: Boolean)
     private data class CookieRecord(val url: String, val header: String, val profile: String?)
     private data class Cookie(val url: String, val value: String)
+    private data class CookieInstall(val accepted: Int, val skippedForSession: Int)
     private data class CookiePlan(val values: Set<Cookie>, val skippedPairs: Int, val skippedRecords: Int)
 
     /** Takes ownership of the passphrase, including when opening the document fails. */
@@ -139,14 +143,15 @@ internal object AstralImport {
         val plan = cookies ?: throw InvalidAstralExport()
         currentCoroutineContext().ensureActive()
         val filesImported = files.count { (name, content) -> restoreFile(application.filesDir, name, content) }
-        val accepted = withContext(Dispatchers.Main) {
+        val (accepted, skippedForSession) = withContext(Dispatchers.Main) {
+            val installed = installCookies(plan.values)
             preferences.forEach { it.apply(application.preferences, it.value) }
-            installCookies(plan.values)
+            installed
         }
         return Result(
             filesImported, inventory.count { it.startsWith("files/") } - filesImported,
             preferences.size, preferencesSkipped, preferenceFilesSkipped,
-            accepted, plan.skippedPairs + plan.values.size - accepted, plan.skippedRecords,
+            accepted, plan.skippedPairs + plan.values.size - accepted, plan.skippedRecords, skippedForSession,
         )
     }
 
@@ -260,22 +265,29 @@ internal object AstralImport {
         return CookiePlan(values, skippedPairs, skippedRecords)
     }
 
-    private suspend fun installCookies(cookies: Set<Cookie>): Int {
-        if (cookies.isEmpty()) return 0
+    private suspend fun installCookies(cookies: Set<Cookie>): CookieInstall {
+        if (cookies.isEmpty()) return CookieInstall(0, 0)
         return try {
             val manager = CookieManager.getInstance()
+            // Check all related origins before replaying any cookie for that service.
+            val occupiedUrls = listOf(spotifyUrls, youtubeUrls)
+                .filter { urls -> urls.any { !manager.getCookie(it).isNullOrBlank() } }
+                .flatten().toSet()
+            val (preserved, pending) = cookies.partition { it.url in occupiedUrls }
+            if (pending.isEmpty()) return CookieInstall(0, preserved.size)
             var accepted = 0
             try {
-                for (cookie in cookies) {
+                for (cookie in pending) {
+                    currentCoroutineContext().ensureActive()
                     val stored = suspendCancellableCoroutine { continuation ->
                         manager.setCookie(cookie.url, cookie.value) { continuation.resume(it == true) }
                     }
                     if (stored) accepted++
                 }
             } finally {
-                withContext(Dispatchers.IO) { manager.flush() }
+                withContext(NonCancellable + Dispatchers.IO) { manager.flush() }
             }
-            accepted
+            CookieInstall(accepted, preserved.size)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: RuntimeException) {

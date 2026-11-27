@@ -24,6 +24,7 @@ import app.sonar.ui.components.ProfilePicture as MvProfilePicture
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -734,7 +735,8 @@ fun SettingsScreen(
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .clickable { store.setPureBlack(!pureBlack) }
+                        .heightIn(min = 44.dp)
+                        .toggleable(pureBlack, role = Role.Switch, onValueChange = store::setPureBlack)
                         .padding(start = 18.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -748,7 +750,7 @@ fun SettingsScreen(
                             color = InkDim,
                         )
                     }
-                    PlainToggle(checked = pureBlack, onChange = store::setPureBlack)
+                    PlainToggle(checked = pureBlack)
                 }
             }
         }
@@ -866,7 +868,7 @@ fun SettingsScreen(
         }
 
         "author" -> {
-            Section(stringResource(R.string.developed_by)) {
+            Section(stringResource(R.string.fix2_upstream_credit)) {
                 val uriHandler = LocalUriHandler.current
                 Row(
                     Modifier
@@ -895,31 +897,6 @@ fun SettingsScreen(
                         Text(GITHUB_USER, style = MaterialTheme.typography.titleMedium)
                         Text(
                             GITHUB_URL.removePrefix("https://"),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = InkDim,
-                        )
-                    }
-                    Icon(
-                        PhosphorIcons.Regular.ArrowUpRight,
-                        contentDescription = null,
-                        tint = InkDim,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-                RowDivider()
-                // Beside the name rather than under About: it is about the
-                // person who makes the app, not about the build.
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable { uriHandler.openUri(KOFI_URL) }
-                        .padding(horizontal = 18.dp, vertical = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(R.string.support_development), style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            KOFI_URL.removePrefix("https://"),
                             style = MaterialTheme.typography.bodySmall,
                             color = InkDim,
                         )
@@ -1373,9 +1350,7 @@ private fun EngineSection(soloist: SoloistSetupUi) {
     }
 }
 
-/**
- * Source preferences for the YouTube Music fallback on Spotify tracks.
- */
+/** Source preferences for initial player selection. */
 @Composable
 private fun AudioSourcesSection(soloist: SoloistSetupUi?) {
     val context = LocalContext.current
@@ -1388,7 +1363,7 @@ private fun AudioSourcesSection(soloist: SoloistSetupUi?) {
 
     Section(stringResource(R.string.settings_group_sources)) {
         Text(
-            stringResource(R.string.audio_sources_fallback_order),
+            stringResource(R.string.fix2_audio_sources_order),
             style = MaterialTheme.typography.bodySmall,
             color = InkDim,
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
@@ -2269,7 +2244,8 @@ private fun DownloadSwitch(
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable { onChange(!checked) }
+            .heightIn(min = 44.dp)
+            .toggleable(checked, role = Role.Switch, onValueChange = onChange)
             .padding(start = 18.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -2277,7 +2253,7 @@ private fun DownloadSwitch(
         icon?.let { RowIcon(it) }
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
         // Drawn, not glass; see PlainToggle.
-        PlainToggle(checked = checked, onChange = onChange)
+        PlainToggle(checked = checked)
     }
 }
 
@@ -2352,8 +2328,6 @@ private fun LazyListScope.groupHeading(group: SettingsGroup) =
                 stringResource(group.title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f).semantics { heading() },
             )
         }
@@ -2501,7 +2475,8 @@ private fun ActionRow(
         Row(
             Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
+                .heightIn(min = 44.dp)
+                .clickable(role = Role.Button, onClick = onClick)
                 .padding(horizontal = 18.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -2524,7 +2499,8 @@ private fun ActionRow(
         color = if (destructive) MaterialTheme.colorScheme.error else Ink,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .heightIn(min = 44.dp)
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = 18.dp, vertical = 16.dp),
     )
 }
@@ -2540,7 +2516,8 @@ private fun ChoiceRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .heightIn(min = 44.dp)
+            .selectable(selected, role = Role.RadioButton, onClick = onClick)
             .padding(horizontal = 18.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -2605,7 +2582,6 @@ private val LICENCES = listOf(
 
 private const val GITHUB_USER = "Lelonio"
 private const val GITHUB_URL = "https://github.com/Lelonio"
-private const val KOFI_URL = "https://ko-fi.com/lelonio"
 private const val DISCUSSIONS_URL = "https://github.com/Martinikaws/Sonar/discussions"
 private const val TELEGRAM_COMMUNITY_URL = "https://t.me/+SAOhZ4HTFpMwNDJk"
 private const val NEW_ISSUE_URL = "https://github.com/Martinikaws/Sonar/issues/new/choose"

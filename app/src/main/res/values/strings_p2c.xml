@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="audio_sources_fallback_order">This order applies to the YouTube Music fallback when Spotify cannot play a track.</string>
-</resources>

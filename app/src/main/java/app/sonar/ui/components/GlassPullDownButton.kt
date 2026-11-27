@@ -18,6 +18,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
@@ -160,8 +163,9 @@ fun GlassMenuItem(
     title: String,
     onClick: () -> Unit,
     icon: ImageVector? = null,
-    selected: Boolean = false,
+    selected: Boolean? = null,
     enabled: Boolean = true,
+    checked: Boolean? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     val morph = LocalChoiceRowMorph.current
@@ -173,6 +177,17 @@ fun GlassMenuItem(
         tween(150, easing = androidx.compose.animation.core.CubicBezierEasing(0.215f, 0.61f, 0.355f, 1f)),
         label = "menuItemScale",
     )
+    val action = when {
+        checked != null -> Modifier.toggleable(
+            checked, interaction, null, enabled, Role.Checkbox, onValueChange = { onClick() },
+        )
+        selected != null -> Modifier.selectable(
+            selected, interaction, null, enabled, Role.RadioButton, onClick,
+        )
+        else -> Modifier.clickable(
+            interactionSource = interaction, indication = null, enabled = enabled, role = Role.Button, onClick = onClick,
+        )
+    }
     Box(
         Modifier
             .choiceRowMorph(morph)
@@ -188,7 +203,7 @@ fun GlassMenuItem(
             }
             // Instant on the press, as upstream's AnimatedContainer is.
             .background(if (pressed) Color(0x26FFFFFF) else Color.Transparent, RoundedCornerShape(24.dp))
-            .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
+            .then(action)
             .heightIn(min = 44.dp)
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .graphicsLayer { alpha = if (enabled) 1f else 0.4f },
@@ -216,7 +231,7 @@ fun GlassMenuItem(
             }
             when {
                 trailing != null -> trailing()
-                selected -> Icon(
+                selected == true || checked == true -> Icon(
                     com.adamglin.PhosphorIcons.Regular.Check,
                     contentDescription = null,
                     tint = GlassInk,
