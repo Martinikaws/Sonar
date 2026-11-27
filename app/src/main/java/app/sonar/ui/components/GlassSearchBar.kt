@@ -67,12 +67,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.fill.XCircle
-import com.adamglin.phosphoricons.regular.MagnifyingGlass
-import com.adamglin.phosphoricons.regular.X
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.CircleX
+import com.composables.icons.lucide.Search
+import com.composables.icons.lucide.X
 import app.sonar.R
 import app.sonar.ui.glass.LiquidButton
 import app.sonar.ui.glass.LocalAppBackdrop
@@ -104,7 +102,7 @@ fun GlassSearchBar(
     /** How present the contents are, read while drawing. */
     contentAlpha: () -> Float = { 1f },
     /** The magnifier; null for a plain field, upstream's GlassTextField. */
-    icon: androidx.compose.ui.graphics.vector.ImageVector? = PhosphorIcons.Regular.MagnifyingGlass,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = Lucide.Search,
     imeAction: ImeAction = ImeAction.Search,
 ) {
     val light = isLightGlassPage()
@@ -230,7 +228,7 @@ fun GlassSearchBar(
                     contentAlignment = Alignment.CenterEnd,
                 ) {
                     Icon(
-                        PhosphorIcons.Fill.XCircle,
+                        Lucide.CircleX,
                         contentDescription = null,
                         tint = iconColor,
                         modifier = Modifier.size(18.dp),
@@ -258,7 +256,7 @@ fun GlassSearchBar(
                 contentPadding = 0.dp,
             ) {
                 Icon(
-                    PhosphorIcons.Regular.X,
+                    Lucide.X,
                     contentDescription = stringResource(R.string.cancel),
                     tint = cancelColor,
                     modifier = Modifier.size(24.dp),

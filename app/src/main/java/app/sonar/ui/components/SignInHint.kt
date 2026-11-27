@@ -22,9 +22,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.fill.YoutubeLogo
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.SquarePlay
 import app.sonar.R
 import app.sonar.ui.glass.pressable
 import app.sonar.ui.theme.Ink
@@ -63,7 +62,7 @@ fun SignInHint(onSignIn: () -> Unit, modifier: Modifier = Modifier) {
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    PhosphorIcons.Fill.YoutubeLogo,
+                    Lucide.SquarePlay,
                     contentDescription = null,
                     tint = Ink,
                     modifier = Modifier.size(20.dp),

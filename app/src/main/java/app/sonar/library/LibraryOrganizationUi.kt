@@ -36,11 +36,10 @@ import app.sonar.data.CatalogTrack
 import app.sonar.ui.components.GlassMenuDivider
 import app.sonar.ui.components.GlassMenuItem
 import app.sonar.ui.components.TrackSheetAction
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.DotsSixVertical
-import com.adamglin.phosphoricons.regular.FolderSimple
-import com.adamglin.phosphoricons.regular.X
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Folder
+import com.composables.icons.lucide.GripVertical
+import com.composables.icons.lucide.X
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -102,7 +101,7 @@ fun PlaylistReorderDialog(
                             },
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(PhosphorIcons.Regular.DotsSixVertical, stringResource(R.string.fix2_library_reorder_item, playlist.name))
+                            Icon(Lucide.GripVertical, stringResource(R.string.fix2_library_reorder_item, playlist.name))
                         }
                     }
                 }
@@ -250,7 +249,7 @@ fun PlaylistFolderDialog(
 
 @Composable
 fun HidePlaylistTrackItem(onHide: () -> Unit) {
-    TrackSheetAction(stringResource(R.string.fix2_library_hide_track), PhosphorIcons.Regular.X, onClick = onHide)
+    TrackSheetAction(stringResource(R.string.fix2_library_hide_track), Lucide.X, onClick = onHide)
 }
 
 @Composable
@@ -324,5 +323,5 @@ fun HiddenPlaylistTracksControl(
 
 @Composable
 fun MovePlaylistToFolderItem(onMove: () -> Unit) {
-    TrackSheetAction(stringResource(R.string.fix2_library_move_to_folder), PhosphorIcons.Regular.FolderSimple, onClick = onMove)
+    TrackSheetAction(stringResource(R.string.fix2_library_move_to_folder), Lucide.Folder, onClick = onMove)
 }

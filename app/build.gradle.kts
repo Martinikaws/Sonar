@@ -59,8 +59,8 @@ android {
         minSdk = 26
         // soloist-android spike: 28 lets the app execute what it downloads.
         targetSdk = 35
-        versionCode = 4
-        versionName = "0.1.3"
+        versionCode = 5
+        versionName = "0.1.4"
         buildConfigField("boolean", "VERBOSE_LOG", "false")
         buildConfigField("boolean", "GLASS_FLAGS", "false")
 
@@ -264,7 +264,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.backdrop)
     implementation(libs.kyant.shapes)
-    implementation(libs.phosphor)
+    implementation(libs.lucide)
 
     coreLibraryDesugaring(libs.desugaring)
 }

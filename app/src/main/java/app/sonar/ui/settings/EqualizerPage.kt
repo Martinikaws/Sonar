@@ -43,16 +43,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.ArrowCounterClockwise
-import com.adamglin.phosphoricons.regular.Bluetooth
-import com.adamglin.phosphoricons.regular.DeviceMobileSpeaker
-import com.adamglin.phosphoricons.regular.Headphones
-import com.adamglin.phosphoricons.regular.Plus
-import com.adamglin.phosphoricons.regular.SpeakerHifi
-import com.adamglin.phosphoricons.regular.Usb
-import com.adamglin.phosphoricons.regular.X
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Bluetooth
+import com.composables.icons.lucide.Headphones
+import com.composables.icons.lucide.Plus
+import com.composables.icons.lucide.RotateCcw
+import com.composables.icons.lucide.Smartphone
+import com.composables.icons.lucide.Speaker
+import com.composables.icons.lucide.Usb
+import com.composables.icons.lucide.X
 import app.sonar.R
 import app.sonar.playback.AudioRoute
 import app.sonar.playback.BuiltInEqPresets
@@ -164,7 +163,7 @@ fun EqualizerPage(contentPadding: PaddingValues, header: @Composable () -> Unit)
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    RowIcon(PhosphorIcons.Regular.ArrowCounterClockwise)
+                    RowIcon(Lucide.RotateCcw)
                     Text(stringResource(R.string.eq_reset), style = MaterialTheme.typography.bodyLarge)
                 }
             }
@@ -195,7 +194,7 @@ fun EqualizerPage(contentPadding: PaddingValues, header: @Composable () -> Unit)
                     PresetChip(
                         label = stringResource(R.string.eq_save_preset),
                         selected = false,
-                        icon = PhosphorIcons.Regular.Plus,
+                        icon = Lucide.Plus,
                     ) { saving = true }
                 }
             }
@@ -425,7 +424,7 @@ private fun PresetChip(
         Text(label, style = MaterialTheme.typography.labelLarge, color = ink)
         if (onDelete != null) {
             Icon(
-                PhosphorIcons.Regular.X,
+                Lucide.X,
                 contentDescription = stringResource(R.string.delete),
                 tint = ink.copy(alpha = 0.7f),
                 modifier = Modifier
@@ -454,11 +453,11 @@ private fun outputName(key: String, names: Map<String, String>): String {
 }
 
 private fun iconFor(key: String): ImageVector = when (AudioRoute.kindOf(key)) {
-    AudioRoute.Kind.SPEAKER -> PhosphorIcons.Regular.DeviceMobileSpeaker
-    AudioRoute.Kind.WIRED -> PhosphorIcons.Regular.Headphones
-    AudioRoute.Kind.BLUETOOTH -> PhosphorIcons.Regular.Bluetooth
-    AudioRoute.Kind.USB -> PhosphorIcons.Regular.Usb
-    AudioRoute.Kind.OTHER -> PhosphorIcons.Regular.SpeakerHifi
+    AudioRoute.Kind.SPEAKER -> Lucide.Smartphone
+    AudioRoute.Kind.WIRED -> Lucide.Headphones
+    AudioRoute.Kind.BLUETOOTH -> Lucide.Bluetooth
+    AudioRoute.Kind.USB -> Lucide.Usb
+    AudioRoute.Kind.OTHER -> Lucide.Speaker
 }
 
 private fun frequencyLabel(hz: Int): String = if (hz >= 1000) "${hz / 1000}k" else "$hz"

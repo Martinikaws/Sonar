@@ -57,14 +57,12 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.Sparkle
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.fill.Devices
-import com.adamglin.phosphoricons.fill.Pause
-import com.adamglin.phosphoricons.fill.Play
-import com.adamglin.phosphoricons.fill.SkipForward
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.MonitorSmartphone
+import com.composables.icons.lucide.Pause
+import com.composables.icons.lucide.Play
+import com.composables.icons.lucide.SkipForward
+import com.composables.icons.lucide.Sparkle
 import app.sonar.R
 import app.sonar.ui.glass.InteractiveHighlight
 import app.sonar.ui.glass.ScrollingWaveformSeekBar
@@ -215,7 +213,7 @@ fun FloatingMiniPlayer(
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (state.smartRecommended) Icon(
-                        PhosphorIcons.Regular.Sparkle,
+                        Lucide.Sparkle,
                         contentDescription = null,
                         tint = contentColor,
                         modifier = Modifier.padding(end = 4.dp).size(14.dp),
@@ -269,7 +267,7 @@ fun FloatingMiniPlayer(
                     }
                     if (remoteLabel != null) {
                         Icon(
-                            PhosphorIcons.Fill.Devices,
+                            Lucide.MonitorSmartphone,
                             contentDescription = null,
                             tint = MiniPlayerAccent,
                             modifier = Modifier
@@ -303,7 +301,7 @@ fun FloatingMiniPlayer(
                     modifier = Modifier.width(ControlSize * (1f - fold)).height(controlSize)
                         .graphicsLayer { alpha = 1f - fold }.clipToBounds()) {
                     Icon(
-                        PhosphorIcons.Fill.SkipForward,
+                        Lucide.SkipForward,
                         contentDescription = stringResource(R.string.next),
                         tint = contentColor,
                         modifier = Modifier.size(22.dp),
@@ -328,7 +326,7 @@ fun FloatingMiniPlayer(
                         )
                     }
                     Icon(
-                        if (state.wantsPlay) PhosphorIcons.Fill.Pause else PhosphorIcons.Fill.Play,
+                        if (state.wantsPlay) Lucide.Pause else Lucide.Play,
                         contentDescription = stringResource(
                             if (state.wantsPlay) R.string.pause else R.string.play,
                         ),

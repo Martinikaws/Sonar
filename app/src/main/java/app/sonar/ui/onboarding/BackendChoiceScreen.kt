@@ -27,12 +27,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.fill.SpotifyLogo
-import com.adamglin.phosphoricons.fill.YoutubeLogo
-import com.adamglin.phosphoricons.regular.CaretRight
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.AudioLines
+import com.composables.icons.lucide.ChevronRight
+import com.composables.icons.lucide.SquarePlay
 import app.sonar.R
 import app.sonar.backend.BackendId
 import app.sonar.ui.components.SonarStackedLogo
@@ -70,7 +68,7 @@ fun BackendChoiceScreen(onChoose: (BackendId) -> Unit) {
                 .setupCard(),
         ) {
             SourceCard(
-                logo = PhosphorIcons.Fill.SpotifyLogo,
+                logo = Lucide.AudioLines,
                 title = stringResource(R.string.backend_spotify),
                 description = stringResource(R.string.backend_choice_spotify_note),
                 needs = stringResource(R.string.backend_choice_spotify_needs),
@@ -78,7 +76,7 @@ fun BackendChoiceScreen(onChoose: (BackendId) -> Unit) {
             )
             ListDivider()
             SourceCard(
-                logo = PhosphorIcons.Fill.YoutubeLogo,
+                logo = Lucide.SquarePlay,
                 title = stringResource(R.string.backend_youtube),
                 description = stringResource(R.string.backend_choice_youtube_note),
                 needs = stringResource(R.string.backend_choice_youtube_needs),
@@ -144,7 +142,7 @@ private fun SourceCard(
             )
         }
         Icon(
-            PhosphorIcons.Regular.CaretRight,
+            Lucide.ChevronRight,
             contentDescription = null,
             tint = InkDim,
             modifier = Modifier

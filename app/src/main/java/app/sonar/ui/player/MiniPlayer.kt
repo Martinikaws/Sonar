@@ -40,13 +40,11 @@ import app.sonar.R
 import app.sonar.ui.components.Artwork
 import app.sonar.ui.glass.LiquidButton
 import app.sonar.ui.theme.softShadow
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.Broadcast
-import com.adamglin.phosphoricons.fill.Pause
-import com.adamglin.phosphoricons.fill.Play
-import com.adamglin.phosphoricons.fill.SkipForward
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Pause
+import com.composables.icons.lucide.Play
+import com.composables.icons.lucide.Radio
+import com.composables.icons.lucide.SkipForward
 
 /** Persistent bar above the bottom edge; tapping it opens the full player. */
 /**
@@ -206,7 +204,7 @@ fun MiniPlayer(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (remoteDevice != null) {
                                 Icon(
-                                    PhosphorIcons.Regular.Broadcast,
+                                    Lucide.Radio,
                                     contentDescription = null,
                                     tint = MiniPlayerAccent,
                                     modifier = Modifier
@@ -228,7 +226,7 @@ fun MiniPlayer(
 
                 IconButton(onClick = onNext, enabled = state.hasNext) {
                     Icon(
-                        PhosphorIcons.Fill.SkipForward,
+                        Lucide.SkipForward,
                         contentDescription = stringResource(R.string.next),
                         tint = MiniPlayerInkDim,
                     )
@@ -259,7 +257,7 @@ fun MiniPlayer(
                             label = "playPause",
                         ) { playing ->
                             Icon(
-                                imageVector = if (playing) PhosphorIcons.Fill.Pause else PhosphorIcons.Fill.Play,
+                                imageVector = if (playing) Lucide.Pause else Lucide.Play,
                                 contentDescription = if (playing) stringResource(R.string.pause) else stringResource(R.string.play),
                                 tint = MiniPlayerInk,
                                 modifier = Modifier.size(20.dp),

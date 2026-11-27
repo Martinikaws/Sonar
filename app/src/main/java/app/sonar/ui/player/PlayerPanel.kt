@@ -50,22 +50,14 @@ import app.sonar.ui.glass.LiquidSlider
 import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.math.roundToInt
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.Plus
-import com.adamglin.phosphoricons.regular.SlidersHorizontal
-import com.adamglin.phosphoricons.regular.TextAa
-import com.adamglin.phosphoricons.fill.SlidersHorizontal
-import com.adamglin.phosphoricons.fill.TextAa
-import com.adamglin.phosphoricons.fill.Queue
-import com.adamglin.phosphoricons.fill.VinylRecord
-import com.adamglin.phosphoricons.regular.Queue
-import com.adamglin.phosphoricons.regular.VinylRecord
-import com.adamglin.phosphoricons.fill.Info
-import com.adamglin.phosphoricons.regular.Info
-import com.adamglin.phosphoricons.regular.X
-import com.adamglin.phosphoricons.regular.Sparkle
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.CaseSensitive
+import com.composables.icons.lucide.Disc3
+import com.composables.icons.lucide.Info
+import com.composables.icons.lucide.ListOrdered
+import com.composables.icons.lucide.Plus
+import com.composables.icons.lucide.SlidersHorizontal
+import com.composables.icons.lucide.X
 import app.sonar.ui.glass.pressable
 
 /** Which panel is open below the transport controls. */
@@ -181,14 +173,12 @@ fun PlayerPanelSection(
                 .padding(top = 14.dp),
         ) {
             if (showCover) PanelTab(
-                icon = PhosphorIcons.Regular.VinylRecord,
-                activeIcon = PhosphorIcons.Fill.VinylRecord,
+                icon = Lucide.Disc3,
                 label = stringResource(R.string.cover),
                 selected = selected == views.indexOf(PlayerPanel.NONE),
             ) { onSelect(PlayerPanel.NONE) }
             PanelTab(
-                icon = PhosphorIcons.Regular.TextAa,
-                activeIcon = PhosphorIcons.Fill.TextAa,
+                icon = Lucide.CaseSensitive,
                 label = stringResource(R.string.lyrics),
                 selected = selected == views.indexOf(PlayerPanel.LYRICS),
                 // The karaoke lives in this view and keeps working with the
@@ -196,21 +186,18 @@ fun PlayerPanelSection(
                 marked = karaokeOn,
             ) { onSelect(PlayerPanel.LYRICS) }
             PanelTab(
-                icon = PhosphorIcons.Regular.Queue,
-                activeIcon = PhosphorIcons.Fill.Queue,
+                icon = Lucide.ListOrdered,
                 label = stringResource(R.string.queue),
                 selected = selected == views.indexOf(PlayerPanel.QUEUE),
             ) { onSelect(PlayerPanel.QUEUE) }
             if (!sdkPlayback) PanelTab(
-                icon = PhosphorIcons.Regular.SlidersHorizontal,
-                activeIcon = PhosphorIcons.Fill.SlidersHorizontal,
+                icon = Lucide.SlidersHorizontal,
                 label = stringResource(R.string.effects),
                 selected = selected == views.indexOf(PlayerPanel.EFFECTS),
                 marked = effectsOn,
             ) { onSelect(PlayerPanel.EFFECTS) }
             PanelTab(
-                icon = PhosphorIcons.Regular.Info,
-                activeIcon = PhosphorIcons.Fill.Info,
+                icon = Lucide.Info,
                 label = stringResource(R.string.credits),
                 selected = selected == views.indexOf(PlayerPanel.INFO),
             ) { onSelect(PlayerPanel.INFO) }
@@ -223,7 +210,6 @@ fun PlayerPanelSection(
 private fun RowScope.PanelTab(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     /** The filled cut of the same glyph, for the view being shown. */
-    activeIcon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     selected: Boolean,
     /**
@@ -258,7 +244,7 @@ private fun RowScope.PanelTab(
             // moves, so at a glance the two states differed by a shade of grey
             // sliding around; a solid glyph says which view you are in without
             // being read against its neighbours.
-            imageVector = if (selected) activeIcon else icon,
+            imageVector = icon,
             contentDescription = label,
             tint = when {
                 selected -> GlassInk
@@ -565,7 +551,7 @@ private fun PresetRow(
                 )
                 if (selected && !preset.builtIn) {
                     Icon(
-                        PhosphorIcons.Regular.X,
+                        Lucide.X,
                         contentDescription = stringResource(R.string.delete_preset, preset.name),
                         tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier
@@ -586,7 +572,7 @@ private fun PresetRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                PhosphorIcons.Regular.Plus,
+                Lucide.Plus,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(16.dp),

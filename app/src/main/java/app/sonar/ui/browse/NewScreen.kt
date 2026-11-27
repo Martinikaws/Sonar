@@ -37,10 +37,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Bold
-import com.adamglin.phosphoricons.bold.CaretRight
-import com.adamglin.phosphoricons.bold.DotsThree
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.ChevronRight
+import com.composables.icons.lucide.Ellipsis
 import app.sonar.R
 import app.sonar.data.CatalogTrack
 import app.sonar.data.SearchItem
@@ -476,7 +475,7 @@ private fun SongRow(track: CatalogTrack, onMenu: () -> Unit, onClick: () -> Unit
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                PhosphorIcons.Bold.DotsThree,
+                Lucide.Ellipsis,
                 contentDescription = stringResource(R.string.more),
                 tint = InkDim,
                 modifier = Modifier.size(20.dp),
@@ -509,7 +508,7 @@ private fun Heading(text: String, more: Boolean = false) {
         )
         if (more) {
             Icon(
-                PhosphorIcons.Bold.CaretRight,
+                Lucide.ChevronRight,
                 contentDescription = null,
                 tint = InkDim,
                 modifier = Modifier

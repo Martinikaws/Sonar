@@ -50,9 +50,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.ImageSquare
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Image
 import app.sonar.R
 import app.sonar.ui.theme.Ink
 import app.sonar.ui.theme.InkDim
@@ -137,7 +136,7 @@ fun CreatePlaylistDialog(
                             )
                         } else {
                             Icon(
-                                PhosphorIcons.Regular.ImageSquare,
+                                Lucide.Image,
                                 contentDescription = stringResource(R.string.choose_cover),
                                 tint = InkDim,
                                 modifier = Modifier.size(28.dp),

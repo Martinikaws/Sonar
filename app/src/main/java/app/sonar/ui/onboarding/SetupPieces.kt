@@ -56,9 +56,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Bold
-import com.adamglin.phosphoricons.bold.Check
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Check
 import app.sonar.ui.glass.LiquidButton
 import app.sonar.ui.glass.backdrop.Backdrop
 import app.sonar.ui.glass.backdrop.backdrops.emptyBackdrop
@@ -439,7 +438,7 @@ internal fun DoneRow(label: String) {
                 .background(DoneGreen),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(PhosphorIcons.Bold.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+            Icon(Lucide.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
         }
         Text(
             label,

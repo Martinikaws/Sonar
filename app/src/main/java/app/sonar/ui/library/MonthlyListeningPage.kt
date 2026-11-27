@@ -40,11 +40,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.ArrowLeft
-import com.adamglin.phosphoricons.regular.CaretLeft
-import com.adamglin.phosphoricons.regular.CaretRight
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.ArrowLeft
+import com.composables.icons.lucide.ChevronLeft
+import com.composables.icons.lucide.ChevronRight
 import app.sonar.R
 import app.sonar.data.CatalogTrack
 import app.sonar.data.ListeningEvent
@@ -104,7 +103,7 @@ fun MonthlyListeningPage(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             LiquidButton(onClick = onBack, backdrop = backdrop) {
-                Icon(PhosphorIcons.Regular.ArrowLeft, contentDescription = stringResource(R.string.back))
+                Icon(Lucide.ArrowLeft, contentDescription = stringResource(R.string.back))
             }
             Text(
                 stringResource(R.string.recap_title),
@@ -160,7 +159,7 @@ private fun Header(
             Modifier.fillMaxWidth().padding(top = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Step(PhosphorIcons.Regular.CaretLeft, stringResource(R.string.recap_previous), canGoBack, onBack)
+            Step(Lucide.ChevronLeft, stringResource(R.string.recap_previous), canGoBack, onBack)
             Text(
                 month.format(DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault()))
                     .replaceFirstChar { it.titlecase(Locale.getDefault()) },
@@ -171,7 +170,7 @@ private fun Header(
                 maxLines = 1,
                 modifier = Modifier.weight(1f),
             )
-            Step(PhosphorIcons.Regular.CaretRight, stringResource(R.string.recap_next), canGoForward, onForward)
+            Step(Lucide.ChevronRight, stringResource(R.string.recap_next), canGoForward, onForward)
         }
     }
 }

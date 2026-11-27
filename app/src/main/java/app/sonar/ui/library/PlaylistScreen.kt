@@ -1,5 +1,6 @@
 package app.sonar.ui.library
 
+import app.sonar.ui.theme.emphasizedStar
 import app.sonar.library.HiddenPlaylistTracksControl
 import app.sonar.library.PlaylistTrackSort
 import app.sonar.library.PlaylistTrackSortItems
@@ -24,9 +25,26 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import com.adamglin.phosphoricons.regular.SlidersHorizontal
-import com.adamglin.phosphoricons.regular.Sparkle
-import com.adamglin.phosphoricons.regular.Waveform
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.ArrowDown
+import com.composables.icons.lucide.ArrowDownUp
+import com.composables.icons.lucide.AudioWaveform
+import com.composables.icons.lucide.Check
+import com.composables.icons.lucide.ChevronLeft
+import com.composables.icons.lucide.ChevronRight
+import com.composables.icons.lucide.CircleArrowDown
+import com.composables.icons.lucide.Ellipsis
+import com.composables.icons.lucide.Info
+import com.composables.icons.lucide.Play
+import com.composables.icons.lucide.Plus
+import com.composables.icons.lucide.Save
+import com.composables.icons.lucide.Search
+import com.composables.icons.lucide.Shuffle
+import com.composables.icons.lucide.SlidersHorizontal
+import com.composables.icons.lucide.Sparkle
+import com.composables.icons.lucide.Star
+import com.composables.icons.lucide.Users
+import com.composables.icons.lucide.X
 import androidx.compose.foundation.layout.RowScope
 import app.sonar.ui.glass.liquidGlass
 import app.sonar.ui.player.GlassFilm
@@ -143,54 +161,6 @@ import app.sonar.ui.theme.softShadow
 import kotlin.math.roundToInt
 import java.util.Locale
 import java.util.concurrent.TimeUnit
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.Bold
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.CaretRight
-import com.adamglin.phosphoricons.fill.ArrowCircleDown
-import com.adamglin.phosphoricons.fill.FloppyDisk
-import com.adamglin.phosphoricons.fill.Check
-import com.adamglin.phosphoricons.fill.MagnifyingGlass
-import com.adamglin.phosphoricons.fill.Play
-import com.adamglin.phosphoricons.bold.Shuffle
-import com.adamglin.phosphoricons.bold.Info
-import com.adamglin.phosphoricons.bold.ArrowDown
-import com.adamglin.phosphoricons.bold.CaretLeft
-import com.adamglin.phosphoricons.bold.MagnifyingGlass
-import com.adamglin.phosphoricons.bold.X
-import com.adamglin.phosphoricons.bold.DotsThree
-import com.adamglin.phosphoricons.bold.Plus
-import com.adamglin.phosphoricons.bold.Check
-import com.adamglin.phosphoricons.bold.Star
-import com.adamglin.phosphoricons.bold.Users
-import com.adamglin.phosphoricons.bold.Waveform
-import com.adamglin.phosphoricons.bold.ArrowsDownUp
-import com.adamglin.phosphoricons.bold.ArrowCircleDown
-import com.adamglin.phosphoricons.fill.Shuffle
-import com.adamglin.phosphoricons.fill.Info
-import com.adamglin.phosphoricons.fill.ArrowDown
-import com.adamglin.phosphoricons.fill.CaretLeft
-import com.adamglin.phosphoricons.fill.Export
-import com.adamglin.phosphoricons.fill.DotsThree
-import com.adamglin.phosphoricons.fill.Plus
-import com.adamglin.phosphoricons.fill.ArrowsDownUp
-import com.adamglin.phosphoricons.fill.Star
-import com.adamglin.phosphoricons.regular.Star
-import com.adamglin.phosphoricons.regular.Info
-import com.adamglin.phosphoricons.fill.Waveform
-import com.adamglin.phosphoricons.regular.ArrowLeft
-import com.adamglin.phosphoricons.regular.ArrowsDownUp
-import com.adamglin.phosphoricons.regular.Check
-import com.adamglin.phosphoricons.regular.DotsThree
-import com.adamglin.phosphoricons.regular.Download
-import com.adamglin.phosphoricons.regular.Export
-import com.adamglin.phosphoricons.regular.LinkSimple
-import com.adamglin.phosphoricons.regular.Plus
-import com.adamglin.phosphoricons.regular.Queue
-import com.adamglin.phosphoricons.regular.Shuffle
-import com.adamglin.phosphoricons.regular.Trash
-import com.adamglin.phosphoricons.regular.X
 
 /** How the track list is ordered. */
 enum class TrackSort(@StringRes val label: Int) {
@@ -1191,7 +1161,7 @@ fun PlaylistScreen(
                         }
                         IconButton(onClick = { onAddSuggestion(track) }) {
                             Icon(
-                                PhosphorIcons.Bold.Plus,
+                                Lucide.Plus,
                                 contentDescription = stringResource(R.string.add_to_this_playlist),
                                 tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(20.dp),
@@ -1425,7 +1395,7 @@ fun PlaylistScreen(
                 contentPadding = 0.dp,
             ) {
                 Icon(
-                    PhosphorIcons.Bold.X,
+                    Lucide.X,
                     contentDescription = stringResource(R.string.clear),
                     tint = chromeInk,
                     modifier = Modifier.size(18.dp),
@@ -1461,9 +1431,9 @@ fun PlaylistScreen(
                 CapsuleAction(
                     tint = chromeInk,
                     icon = if (state.saved) {
-                        PhosphorIcons.Bold.Check
+                        Lucide.Check
                     } else {
-                        PhosphorIcons.Bold.Plus
+                        Lucide.Plus
                     },
                     description = stringResource(
                         if (state.saved) R.string.remove_from_library else R.string.add_to_library,
@@ -1482,9 +1452,9 @@ fun PlaylistScreen(
             // where the rest of a page's occasional business already lives.
             CapsuleAction(
                 icon = if (searching) {
-                    PhosphorIcons.Bold.X
+                    Lucide.X
                 } else {
-                    PhosphorIcons.Bold.MagnifyingGlass
+                    Lucide.Search
                 },
                 description = stringResource(R.string.search_in_tracks),
                 onClick = {
@@ -1496,7 +1466,7 @@ fun PlaylistScreen(
             CollapsingSlot(collapseFraction) { CapsuleDivider() }
             CollapsingSlot(collapseFraction) {
                 CapsuleAction(
-                    icon = PhosphorIcons.Bold.DotsThree,
+                    icon = Lucide.Ellipsis,
                     description = stringResource(R.string.more),
                     onClick = onMenu,
                     tint = chromeInk,
@@ -1519,7 +1489,7 @@ fun PlaylistScreen(
             contentPadding = 0.dp,
         ) {
             Icon(
-                PhosphorIcons.Bold.CaretLeft,
+                Lucide.ChevronLeft,
                 contentDescription = stringResource(R.string.back),
                 tint = chromeInk,
                 modifier = Modifier.size(20.dp),
@@ -1761,7 +1731,7 @@ private fun DetailHeader(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CircleAction(
-                    icon = PhosphorIcons.Bold.Shuffle,
+                    icon = Lucide.Shuffle,
                     description = stringResource(R.string.shuffle),
                     size = 46.dp,
                     backdrop = backdrop,
@@ -1794,7 +1764,7 @@ private fun DetailHeader(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        PhosphorIcons.Fill.Play,
+                        Lucide.Play,
                         contentDescription = null,
                         tint = playInk,
                         modifier = Modifier.size(20.dp),
@@ -1822,7 +1792,7 @@ private fun DetailHeader(
                 // download takes on a record is where following it goes.
                 if (kind == MainViewModel.DetailKind.SHOW && saved != null) {
                     CircleAction(
-                        icon = if (saved) PhosphorIcons.Bold.Check else PhosphorIcons.Bold.Plus,
+                        icon = if (saved) Lucide.Check else Lucide.Plus,
                         description = stringResource(
                             if (saved) R.string.remove_from_library else R.string.add_to_library,
                         ),
@@ -2209,7 +2179,7 @@ private fun ArtistHeader(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CircleAction(
-                    icon = PhosphorIcons.Bold.Info,
+                    icon = Lucide.Info,
                     description = stringResource(R.string.about),
                     size = 46.dp,
                     backdrop = backdrop,
@@ -2230,7 +2200,7 @@ private fun ArtistHeader(
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        PhosphorIcons.Fill.Play,
+                        Lucide.Play,
                         contentDescription = stringResource(R.string.play),
                         tint = pageColor,
                         modifier = Modifier
@@ -2254,7 +2224,7 @@ private fun ArtistHeader(
                 // itself a second later has told the reader something false.
                 if (following != null) {
                     CircleAction(
-                        icon = if (following) PhosphorIcons.Fill.Star else PhosphorIcons.Bold.Star,
+                        icon = if (following) emphasizedStar else Lucide.Star,
                         description = stringResource(
                             if (following) R.string.following else R.string.follow,
                         ),
@@ -2284,8 +2254,8 @@ private fun ArtistHeader(
                     Modifier.padding(top = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    subscriberLine?.let { StatPill(PhosphorIcons.Bold.Users, it, ink) }
-                    monthlyLine?.let { StatPill(PhosphorIcons.Bold.Waveform, it, ink) }
+                    subscriberLine?.let { StatPill(Lucide.Users, it, ink) }
+                    monthlyLine?.let { StatPill(Lucide.AudioWaveform, it, ink) }
                 }
             }
         }
@@ -2391,7 +2361,7 @@ private fun LatestReleaseCard(
         if (saved != null) {
             IconButton(onClick = onToggleSaved, modifier = Modifier.size(38.dp)) {
                 Icon(
-                    if (saved) PhosphorIcons.Fill.Check else PhosphorIcons.Bold.Plus,
+                    if (saved) Lucide.Check else Lucide.Plus,
                     contentDescription = stringResource(
                         if (saved) R.string.remove_from_library else R.string.add_to_library,
                     ),
@@ -2583,9 +2553,9 @@ private fun DownloadAction(
             // to say the journey is over. A tick would be about the act rather
             // than about the music.
             icon = if (kept) {
-                PhosphorIcons.Bold.ArrowCircleDown
+                Lucide.CircleArrowDown
             } else {
-                PhosphorIcons.Bold.ArrowDown
+                Lucide.ArrowDown
             },
             description = stringResource(
                 if (kept) R.string.remove_download else R.string.download,
@@ -2867,7 +2837,7 @@ private fun SectionHeader(
                 label = "sectionCaret",
             )
             Icon(
-                PhosphorIcons.Regular.CaretRight,
+                Lucide.ChevronRight,
                 contentDescription = stringResource(
                     if (expanded) R.string.show_less else R.string.show_all,
                 ),
@@ -2887,7 +2857,7 @@ private fun SectionHeader(
         if (mix != true && backdrop != null) {
             // Upstream's GlassPullDownButton, which the sort menu grows out of.
             app.sonar.ui.components.GlassPullDownButton(
-                icon = PhosphorIcons.Bold.ArrowsDownUp,
+                icon = Lucide.ArrowDownUp,
                 semanticLabel = stringResource(R.string.sort),
                 onOpen = { onSortOpen(true) },
                 onAnchor = onAnchor,
@@ -2977,7 +2947,7 @@ private fun DownloadMark(state: app.sonar.data.DownloadState) {
     ) {
         if (state is app.sonar.data.DownloadState.Done) {
             Icon(
-                PhosphorIcons.Fill.ArrowCircleDown,
+                Lucide.CircleArrowDown,
                 contentDescription = stringResource(R.string.downloaded),
                 tint = accent,
                 modifier = Modifier.size(14.dp),
@@ -3119,7 +3089,7 @@ private fun TrackRow(
                 ) {
                     if (isCurrent) {
                         Icon(
-                            PhosphorIcons.Fill.Waveform,
+                            Lucide.AudioWaveform,
                             contentDescription = stringResource(R.string.now_playing),
                             tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(18.dp),
@@ -3149,7 +3119,7 @@ private fun TrackRow(
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        PhosphorIcons.Fill.Waveform,
+                        Lucide.AudioWaveform,
                         contentDescription = stringResource(R.string.now_playing),
                         tint = Color.White,
                         modifier = Modifier.size(20.dp),
@@ -3193,7 +3163,7 @@ private fun TrackRow(
                     app.sonar.data.LocalLibrary.isSpotifyLocal(track.uri)
                 ) {
                     Icon(
-                        PhosphorIcons.Fill.FloppyDisk,
+                        Lucide.Save,
                         contentDescription = stringResource(R.string.local_file),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier
@@ -3242,7 +3212,7 @@ private fun TrackRow(
 
         IconButton(onClick = onMenu, modifier = Modifier.size(32.dp)) {
             Icon(
-                PhosphorIcons.Bold.DotsThree,
+                Lucide.Ellipsis,
                 contentDescription = stringResource(R.string.more),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 modifier = Modifier.size(18.dp),
@@ -3269,7 +3239,7 @@ private fun MixPill(
         selected = on,
         onClick = onClick,
         backdrop = backdrop ?: app.sonar.ui.glass.LocalAppBackdrop.current,
-        icon = PhosphorIcons.Regular.SlidersHorizontal,
+        icon = Lucide.SlidersHorizontal,
         ink = if (on) accent else Color.Unspecified,
         modifier = Modifier
             .padding(end = 4.dp)
@@ -3342,7 +3312,7 @@ private fun TransitionTag(transition: app.sonar.playback.Mixes.Transition?) {
         horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
         Icon(
-            if (transition != null) PhosphorIcons.Regular.Waveform else PhosphorIcons.Regular.Sparkle,
+            if (transition != null) Lucide.AudioWaveform else Lucide.Sparkle,
             contentDescription = null,
             tint = if (transition != null) ink else MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(13.dp),
@@ -3392,7 +3362,7 @@ private fun MixPlayButton(onPlay: () -> Unit, backdrop: Backdrop, ink: Color, un
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    PhosphorIcons.Fill.Play,
+                    Lucide.Play,
                     contentDescription = null,
                     tint = ink,
                     modifier = Modifier.size(20.dp),

@@ -35,10 +35,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.sonar.R
 import app.sonar.SonarApplication
 import app.sonar.auth.SpotifyOAuth
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.ArrowLeft
-import com.adamglin.phosphoricons.regular.ArrowUpRight
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.ArrowLeft
+import com.composables.icons.lucide.ArrowUpRight
 import app.sonar.ui.onboarding.*
 import app.sonar.ui.theme.Ink
 import app.sonar.ui.theme.InkDim
@@ -92,7 +91,7 @@ class WebSdkActivity : ComponentActivity() {
             // trip to the developer dashboard, and it should look like one.
             SetupScaffold(
                 top = {
-                    RoundButton(PhosphorIcons.Regular.ArrowLeft, stringResource(R.string.back)) { finish() }
+                    RoundButton(Lucide.ArrowLeft, stringResource(R.string.back)) { finish() }
                 },
                 primary = {
                     Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
@@ -168,7 +167,7 @@ class WebSdkActivity : ComponentActivity() {
             CardButton(
                 title = stringResource(R.string.onboarding_open_dashboard),
                 detail = DASHBOARD_URL.removePrefix("https://"),
-                icon = PhosphorIcons.Regular.ArrowUpRight,
+                icon = Lucide.ArrowUpRight,
                 onClick = {
                     app.sonar.ui.onboarding.openOrCopy(uriHandler, clipboard, context, DASHBOARD_URL)
                 },

@@ -24,12 +24,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.fill.LockSimple
-import com.adamglin.phosphoricons.regular.ShieldCheck
-import com.adamglin.phosphoricons.regular.X
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Lock
+import com.composables.icons.lucide.ShieldCheck
+import com.composables.icons.lucide.X
 import app.sonar.R
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -191,7 +189,7 @@ fun YouTubeLoginScreen(account: YouTubeAccount, onDone: () -> Unit) {
                 contentAlignment = androidx.compose.ui.Alignment.Center,
             ) {
                 Icon(
-                    PhosphorIcons.Regular.X,
+                    Lucide.X,
                     contentDescription = stringResource(R.string.close),
                     tint = ink,
                     modifier = Modifier.size(20.dp),
@@ -206,7 +204,7 @@ fun YouTubeLoginScreen(account: YouTubeAccount, onDone: () -> Unit) {
                 )
                 androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     Icon(
-                        PhosphorIcons.Fill.LockSimple,
+                        Lucide.Lock,
                         contentDescription = null,
                         tint = ink.copy(alpha = 0.6f),
                         modifier = Modifier.size(12.dp),
@@ -366,7 +364,7 @@ fun YouTubeLoginScreen(account: YouTubeAccount, onDone: () -> Unit) {
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
         ) {
             Icon(
-                PhosphorIcons.Regular.ShieldCheck,
+                Lucide.ShieldCheck,
                 contentDescription = null,
                 tint = ink.copy(alpha = 0.6f),
                 modifier = Modifier.size(16.dp),

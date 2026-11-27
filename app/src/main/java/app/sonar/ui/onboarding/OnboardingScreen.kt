@@ -1,8 +1,18 @@
 package app.sonar.ui.onboarding
 
 import app.sonar.ui.glass.pressable
-import com.adamglin.phosphoricons.regular.CheckCircle
-import com.adamglin.phosphoricons.regular.Circle
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.ArrowLeft
+import com.composables.icons.lucide.ArrowUpRight
+import com.composables.icons.lucide.AudioLines
+import com.composables.icons.lucide.AudioWaveform
+import com.composables.icons.lucide.Check
+import com.composables.icons.lucide.Circle
+import com.composables.icons.lucide.CircleCheck
+import com.composables.icons.lucide.Code
+import com.composables.icons.lucide.Download
+import com.composables.icons.lucide.Key
+import com.composables.icons.lucide.MonitorSmartphone
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.foundation.layout.size
 import androidx.compose.animation.AnimatedContent
@@ -43,22 +53,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.adamglin.PhosphorIcons
 import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.animateContentSize
-import com.adamglin.phosphoricons.regular.Check
-import com.adamglin.phosphoricons.regular.CaretRight
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.ArrowLeft
-import com.adamglin.phosphoricons.regular.ArrowUpRight
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.fill.SpotifyLogo
-import com.adamglin.phosphoricons.regular.Code
-import com.adamglin.phosphoricons.regular.Key
-import com.adamglin.phosphoricons.regular.Waveform
-import com.adamglin.phosphoricons.regular.DownloadSimple
-import com.adamglin.phosphoricons.regular.Devices
 import app.sonar.R
 import app.sonar.data.AppLanguages
 import app.sonar.ui.MainViewModel
@@ -123,7 +120,7 @@ fun OnboardingScreen(
     SetupScaffold(
         top = {
             if (step > 0) {
-                RoundButton(PhosphorIcons.Regular.ArrowLeft, stringResource(R.string.back)) { step-- }
+                RoundButton(Lucide.ArrowLeft, stringResource(R.string.back)) { step-- }
             }
             Spacer(Modifier.weight(1f))
             QuietButton(
@@ -206,7 +203,7 @@ private fun LogIn(
     connecting: Boolean,
     onLogIn: () -> Unit,
 ) {
-    StepHeader(stringResource(R.string.onboarding_login_title), stepOf(1), PhosphorIcons.Fill.SpotifyLogo)
+    StepHeader(stringResource(R.string.onboarding_login_title), stepOf(1), Lucide.AudioLines)
     ProseText(stringResource(R.string.onboarding_login_1))
     Note(stringResource(R.string.onboarding_login_2))
 
@@ -228,13 +225,13 @@ private fun Dashboard(redirectUri: String) {
     val clipboard = LocalClipboardManager.current
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    StepHeader(stringResource(R.string.onboarding_key_title), stepOf(2), PhosphorIcons.Regular.Code)
+    StepHeader(stringResource(R.string.onboarding_key_title), stepOf(2), Lucide.Code)
     ProseText(stringResource(R.string.onboarding_key_intro))
 
     CardButton(
         title = stringResource(R.string.onboarding_open_dashboard),
         detail = DASHBOARD_URL.removePrefix("https://"),
-        icon = PhosphorIcons.Regular.ArrowUpRight,
+        icon = Lucide.ArrowUpRight,
         onClick = { openOrCopy(uriHandler, clipboard, context, DASHBOARD_URL) },
         modifier = Modifier.padding(top = 18.dp),
     )
@@ -295,7 +292,7 @@ private fun ClientId(
     onClientIdChange: (String) -> Unit,
     onConnectWebApi: () -> Unit,
 ) {
-    StepHeader(stringResource(R.string.onboarding_paste_title), stepOf(3), PhosphorIcons.Regular.Key)
+    StepHeader(stringResource(R.string.onboarding_paste_title), stepOf(3), Lucide.Key)
     if (webApi.connected) {
         ProseText(stringResource(R.string.onboarding_paste_done))
         Spacer(Modifier.height(18.dp))
@@ -351,7 +348,7 @@ private fun ClientId(
  */
 @Composable
 private fun Engine(soloist: app.sonar.ui.settings.SoloistSetupUi) {
-    StepHeader(stringResource(R.string.engine), stringResource(R.string.onboarding_optional), PhosphorIcons.Regular.Waveform)
+    StepHeader(stringResource(R.string.engine), stringResource(R.string.onboarding_optional), Lucide.AudioWaveform)
     ProseText(stringResource(R.string.onboarding_engine_intro))
 
     Column(
@@ -382,12 +379,12 @@ internal fun SoloistKeyStep(soloist: app.sonar.ui.settings.SoloistSetupUi) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var draft by remember(soloist.savedKey) { mutableStateOf(soloist.savedKey) }
 
-    StepHeader(stringResource(R.string.soloist_step_key), stringResource(R.string.onboarding_step_of, 1, 3), PhosphorIcons.Regular.Key)
+    StepHeader(stringResource(R.string.soloist_step_key), stringResource(R.string.onboarding_step_of, 1, 3), Lucide.Key)
     ProseText(stringResource(R.string.soloist_key_note))
     CardButton(
         title = stringResource(R.string.soloist_get_key),
         detail = app.sonar.ui.settings.SOLOIST_KEY_PAGE.removePrefix("https://"),
-        icon = PhosphorIcons.Regular.ArrowUpRight,
+        icon = Lucide.ArrowUpRight,
         onClick = { openOrCopy(uriHandler, clipboard, context, app.sonar.ui.settings.SOLOIST_KEY_PAGE) },
         modifier = Modifier.padding(top = 18.dp),
     )
@@ -423,7 +420,7 @@ internal fun SoloistDownloadStep(soloist: app.sonar.ui.settings.SoloistSetupUi) 
             soloist.fetch()
         }
     }
-    StepHeader(stringResource(R.string.soloist_step_download), stringResource(R.string.onboarding_step_of, 2, 3), PhosphorIcons.Regular.DownloadSimple)
+    StepHeader(stringResource(R.string.soloist_step_download), stringResource(R.string.onboarding_step_of, 2, 3), Lucide.Download)
     ProseText(stringResource(R.string.soloist_download_note))
     Column(
         Modifier
@@ -471,7 +468,7 @@ internal fun SoloistSignInStep(soloist: app.sonar.ui.settings.SoloistSetupUi, on
             onDone()
         }
     }
-    StepHeader(stringResource(R.string.soloist_step_account), stringResource(R.string.onboarding_step_of, 3, 3), PhosphorIcons.Regular.Devices)
+    StepHeader(stringResource(R.string.soloist_step_account), stringResource(R.string.onboarding_step_of, 3, 3), Lucide.MonitorSmartphone)
     ProseText(app.sonar.ui.settings.soloistAccountStatus(soloist))
     Row(
         Modifier
@@ -532,7 +529,7 @@ private fun EngineCard(title: String, detail: String, selected: Boolean, onClick
             )
         }
         androidx.compose.material3.Icon(
-            if (selected) PhosphorIcons.Regular.CheckCircle else PhosphorIcons.Regular.Circle,
+            if (selected) Lucide.CircleCheck else Lucide.Circle,
             contentDescription = null,
             tint = if (selected) Ink else InkDim,
             modifier = Modifier
@@ -555,7 +552,7 @@ private fun guideFieldColors() = OutlinedTextFieldDefaults.colors(
 
 @Composable
 private fun Done() {
-    StepHeader(stringResource(R.string.onboarding_done_title), icon = PhosphorIcons.Regular.CheckCircle)
+    StepHeader(stringResource(R.string.onboarding_done_title), icon = Lucide.CircleCheck)
     ProseText(stringResource(R.string.onboarding_done_1))
     Note(stringResource(R.string.onboarding_done_3))
 }
@@ -605,7 +602,7 @@ private fun LanguageChips(language: String, backdrop: app.sonar.ui.glass.backdro
                     modifier = Modifier.weight(1f),
                 )
                 if (tag == language) {
-                    Icon(PhosphorIcons.Regular.Check, contentDescription = null, tint = Ink, modifier = Modifier.size(18.dp))
+                    Icon(Lucide.Check, contentDescription = null, tint = Ink, modifier = Modifier.size(18.dp))
                 }
             }
         }

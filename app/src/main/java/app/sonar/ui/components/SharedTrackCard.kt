@@ -37,11 +37,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.fill.Play
-import com.adamglin.phosphoricons.regular.Plus
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Play
+import com.composables.icons.lucide.Plus
 import app.sonar.ui.glass.backdrop.Backdrop
 import app.sonar.ui.glass.backdrop.drawBackdrop
 import app.sonar.ui.glass.backdrop.effects.blur
@@ -204,14 +202,14 @@ fun BoxScope.SharedTrackCard(
                 ) {
                     CardButton(
                         label = stringResource(R.string.play),
-                        icon = PhosphorIcons.Fill.Play,
+                        icon = Lucide.Play,
                         filled = true,
                         onClick = onPlay,
                         modifier = Modifier.weight(1f),
                     )
                     CardButton(
                         label = stringResource(R.string.save),
-                        icon = PhosphorIcons.Regular.Plus,
+                        icon = Lucide.Plus,
                         filled = false,
                         onClick = onAddToPlaylist,
                         modifier = Modifier.weight(1f),

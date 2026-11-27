@@ -30,13 +30,12 @@ import androidx.compose.ui.unit.dp
 import app.sonar.ui.glass.backdrop.Backdrop
 import app.sonar.R
 import app.sonar.ui.MainViewModel
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.ArrowClockwise
-import com.adamglin.phosphoricons.regular.Desktop
-import com.adamglin.phosphoricons.regular.DeviceMobile
-import com.adamglin.phosphoricons.regular.SpeakerHifi
-import com.adamglin.phosphoricons.regular.Television
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Monitor
+import com.composables.icons.lucide.RotateCw
+import com.composables.icons.lucide.Smartphone
+import com.composables.icons.lucide.Speaker
+import com.composables.icons.lucide.Tv
 
 /**
  * The Spotify Connect device list.
@@ -99,7 +98,7 @@ fun DevicePicker(
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
-                            PhosphorIcons.Regular.ArrowClockwise,
+                            Lucide.RotateCw,
                             contentDescription = stringResource(R.string.refresh),
                             tint = GlassInkDim,
                             modifier = Modifier.size(20.dp),
@@ -183,7 +182,7 @@ fun DeviceList(
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
-                            PhosphorIcons.Regular.ArrowClockwise,
+                            Lucide.RotateCw,
                             contentDescription = stringResource(R.string.refresh),
                             tint = GlassInkDim,
                             modifier = Modifier.size(20.dp),
@@ -294,8 +293,8 @@ private fun DeviceRow(
 
 /** Spotify's device types, as far as they map onto icons worth telling apart. */
 private fun iconFor(type: String): ImageVector = when (type.lowercase()) {
-    "computer" -> PhosphorIcons.Regular.Desktop
-    "smartphone", "tablet" -> PhosphorIcons.Regular.DeviceMobile
-    "tv", "castvideo" -> PhosphorIcons.Regular.Television
-    else -> PhosphorIcons.Regular.SpeakerHifi
+    "computer" -> Lucide.Monitor
+    "smartphone", "tablet" -> Lucide.Smartphone
+    "tv", "castvideo" -> Lucide.Tv
+    else -> Lucide.Speaker
 }

@@ -63,11 +63,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.unit.lerp
 import app.sonar.ui.glass.backdrop.Backdrop
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.ArrowsLeftRight
-import com.adamglin.phosphoricons.regular.SpotifyLogo
-import com.adamglin.phosphoricons.regular.YoutubeLogo
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.ArrowLeftRight
+import com.composables.icons.lucide.AudioLines
+import com.composables.icons.lucide.SquarePlay
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -324,7 +323,7 @@ fun HomeScreen(
                     name = state.displayName,
                     avatarUrl = state.avatarUrl,
                     service = R.string.backend_spotify,
-                    serviceIcon = PhosphorIcons.Regular.SpotifyLogo,
+                    serviceIcon = Lucide.AudioLines,
                     onSwitchSource = onSwitchSource,
                     collapse = { collapse },
                     // The chip that is lit is the one that was tapped. It used
@@ -746,7 +745,7 @@ private fun Header(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Icon(
-                        PhosphorIcons.Regular.ArrowsLeftRight,
+                        Lucide.ArrowLeftRight,
                         contentDescription = null,
                         tint = InkDim,
                         modifier = Modifier.padding(start = 6.dp).size(14.dp),
@@ -1611,7 +1610,7 @@ private fun YouTubeHeader(
         name = accountName,
         avatarUrl = null,
         service = R.string.backend_youtube,
-        serviceIcon = PhosphorIcons.Regular.YoutubeLogo,
+        serviceIcon = Lucide.SquarePlay,
         onSwitchSource = onSwitchSource,
         collapse = collapse,
         highlighted = Feed.entries.first(),

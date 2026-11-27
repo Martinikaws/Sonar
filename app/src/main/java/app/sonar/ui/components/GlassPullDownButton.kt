@@ -62,8 +62,8 @@ import androidx.compose.ui.unit.sp
 import app.sonar.ui.glass.LiquidButton
 import app.sonar.ui.glass.backdrop.Backdrop
 import app.sonar.ui.player.GlassInk
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.Check
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Check
 
 /**
  * Upstream's GlassPullDownButton: a round GlassButton, 44 dp across, or a
@@ -232,7 +232,7 @@ fun GlassMenuItem(
             when {
                 trailing != null -> trailing()
                 selected == true || checked == true -> Icon(
-                    com.adamglin.PhosphorIcons.Regular.Check,
+                    Lucide.Check,
                     contentDescription = null,
                     tint = GlassInk,
                     modifier = Modifier.size(17.dp),

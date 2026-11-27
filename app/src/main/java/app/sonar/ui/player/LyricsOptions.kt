@@ -43,12 +43,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.CaretDown
-import com.adamglin.phosphoricons.regular.Quotes
-import com.adamglin.phosphoricons.regular.Check
-import com.adamglin.phosphoricons.regular.X
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Check
+import com.composables.icons.lucide.ChevronDown
+import com.composables.icons.lucide.Quote
+import com.composables.icons.lucide.X
 import app.sonar.R
 import app.sonar.backend.lyrics.LyricsLibrary
 import app.sonar.backend.lyrics.LyricsQuery
@@ -77,7 +76,7 @@ fun LyricsSourceChip(source: String?, backdrop: Backdrop, onClick: () -> Unit, m
     ) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Icon(
-                PhosphorIcons.Regular.Quotes,
+                Lucide.Quote,
                 // Says which source it is, for whoever cannot see the words.
                 contentDescription = label,
                 tint = GlassInk,
@@ -139,7 +138,7 @@ fun LyricsOptionsPanel(
                 modifier = Modifier.weight(1f),
             )
             Icon(
-                PhosphorIcons.Regular.X,
+                Lucide.X,
                 contentDescription = stringResource(R.string.close),
                 tint = GlassInk,
                 modifier = Modifier
@@ -217,7 +216,7 @@ fun LyricsOptionsPanel(
                             )
                         }
                         Icon(
-                            PhosphorIcons.Regular.CaretDown,
+                            Lucide.ChevronDown,
                             contentDescription = null,
                             tint = GlassInkDim,
                             modifier = Modifier.size(18.dp).rotate(turn),
@@ -303,7 +302,7 @@ private fun SourceRow(name: String, status: String?, selected: Boolean, enabled:
         }
         if (selected) {
             Icon(
-                PhosphorIcons.Regular.Check,
+                Lucide.Check,
                 contentDescription = null,
                 tint = GlassInk,
                 modifier = Modifier.size(18.dp),

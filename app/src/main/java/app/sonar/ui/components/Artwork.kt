@@ -24,11 +24,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.background
 import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.Color
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.ArrowCircleDown
-import com.adamglin.phosphoricons.regular.FolderSimple
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.CircleArrowDown
+import com.composables.icons.lucide.Folder
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -206,7 +204,7 @@ private fun LocalFilesCover() {
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            PhosphorIcons.Regular.FolderSimple,
+            Lucide.Folder,
             contentDescription = null,
             tint = LocalFilesGlyph,
             modifier = Modifier.fillMaxSize(0.44f),
@@ -374,7 +372,7 @@ private fun DownloadsCover() {
         // same kind of thing — music that is already on the phone — and they
         // should read as a pair rather than as one shelf and one badge.
         Icon(
-            PhosphorIcons.Regular.ArrowCircleDown,
+            Lucide.CircleArrowDown,
             contentDescription = null,
             tint = DownloadsGlyph,
             modifier = Modifier.fillMaxSize(0.44f),

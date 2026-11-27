@@ -15,9 +15,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.fill.User
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.User
 import app.sonar.ui.theme.Ink
 
 /**
@@ -63,7 +62,7 @@ fun ProfilePicture(
         val initials = initialsOf(name)
         if (initials.isEmpty()) {
             Icon(
-                PhosphorIcons.Fill.User,
+                Lucide.User,
                 contentDescription = null,
                 tint = Ink.copy(alpha = 0.55f),
                 modifier = Modifier.fillMaxSize(0.5f),

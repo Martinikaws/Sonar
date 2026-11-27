@@ -95,15 +95,13 @@ import app.sonar.ui.glass.backdrop.backdrops.layerBackdrop
 import app.sonar.ui.glass.backdrop.backdrops.rememberCombinedBackdrop
 import app.sonar.ui.glass.backdrop.backdrops.rememberLayerBackdrop
 import app.sonar.ui.glass.backdrop.backdrops.rememberBackdropFreeze
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.fill.PushPin
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.ArrowsDownUp
-import com.adamglin.phosphoricons.regular.ListBullets
-import com.adamglin.phosphoricons.regular.ChartBar
-import com.adamglin.phosphoricons.regular.Plus
-import com.adamglin.phosphoricons.regular.SquaresFour
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.ArrowDownUp
+import com.composables.icons.lucide.ChartNoAxesColumn
+import com.composables.icons.lucide.Grid2x2
+import com.composables.icons.lucide.List
+import com.composables.icons.lucide.Pin
+import com.composables.icons.lucide.Plus
 
 /** How the playlists are arranged. */
 private enum class Layout { GRID, LIST }
@@ -389,7 +387,7 @@ fun LibraryScreen(
                 // the sort menu grows out of. The order chosen is ticked in it.
                 val sortButton: @Composable (Modifier) -> Unit = { buttonModifier ->
                     app.sonar.ui.components.GlassPullDownButton(
-                        icon = PhosphorIcons.Regular.ArrowsDownUp,
+                        icon = Lucide.ArrowDownUp,
                         semanticLabel = stringResource(R.string.sort) + ": " + stringResource(order.label),
                         onOpen = { sortOpen = true },
                         onAnchor = { sortAnchor = it },
@@ -717,7 +715,7 @@ private fun Header(
                             modifier = Modifier.padding(end = 8.dp).size(42.dp),
                             contentHeight = 42.dp, contentPadding = 0.dp,
                         ) {
-                            Icon(PhosphorIcons.Regular.ChartBar,
+                            Icon(Lucide.ChartNoAxesColumn,
                                 contentDescription = stringResource(R.string.recap_title),
                                 tint = Ink, modifier = Modifier.size(20.dp))
                         }
@@ -737,7 +735,7 @@ private fun Header(
                             contentPadding = 0.dp,
                         ) {
                             Icon(
-                                PhosphorIcons.Regular.Plus,
+                                Lucide.Plus,
                                 contentDescription = stringResource(R.string.new_playlist),
                                 tint = Ink,
                                 modifier = Modifier.size(20.dp),
@@ -756,8 +754,8 @@ private fun Header(
                         contentPadding = 0.dp,
                     ) {
                         Icon(
-                            if (layout == Layout.GRID) PhosphorIcons.Regular.ListBullets
-                            else PhosphorIcons.Regular.SquaresFour,
+                            if (layout == Layout.GRID) Lucide.List
+                            else Lucide.Grid2x2,
                             contentDescription = stringResource(R.string.change_layout),
                             tint = Ink,
                             modifier = Modifier.size(20.dp),
@@ -883,7 +881,7 @@ private fun ListRow(
 @Composable
 private fun PinMark(modifier: Modifier = Modifier) {
     Icon(
-        PhosphorIcons.Fill.PushPin,
+        Lucide.Pin,
         contentDescription = stringResource(R.string.pinned),
         tint = InkDim,
         modifier = modifier.size(14.dp),

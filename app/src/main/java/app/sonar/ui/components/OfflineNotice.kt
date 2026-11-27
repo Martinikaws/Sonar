@@ -29,9 +29,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.CloudSlash
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.CloudOff
 import app.sonar.R
 import app.sonar.playback.OfflineMode
 import app.sonar.ui.glass.pressable
@@ -81,7 +80,7 @@ fun OfflineNotice(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Icon(
-                PhosphorIcons.Regular.CloudSlash,
+                Lucide.CloudOff,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(16.dp),

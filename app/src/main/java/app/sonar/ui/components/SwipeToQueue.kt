@@ -33,10 +33,9 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.Queue
-import com.adamglin.phosphoricons.regular.Trash
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.ListOrdered
+import com.composables.icons.lucide.Trash
 
 /**
  * Wraps a row so dragging it to the left queues the track.
@@ -92,7 +91,7 @@ fun SwipeToQueue(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    if (removing) PhosphorIcons.Regular.Trash else PhosphorIcons.Regular.Queue,
+                    if (removing) Lucide.Trash else Lucide.ListOrdered,
                     contentDescription = null,
                     tint = tint,
                     modifier = Modifier.size(20.dp),

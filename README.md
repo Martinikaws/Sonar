@@ -202,7 +202,7 @@ development on TODO: Sonar support link not set up.
 | [Spicy Lyrics](https://github.com/Spikerko/spicy-lyrics) | AGPL-3.0 | The lyrics animation, ported to Compose by [@donutnotnut](https://github.com/donutnotnut) in [#50](https://github.com/Lelonio/Square/discussions/50). |
 | [Bungee](https://github.com/kupix/bungee) | MPL-2.0 | Time stretching, fetched at build time. |
 | [AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass) | Apache-2.0 | The glass material; the catalog components are copied with their notice. |
-| [Phosphor Icons](https://phosphoricons.com) | MIT | Every icon in the app. |
+| [Lucide Icons](https://lucide.dev/license) | ISC / MIT | App icons. |
 | [ebur128](https://github.com/sdroege/ebur128) | MIT | Loudness of local files, so they play at the level of the streamed tracks. |
 | librespot-java | Apache-2.0 | The listening-event format, re-implemented from its `EventService` rather than copied. |
 | [go-librespot](https://github.com/devgianlu/go-librespot) and [go-librespot-termux](https://github.com/SEKY443/go-librespot-termux) | GPL-3.0 | The remote sleep timer's command and state fields, the check on truncated audio keys, and how Spotify's DJ is resolved and voiced (the session service, `client-tts`, the narration metadata), re-implemented from their findings rather than copied. |

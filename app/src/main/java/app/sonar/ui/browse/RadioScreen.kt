@@ -36,9 +36,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.fill.Broadcast
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Radio
 import app.sonar.R
 import app.sonar.data.CatalogTrack
 import app.sonar.ui.components.Artwork
@@ -276,7 +275,7 @@ private fun StationTile(seed: CatalogTrack, onClick: () -> Unit) {
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                PhosphorIcons.Fill.Broadcast,
+                Lucide.Radio,
                 contentDescription = null,
                 tint = Color.White,
                 modifier = Modifier.size(15.dp),

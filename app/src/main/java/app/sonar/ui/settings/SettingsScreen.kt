@@ -68,30 +68,52 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.ArrowLeft
-import com.adamglin.phosphoricons.regular.Check
-import com.adamglin.phosphoricons.regular.TextAa
-import com.adamglin.phosphoricons.regular.TextItalic
-import com.adamglin.phosphoricons.regular.ArrowUpRight
-import com.adamglin.phosphoricons.regular.CaretDown
-import com.adamglin.phosphoricons.regular.CaretRight
-import com.adamglin.phosphoricons.regular.CaretUp
-import com.adamglin.phosphoricons.regular.MicrophoneStage
-import com.adamglin.phosphoricons.regular.Lifebuoy
-import com.adamglin.phosphoricons.regular.ShieldCheck
-import com.adamglin.phosphoricons.regular.GearSix
-import com.adamglin.phosphoricons.regular.Palette
-import com.adamglin.phosphoricons.regular.Translate
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.ArrowLeft
+import com.composables.icons.lucide.ArrowUpRight
+import com.composables.icons.lucide.AudioWaveform
+import com.composables.icons.lucide.BatteryCharging
+import com.composables.icons.lucide.Bug
+import com.composables.icons.lucide.CaseSensitive
+import com.composables.icons.lucide.Check
+import com.composables.icons.lucide.ChevronDown
+import com.composables.icons.lucide.ChevronRight
+import com.composables.icons.lucide.ChevronUp
+import com.composables.icons.lucide.CircleUser
+import com.composables.icons.lucide.Contrast
+import com.composables.icons.lucide.Download
+import com.composables.icons.lucide.Eraser
+import com.composables.icons.lucide.Film
+import com.composables.icons.lucide.FolderOpen
+import com.composables.icons.lucide.Heart
+import com.composables.icons.lucide.Image
+import com.composables.icons.lucide.Info
+import com.composables.icons.lucide.Italic
+import com.composables.icons.lucide.Key
+import com.composables.icons.lucide.Languages
+import com.composables.icons.lucide.Layers
+import com.composables.icons.lucide.LifeBuoy
+import com.composables.icons.lucide.ListMusic
+import com.composables.icons.lucide.MessagesSquare
+import com.composables.icons.lucide.MicVocal
+import com.composables.icons.lucide.Moon
+import com.composables.icons.lucide.MoveHorizontal
+import com.composables.icons.lucide.Palette
+import com.composables.icons.lucide.Pause
+import com.composables.icons.lucide.Plane
+import com.composables.icons.lucide.Repeat
+import com.composables.icons.lucide.RotateCw
+import com.composables.icons.lucide.Scissors
+import com.composables.icons.lucide.Send
+import com.composables.icons.lucide.Settings
+import com.composables.icons.lucide.ShieldCheck
+import com.composables.icons.lucide.Smartphone
+import com.composables.icons.lucide.Sun
+import com.composables.icons.lucide.Trash
+import com.composables.icons.lucide.Wifi
 import app.sonar.ui.glass.backdrop.Backdrop
 import app.sonar.BuildConfig
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.adamglin.phosphoricons.regular.UserCircle
-import com.adamglin.phosphoricons.regular.Waveform
-import com.adamglin.phosphoricons.regular.Stack
-import com.adamglin.phosphoricons.regular.Info
-import com.adamglin.phosphoricons.regular.DownloadSimple
 import androidx.compose.ui.res.pluralStringResource
 import app.sonar.ui.glass.shapes.ContinuousCapsule
 import androidx.compose.animation.AnimatedContent
@@ -101,33 +123,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
-import com.adamglin.phosphoricons.regular.DeviceMobile
-import com.adamglin.phosphoricons.regular.Moon
-import com.adamglin.phosphoricons.regular.CircleHalf
-import com.adamglin.phosphoricons.regular.FolderOpen
-import com.adamglin.phosphoricons.regular.Sun
-import com.adamglin.phosphoricons.regular.Package
-import com.adamglin.phosphoricons.regular.FilmStrip
-import com.adamglin.phosphoricons.regular.Repeat
-import com.adamglin.phosphoricons.regular.Scissors
-import com.adamglin.phosphoricons.regular.WifiHigh
-import com.adamglin.phosphoricons.regular.Heart
-import com.adamglin.phosphoricons.regular.AirplaneTilt
-import com.adamglin.phosphoricons.regular.HardDrives
-import com.adamglin.phosphoricons.regular.Key
-import com.adamglin.phosphoricons.regular.ArrowClockwise
-import com.adamglin.phosphoricons.regular.Image
-import com.adamglin.phosphoricons.regular.Gear
-import com.adamglin.phosphoricons.regular.BatteryCharging
-import com.adamglin.phosphoricons.regular.Broom
-import com.adamglin.phosphoricons.regular.ArrowsInLineHorizontal
-import com.adamglin.phosphoricons.regular.Pause
-import com.adamglin.phosphoricons.regular.Playlist
 import androidx.compose.foundation.layout.fillMaxHeight
-import com.adamglin.phosphoricons.regular.Trash
-import com.adamglin.phosphoricons.regular.ChatsCircle
-import com.adamglin.phosphoricons.regular.TelegramLogo
-import com.adamglin.phosphoricons.regular.Bug
 import app.sonar.R
 import app.sonar.ui.look.LookPicker
 import app.sonar.data.AppLanguages
@@ -314,7 +310,7 @@ fun SettingsScreen(
                 onClick = { if (shown != null) goTo(null) else onBack() },
                 backdrop = backdrop,
             ) {
-                Icon(PhosphorIcons.Regular.ArrowLeft, contentDescription = stringResource(R.string.back))
+                Icon(Lucide.ArrowLeft, contentDescription = stringResource(R.string.back))
             }
             Text(
                 stringResource(shown?.title ?: R.string.settings),
@@ -432,7 +428,7 @@ fun SettingsScreen(
                 )
             }
             Section(null) {
-                InfoRow(stringResource(R.string.connect_device), deviceName, icon = PhosphorIcons.Regular.DeviceMobile)
+                InfoRow(stringResource(R.string.connect_device), deviceName, icon = Lucide.Smartphone)
             }
         }
 
@@ -536,7 +532,7 @@ fun SettingsScreen(
                     label = stringResource(R.string.keep_playing_on_close),
                     checked = keepPlaying,
                     backdrop = backdrop,
-                    icon = PhosphorIcons.Regular.Playlist,
+                    icon = Lucide.ListMusic,
                     onChange = prefs::setKeepPlayingOnClose,
                 )
                 Text(
@@ -554,7 +550,7 @@ fun SettingsScreen(
                         label = stringResource(R.string.pause_for_other_apps),
                         checked = pauseForOthers,
                         backdrop = backdrop,
-                        icon = PhosphorIcons.Regular.Pause,
+                        icon = Lucide.Pause,
                         onChange = prefs::setPauseForOtherApps,
                     )
                     Text(
@@ -572,7 +568,7 @@ fun SettingsScreen(
                         label = stringResource(R.string.sponsor_block),
                         checked = sponsorBlock,
                         backdrop = backdrop,
-                        icon = PhosphorIcons.Regular.Scissors,
+                        icon = Lucide.Scissors,
                         onChange = prefs::setSponsorBlock,
                     )
                     Text(
@@ -600,7 +596,7 @@ fun SettingsScreen(
             Section(stringResource(R.string.spotify_dj)) {
                 DownloadSwitch(
                     label = stringResource(R.string.spotify_dj_title),
-                    icon = PhosphorIcons.Regular.MicrophoneStage,
+                    icon = Lucide.MicVocal,
                     checked = enabled,
                     backdrop = backdrop,
                     onChange = sonarApp.preferences::setSpotifyDj,
@@ -662,7 +658,7 @@ fun SettingsScreen(
                 ActionRow(
                     stringResource(R.string.app_clear_list_cache),
                     destructive = false,
-                    icon = PhosphorIcons.Regular.Broom,
+                    icon = Lucide.Eraser,
                 ) {
                     scope.launch {
                         MvContextCacheStore(context).clear()
@@ -681,7 +677,7 @@ fun SettingsScreen(
                 ActionRow(
                     stringResource(R.string.app_clear_cache),
                     destructive = false,
-                    icon = PhosphorIcons.Regular.Trash,
+                    icon = Lucide.Trash,
                 ) {
                     scope.launch {
                         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -734,9 +730,9 @@ fun SettingsScreen(
                         ),
                         selected = choice == mode,
                         icon = when (choice) {
-                            MvPreferencesStore.ThemeMode.SYSTEM -> PhosphorIcons.Regular.DeviceMobile
-                            MvPreferencesStore.ThemeMode.LIGHT -> PhosphorIcons.Regular.Sun
-                            MvPreferencesStore.ThemeMode.DARK -> PhosphorIcons.Regular.Moon
+                            MvPreferencesStore.ThemeMode.SYSTEM -> Lucide.Smartphone
+                            MvPreferencesStore.ThemeMode.LIGHT -> Lucide.Sun
+                            MvPreferencesStore.ThemeMode.DARK -> Lucide.Moon
                         },
                     ) { store.setThemeMode(choice) }
                 }
@@ -752,7 +748,7 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    RowIcon(PhosphorIcons.Regular.CircleHalf)
+                    RowIcon(Lucide.Contrast)
                     Column(Modifier.weight(1f)) {
                         Text(stringResource(R.string.theme_pure_black), style = MaterialTheme.typography.bodyLarge)
                         Text(
@@ -784,7 +780,7 @@ fun SettingsScreen(
                     label = stringResource(R.string.bar_folds),
                     checked = folds,
                     backdrop = backdrop,
-                    icon = PhosphorIcons.Regular.ArrowsInLineHorizontal,
+                    icon = Lucide.MoveHorizontal,
                     onChange = glass::setBarFolds,
                 )
             }
@@ -802,7 +798,7 @@ fun SettingsScreen(
                     label = stringResource(R.string.font_system),
                     checked = systemFont,
                     backdrop = backdrop,
-                    icon = PhosphorIcons.Regular.TextAa,
+                    icon = Lucide.CaseSensitive,
                     onChange = store::setSystemFont,
                 )
                 RowDivider()
@@ -810,7 +806,7 @@ fun SettingsScreen(
                     label = stringResource(R.string.font_serif_artists),
                     checked = serifNames,
                     backdrop = backdrop,
-                    icon = PhosphorIcons.Regular.TextItalic,
+                    icon = Lucide.Italic,
                     onChange = store::setSerifArtistNames,
                 )
             }
@@ -822,7 +818,7 @@ fun SettingsScreen(
                 ActionRow(
                     stringResource(R.string.app_system_settings),
                     destructive = false,
-                    icon = PhosphorIcons.Regular.Gear,
+                    icon = Lucide.Settings,
                 ) {
                     runCatching {
                         context.startActivity(
@@ -837,7 +833,7 @@ fun SettingsScreen(
                 ActionRow(
                     stringResource(R.string.app_battery_settings),
                     destructive = false,
-                    icon = PhosphorIcons.Regular.BatteryCharging,
+                    icon = Lucide.BatteryCharging,
                 ) {
                     runCatching {
                         context.startActivity(
@@ -913,7 +909,7 @@ fun SettingsScreen(
                         )
                     }
                     Icon(
-                        PhosphorIcons.Regular.ArrowUpRight,
+                        Lucide.ArrowUpRight,
                         contentDescription = null,
                         tint = InkDim,
                         modifier = Modifier.size(18.dp),
@@ -963,19 +959,19 @@ fun SettingsScreen(
                 ActionRow(
                     stringResource(R.string.telegram_community),
                     destructive = false,
-                    icon = PhosphorIcons.Regular.TelegramLogo,
+                    icon = Lucide.Send,
                 ) { uriHandler.openUri(TELEGRAM_COMMUNITY_URL) }
                 RowDivider()
                 ActionRow(
                     stringResource(R.string.help_discussions),
                     destructive = false,
-                    icon = PhosphorIcons.Regular.ChatsCircle,
+                    icon = Lucide.MessagesSquare,
                 ) { uriHandler.openUri(DISCUSSIONS_URL) }
                 RowDivider()
                 ActionRow(
                     stringResource(R.string.help_report_problem),
                     destructive = false,
-                    icon = PhosphorIcons.Regular.Bug,
+                    icon = Lucide.Bug,
                 ) { uriHandler.openUri(NEW_ISSUE_URL) }
             }
         }
@@ -1240,7 +1236,7 @@ private fun PageRow(title: String, summary: String, onClick: () -> Unit) {
             )
         }
         Icon(
-            PhosphorIcons.Regular.CaretRight,
+            Lucide.ChevronRight,
             contentDescription = null,
             tint = InkDim,
             modifier = Modifier.size(18.dp),
@@ -1358,7 +1354,7 @@ private fun EngineSection(soloist: SoloistSetupUi) {
             )
         }
         RowDivider()
-        ActionRow(stringResource(R.string.soloist_setup), destructive = false, icon = PhosphorIcons.Regular.ArrowUpRight) {
+        ActionRow(stringResource(R.string.soloist_setup), destructive = false, icon = Lucide.ArrowUpRight) {
             guide = true
         }
         if (soloist.installed && soloist.download !is SoloistDownload.Progress.Running) {
@@ -1443,12 +1439,12 @@ private fun AudioSourcesSection() {
                     Switch(checked = enabled, onCheckedChange = null)
                 }
                 SourceMoveButton(
-                    PhosphorIcons.Regular.CaretUp,
+                    Lucide.ChevronUp,
                     stringResource(R.string.audio_source_move_up, label),
                     enabled = index > 0,
                 ) { store.set(priority.move(source, index - 1)) }
                 SourceMoveButton(
-                    PhosphorIcons.Regular.CaretDown,
+                    Lucide.ChevronDown,
                     stringResource(R.string.audio_source_move_down, label),
                     enabled = index < priority.order.lastIndex,
                 ) { store.set(priority.move(source, index + 1)) }
@@ -1607,7 +1603,7 @@ private fun CanvasSection(backdrop: Backdrop) {
     Section(stringResource(R.string.canvas)) {
         DownloadSwitch(
             label = stringResource(R.string.canvas_show),
-            icon = PhosphorIcons.Regular.FilmStrip,
+            icon = Lucide.Film,
             checked = enabled,
             backdrop = backdrop,
             onChange = store::setCanvasEnabled,
@@ -1643,7 +1639,7 @@ private fun AutoplaySection(backdrop: Backdrop) {
     Section(stringResource(R.string.autoplay)) {
         DownloadSwitch(
             label = stringResource(R.string.autoplay_infinite_title),
-            icon = PhosphorIcons.Regular.Repeat,
+            icon = Lucide.Repeat,
             checked = enabled,
             backdrop = backdrop,
             onChange = store::setAutoplayInfinite,
@@ -1698,7 +1694,7 @@ private fun CrossfadeSection(backdrop: Backdrop) {
         RowDivider()
         DownloadSwitch(
             label = stringResource(R.string.trim_silence),
-            icon = PhosphorIcons.Regular.Scissors,
+            icon = Lucide.Scissors,
             checked = trimSilence,
             backdrop = backdrop,
             onChange = preferences::setTrimSilence,
@@ -1710,7 +1706,7 @@ private fun CrossfadeSection(backdrop: Backdrop) {
         // has heard enough.
         DownloadSwitch(
             label = stringResource(R.string.skip_fade),
-            icon = PhosphorIcons.Regular.Waveform,
+            icon = Lucide.AudioWaveform,
             checked = skipFade,
             backdrop = backdrop,
             onChange = preferences::setSkipFade,
@@ -1809,7 +1805,7 @@ private fun SpicyLyricsSection() {
         }
         RowDivider()
         if (draft.trim() != saved) {
-            ActionRow(stringResource(R.string.save), destructive = false, icon = PhosphorIcons.Regular.Check) {
+            ActionRow(stringResource(R.string.save), destructive = false, icon = Lucide.Check) {
                 store.setSpicyLyricsKey(draft)
             }
             RowDivider()
@@ -1820,7 +1816,7 @@ private fun SpicyLyricsSection() {
             }
             RowDivider()
         }
-        ActionRow(stringResource(R.string.spicy_lyrics_get_key), destructive = false, icon = PhosphorIcons.Regular.ArrowUpRight) {
+        ActionRow(stringResource(R.string.spicy_lyrics_get_key), destructive = false, icon = Lucide.ArrowUpRight) {
             runCatching { uriHandler.openUri(app.sonar.backend.lyrics.SpicyLyrics.KEY_PAGE) }
         }
     }
@@ -1861,7 +1857,7 @@ private fun PreferredLyricsSection(showSpotify: Boolean) {
         ) {
             Text(current, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
             Icon(
-                if (open) PhosphorIcons.Regular.CaretUp else PhosphorIcons.Regular.CaretDown,
+                if (open) Lucide.ChevronUp else Lucide.ChevronDown,
                 contentDescription = null,
                 tint = InkDim,
                 modifier = Modifier.size(18.dp),
@@ -1917,7 +1913,7 @@ private fun LyricsFolderSection(onPick: () -> Unit) {
         ActionRow(
             name ?: stringResource(R.string.lyrics_folder_choose),
             destructive = false,
-            icon = PhosphorIcons.Regular.FolderOpen,
+            icon = Lucide.FolderOpen,
         ) { onPick() }
         if (name != null) {
             RowDivider()
@@ -2053,16 +2049,17 @@ private fun Licences() {
         ) {
             Text(stringResource(R.string.licences), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
             Icon(
-                if (open) PhosphorIcons.Regular.CaretUp else PhosphorIcons.Regular.CaretDown,
+                if (open) Lucide.ChevronUp else Lucide.ChevronDown,
                 contentDescription = null,
                 tint = InkDim,
                 modifier = Modifier.size(18.dp),
             )
         }
         if (open) {
-            LICENCES.forEach { (what, licence) ->
+            val notices = LICENCES.map { (what, licence) -> "$what — $licence" }
+            (notices + stringResource(R.string.lucide_icon_notice)).forEach { notice ->
                 Text(
-                    "$what — $licence",
+                    notice,
                     style = MaterialTheme.typography.bodySmall,
                     color = InkDim,
                     modifier = Modifier.padding(horizontal = 18.dp, vertical = 3.dp),
@@ -2147,7 +2144,7 @@ private fun DownloadsSection(
         RowDivider()
         DownloadSwitch(
             label = stringResource(R.string.download_wifi_only),
-            icon = PhosphorIcons.Regular.WifiHigh,
+            icon = Lucide.Wifi,
             checked = wifiOnly,
             backdrop = backdrop,
             onChange = settings::setWifiOnly,
@@ -2157,7 +2154,7 @@ private fun DownloadsSection(
         if (spotify) RowDivider()
         if (spotify) DownloadSwitch(
             label = stringResource(R.string.download_liked_songs),
-            icon = PhosphorIcons.Regular.Heart,
+            icon = Lucide.Heart,
             checked = likedSongs,
             backdrop = backdrop,
             onChange = { enable ->
@@ -2192,7 +2189,7 @@ private fun DownloadsSection(
         RowDivider()
         DownloadSwitch(
             label = stringResource(R.string.offline_mode),
-            icon = PhosphorIcons.Regular.AirplaneTilt,
+            icon = Lucide.Plane,
             checked = offline,
             backdrop = backdrop,
             onChange = settings::setOfflineMode,
@@ -2206,7 +2203,7 @@ private fun DownloadsSection(
         ActionRow(
             stringResource(R.string.download_refetch_extras),
             destructive = false,
-            icon = PhosphorIcons.Regular.Image,
+            icon = Lucide.Image,
         ) {
             scope.launch {
                 (context.applicationContext as app.sonar.SonarApplication)
@@ -2234,7 +2231,7 @@ private fun DownloadsSection(
             ActionRow(
                 stringResource(R.string.download_retry_failed),
                 destructive = false,
-                icon = PhosphorIcons.Regular.ArrowClockwise,
+                icon = Lucide.RotateCw,
             ) {
                 scope.launch {
                     store.retryFailed()
@@ -2314,21 +2311,21 @@ private fun Section(title: String?, content: @Composable () -> Unit) {
 
 /** A group's mark; the groups themselves are SettingsGroup. */
 private fun groupIcon(group: SettingsGroup): ImageVector = when (group) {
-    SettingsGroup.ACCOUNT -> PhosphorIcons.Regular.UserCircle
-    SettingsGroup.SETUP -> PhosphorIcons.Regular.Key
-    SettingsGroup.SOUND -> PhosphorIcons.Regular.Waveform
-    SettingsGroup.SOURCES -> PhosphorIcons.Regular.Stack
-    SettingsGroup.LISTENING -> PhosphorIcons.Regular.Playlist
-    SettingsGroup.LYRICS -> PhosphorIcons.Regular.MicrophoneStage
-    SettingsGroup.COVERS -> PhosphorIcons.Regular.FilmStrip
-    SettingsGroup.DOWNLOADS -> PhosphorIcons.Regular.DownloadSimple
-    SettingsGroup.CLEANUP -> PhosphorIcons.Regular.Broom
-    SettingsGroup.LANGUAGE -> PhosphorIcons.Regular.Translate
-    SettingsGroup.APPEARANCE -> PhosphorIcons.Regular.Palette
-    SettingsGroup.SYSTEM -> PhosphorIcons.Regular.GearSix
-    SettingsGroup.ABOUT -> PhosphorIcons.Regular.Info
-    SettingsGroup.HELP -> PhosphorIcons.Regular.Lifebuoy
-    SettingsGroup.PERMISSIONS -> PhosphorIcons.Regular.ShieldCheck
+    SettingsGroup.ACCOUNT -> Lucide.CircleUser
+    SettingsGroup.SETUP -> Lucide.Key
+    SettingsGroup.SOUND -> Lucide.AudioWaveform
+    SettingsGroup.SOURCES -> Lucide.Layers
+    SettingsGroup.LISTENING -> Lucide.ListMusic
+    SettingsGroup.LYRICS -> Lucide.MicVocal
+    SettingsGroup.COVERS -> Lucide.Film
+    SettingsGroup.DOWNLOADS -> Lucide.Download
+    SettingsGroup.CLEANUP -> Lucide.Eraser
+    SettingsGroup.LANGUAGE -> Lucide.Languages
+    SettingsGroup.APPEARANCE -> Lucide.Palette
+    SettingsGroup.SYSTEM -> Lucide.Settings
+    SettingsGroup.ABOUT -> Lucide.Info
+    SettingsGroup.HELP -> Lucide.LifeBuoy
+    SettingsGroup.PERMISSIONS -> Lucide.ShieldCheck
 }
 
 /** The group a section is drawn in, whose heading it then does not repeat; see Section. */
@@ -2563,7 +2560,7 @@ private fun ChoiceRow(
         )
         if (selected) {
             Icon(
-                PhosphorIcons.Regular.Check,
+                Lucide.Check,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(18.dp),
@@ -2599,7 +2596,6 @@ private val LICENCES = listOf(
     "librespot" to "MIT",
     "Bungee" to "MPL-2.0",
     "AndroidLiquidGlass" to "Apache-2.0",
-    "Phosphor Icons" to "MIT",
     "Coil" to "Apache-2.0",
     "Spicy Lyrics" to "AGPL-3.0",
     "OkHttp / Retrofit" to "Apache-2.0",

@@ -51,9 +51,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.sonar.R
 import java.io.Serializable
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.ArrowLeft
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.ArrowLeft
 import javax.crypto.BadPaddingException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
@@ -132,7 +131,7 @@ internal fun AstralImportScreen(onBack: () -> Unit) {
     ) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack, enabled = !busy, modifier = Modifier.size(48.dp)) {
-                Icon(PhosphorIcons.Regular.ArrowLeft, contentDescription = stringResource(R.string.back))
+                Icon(Lucide.ArrowLeft, contentDescription = stringResource(R.string.back))
             }
             Text(stringResource(R.string.astral_import_title), Modifier.semantics { heading() }, style = MaterialTheme.typography.titleLarge)
         }

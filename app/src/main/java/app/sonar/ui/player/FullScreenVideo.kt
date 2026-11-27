@@ -34,16 +34,10 @@ import androidx.compose.foundation.layout.height
 import app.sonar.ui.glass.backdrop.backdrops.layerBackdrop
 import app.sonar.ui.glass.backdrop.backdrops.rememberLayerBackdrop
 import androidx.media3.common.Player
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.fill.Pause
-import com.adamglin.phosphoricons.fill.Play
-import com.adamglin.phosphoricons.fill.SkipBack
-import com.adamglin.phosphoricons.fill.SkipForward
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Minimize
+import com.composables.icons.lucide.Music2
 import app.sonar.R
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.CornersIn
-import com.adamglin.phosphoricons.regular.MusicNotes
 import app.sonar.ui.library.formatDuration
 
 /**
@@ -183,7 +177,7 @@ fun FullScreenVideo(
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
-                            PhosphorIcons.Regular.MusicNotes,
+                            Lucide.Music2,
                             contentDescription = stringResource(R.string.switch_to_audio),
                             tint = Color.White,
                             modifier = Modifier.size(20.dp),
@@ -199,7 +193,7 @@ fun FullScreenVideo(
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        PhosphorIcons.Regular.CornersIn,
+                        Lucide.Minimize,
                         contentDescription = stringResource(R.string.exit_full_screen),
                         tint = Color.White,
                         modifier = Modifier.size(20.dp),

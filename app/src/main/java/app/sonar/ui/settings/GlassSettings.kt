@@ -23,11 +23,27 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import com.adamglin.phosphoricons.fill.SquaresFour
-import com.adamglin.phosphoricons.fill.MusicNotes
-import com.adamglin.phosphoricons.fill.Broadcast
-import com.adamglin.phosphoricons.bold.MagnifyingGlass
-import com.adamglin.phosphoricons.Bold
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Aperture
+import com.composables.icons.lucide.Check
+import com.composables.icons.lucide.Droplet
+import com.composables.icons.lucide.Grid2x2
+import com.composables.icons.lucide.Highlighter
+import com.composables.icons.lucide.House
+import com.composables.icons.lucide.Layers
+import com.composables.icons.lucide.Music2
+import com.composables.icons.lucide.Palette
+import com.composables.icons.lucide.Play
+import com.composables.icons.lucide.Radio
+import com.composables.icons.lucide.Rows3
+import com.composables.icons.lucide.Search
+import com.composables.icons.lucide.Smartphone
+import com.composables.icons.lucide.Snowflake
+import com.composables.icons.lucide.Sparkle
+import com.composables.icons.lucide.Sun
+import com.composables.icons.lucide.SwatchBook
+import com.composables.icons.lucide.WandSparkles
+import com.composables.icons.lucide.Waves
 import androidx.compose.ui.unit.sp
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -61,30 +77,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.regular.Drop
-import com.adamglin.phosphoricons.regular.Aperture
-import com.adamglin.phosphoricons.regular.Swatches
-import com.adamglin.phosphoricons.regular.Highlighter
-import com.adamglin.phosphoricons.regular.Sparkle
-import com.adamglin.phosphoricons.regular.Snowflake
-import com.adamglin.phosphoricons.regular.Waves
-import com.adamglin.phosphoricons.regular.MagicWand
-import com.adamglin.phosphoricons.regular.Sun
-import com.adamglin.phosphoricons.regular.Stack
-import com.adamglin.phosphoricons.regular.Rows
-import com.adamglin.phosphoricons.regular.DeviceMobile
-import com.adamglin.phosphoricons.regular.ArrowsInLineHorizontal
-import com.adamglin.phosphoricons.regular.Palette
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.fill.House
-import com.adamglin.phosphoricons.fill.Play
-import com.adamglin.phosphoricons.regular.MagnifyingGlass
-import com.adamglin.phosphoricons.regular.MusicNotes
-import com.adamglin.phosphoricons.regular.CaretDown
-import com.adamglin.phosphoricons.regular.CaretUp
-import com.adamglin.phosphoricons.regular.Check
 import app.sonar.R
 import app.sonar.SonarApplication
 import app.sonar.data.GlassProfile
@@ -169,7 +161,7 @@ fun GlassPage(backdrop: Backdrop, contentPadding: PaddingValues, header: @Compos
                         SettingsDivider()
                         GlassSwitch(
                             label = stringResource(R.string.glass_ios27),
-                            icon = PhosphorIcons.Regular.Sparkle,
+                            icon = Lucide.Sparkle,
                             checked = config.ios27,
                             backdrop = backdrop,
                             onChange = store::setIos27,
@@ -178,7 +170,7 @@ fun GlassPage(backdrop: Backdrop, contentPadding: PaddingValues, header: @Compos
                             SettingsDivider()
                             GlassSwitch(
                                 label = stringResource(R.string.glass_frost),
-                                icon = PhosphorIcons.Regular.Snowflake,
+                                icon = Lucide.Snowflake,
                                 checked = config.frost,
                                 backdrop = backdrop,
                                 onChange = store::setFrost,
@@ -191,7 +183,7 @@ fun GlassPage(backdrop: Backdrop, contentPadding: PaddingValues, header: @Compos
                     // glass is honest and looks washed out.
                     GlassSlider(
                         label = stringResource(R.string.glass_vibrancy),
-                        icon = PhosphorIcons.Regular.Drop,
+                        icon = Lucide.Droplet,
                         value = config.vibrancy,
                         range = 0f..2f,
                         readout = { "${(it * 50).roundToInt()}%" },
@@ -205,7 +197,7 @@ fun GlassPage(backdrop: Backdrop, contentPadding: PaddingValues, header: @Compos
                         SettingsDivider()
                         GlassSlider(
                             label = stringResource(R.string.glass_blur),
-                        icon = PhosphorIcons.Regular.Aperture,
+                        icon = Lucide.Aperture,
                             value = config.blurRadius,
                             range = 0f..24f,
                             readout = { "${it.roundToInt()} dp" },
@@ -230,7 +222,7 @@ fun GlassPage(backdrop: Backdrop, contentPadding: PaddingValues, header: @Compos
                     SettingsDivider()
                     GlassSlider(
                         label = stringResource(R.string.glass_film),
-                        icon = PhosphorIcons.Regular.Swatches,
+                        icon = Lucide.SwatchBook,
                         value = config.surfaceOpacity,
                         range = 0f..1f,
                         readout = { "${(it * 100).roundToInt()}%" },
@@ -240,7 +232,7 @@ fun GlassPage(backdrop: Backdrop, contentPadding: PaddingValues, header: @Compos
                     SettingsDivider()
                     GlassSlider(
                         label = stringResource(R.string.glass_indicator),
-                        icon = PhosphorIcons.Regular.Highlighter,
+                        icon = Lucide.Highlighter,
                         value = config.puckOpacity,
                         range = 0f..1f,
                         readout = { "${(it * 100).roundToInt()}%" },
@@ -255,7 +247,7 @@ fun GlassPage(backdrop: Backdrop, contentPadding: PaddingValues, header: @Compos
                     SettingsSection(stringResource(R.string.glass_group_edges)) {
                         GlassSlider(
                             label = stringResource(R.string.glass_rim),
-                        icon = PhosphorIcons.Regular.Sparkle,
+                        icon = Lucide.Sparkle,
                             value = config.highlightOpacity,
                             range = 0f..1f,
                             readout = { "${(it * 100).roundToInt()}%" },
@@ -265,7 +257,7 @@ fun GlassPage(backdrop: Backdrop, contentPadding: PaddingValues, header: @Compos
                         SettingsDivider()
                         GlassSlider(
                             label = stringResource(R.string.glass_refraction_depth),
-                        icon = PhosphorIcons.Regular.Waves,
+                        icon = Lucide.Waves,
                             value = config.lensHeight,
                             range = 0f..1f,
                             readout = { "${(it * LENS_MAX_DP).roundToInt()} dp" },
@@ -275,7 +267,7 @@ fun GlassPage(backdrop: Backdrop, contentPadding: PaddingValues, header: @Compos
                         SettingsDivider()
                         GlassSlider(
                             label = stringResource(R.string.glass_refraction_amount),
-                        icon = PhosphorIcons.Regular.MagicWand,
+                        icon = Lucide.WandSparkles,
                             value = config.lensAmount,
                             range = 0f..1f,
                             readout = { "${(it * LENS_MAX_DP).roundToInt()} dp" },
@@ -285,7 +277,7 @@ fun GlassPage(backdrop: Backdrop, contentPadding: PaddingValues, header: @Compos
                         SettingsDivider()
                         GlassSwitch(
                             label = stringResource(R.string.glass_dispersion),
-                        icon = PhosphorIcons.Regular.Sun,
+                        icon = Lucide.Sun,
                             checked = config.chromaticAberration,
                             backdrop = backdrop,
                             onChange = store::setChromaticAberration,
@@ -293,7 +285,7 @@ fun GlassPage(backdrop: Backdrop, contentPadding: PaddingValues, header: @Compos
                         SettingsDivider()
                         GlassSwitch(
                             label = stringResource(R.string.glass_depth),
-                        icon = PhosphorIcons.Regular.Stack,
+                        icon = Lucide.Layers,
                             checked = config.depthEffect,
                             backdrop = backdrop,
                             onChange = store::setDepthEffect,
@@ -309,7 +301,7 @@ fun GlassPage(backdrop: Backdrop, contentPadding: PaddingValues, header: @Compos
                 SettingsSection(stringResource(R.string.glass_group_where)) {
                     GlassSwitch(
                         label = stringResource(R.string.glass_where_bar),
-                        icon = PhosphorIcons.Regular.Rows,
+                        icon = Lucide.Rows3,
                         checked = config.navBarEnabled,
                         backdrop = backdrop,
                         onChange = store::setNavBarEnabled,
@@ -317,7 +309,7 @@ fun GlassPage(backdrop: Backdrop, contentPadding: PaddingValues, header: @Compos
                     SettingsDivider()
                     GlassSwitch(
                         label = stringResource(R.string.glass_where_mini_player),
-                        icon = PhosphorIcons.Regular.MusicNotes,
+                        icon = Lucide.Music2,
                         checked = config.miniPlayerEnabled,
                         backdrop = backdrop,
                         onChange = store::setMiniPlayerEnabled,
@@ -325,7 +317,7 @@ fun GlassPage(backdrop: Backdrop, contentPadding: PaddingValues, header: @Compos
                     SettingsDivider()
                     GlassSwitch(
                         label = stringResource(R.string.glass_where_player),
-                        icon = PhosphorIcons.Regular.DeviceMobile,
+                        icon = Lucide.Smartphone,
                         checked = config.playerEnabled,
                         backdrop = backdrop,
                         onChange = store::setPlayerEnabled,
@@ -463,7 +455,7 @@ private fun GlassPreview(config: GlassEffectConfig, backdrop: Backdrop) {
                 )
             }
             Icon(
-                PhosphorIcons.Fill.Play,
+                Lucide.Play,
                 contentDescription = null,
                 tint = Ink,
                 modifier = Modifier.size(18.dp),
@@ -487,11 +479,11 @@ private fun GlassPreview(config: GlassEffectConfig, backdrop: Backdrop) {
             horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            PreviewTab(PhosphorIcons.Fill.House, R.string.home, selected = true, config = barConfig)
-            PreviewTab(PhosphorIcons.Fill.SquaresFour, R.string.tab_new, selected = false, config = barConfig)
-            PreviewTab(PhosphorIcons.Fill.Broadcast, R.string.tab_radio, selected = false, config = barConfig)
-            PreviewTab(PhosphorIcons.Fill.MusicNotes, R.string.library, selected = false, config = barConfig)
-            PreviewTab(PhosphorIcons.Bold.MagnifyingGlass, R.string.search, selected = false, config = barConfig)
+            PreviewTab(Lucide.House, R.string.home, selected = true, config = barConfig)
+            PreviewTab(Lucide.Grid2x2, R.string.tab_new, selected = false, config = barConfig)
+            PreviewTab(Lucide.Radio, R.string.tab_radio, selected = false, config = barConfig)
+            PreviewTab(Lucide.Music2, R.string.library, selected = false, config = barConfig)
+            PreviewTab(Lucide.Search, R.string.search, selected = false, config = barConfig)
         }
     }
     }
@@ -570,7 +562,7 @@ private fun TintRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            RowIcon(PhosphorIcons.Regular.Palette)
+            RowIcon(Lucide.Palette)
             Text(
                 stringResource(R.string.glass_tint),
                 style = MaterialTheme.typography.bodyLarge,
@@ -939,7 +931,7 @@ internal fun SettingsChoiceRow(
         )
         if (selected) {
             Icon(
-                PhosphorIcons.Regular.Check,
+                Lucide.Check,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(18.dp),

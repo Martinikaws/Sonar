@@ -1,5 +1,6 @@
 package app.sonar.ui.player
 
+import app.sonar.ui.theme.emphasizedLanguages
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -24,11 +25,8 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.fill.Translate
-import com.adamglin.phosphoricons.regular.Translate
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Languages
 import app.sonar.R
 import app.sonar.ui.glass.LocalGlassEffectConfig
 import app.sonar.ui.glass.backdrop.Backdrop
@@ -39,7 +37,7 @@ import app.sonar.ui.glass.shapes.ContinuousCapsule
  * Whether to read the song in your own language as well.
  *
  * The same button the karaoke dial is when it is closed — the glass capsule the
- * width of a thumb, the filled glyph for on and the outline for off — because
+ * width of a thumb, a heavier stroke when on — because
  * the two sit beside each other over the lyrics and anything else would read as
  * two different kinds of control.
  *
@@ -56,8 +54,8 @@ fun TranslationToggle(
     backdrop: Backdrop,
     modifier: Modifier = Modifier,
     /** The glyph on and off, and what it says; the pronunciation switch uses this too. */
-    iconOn: androidx.compose.ui.graphics.vector.ImageVector = PhosphorIcons.Fill.Translate,
-    iconOff: androidx.compose.ui.graphics.vector.ImageVector = PhosphorIcons.Regular.Translate,
+    iconOn: androidx.compose.ui.graphics.vector.ImageVector = emphasizedLanguages,
+    iconOff: androidx.compose.ui.graphics.vector.ImageVector = Lucide.Languages,
     description: String = stringResource(R.string.translation),
 ) {
     var pressed by remember { mutableStateOf(false) }
@@ -136,8 +134,7 @@ fun TranslationToggle(
             Icon(
                 if (on) iconOn else iconOff,
                 contentDescription = description,
-                // White throughout, as the dial is: the filled glyph is what
-                // says it is on, and a coloured one competes with the artwork.
+                // The heavier stroke marks the active state over the artwork.
                 tint = Color.White,
                 modifier = Modifier.size(20.dp),
             )

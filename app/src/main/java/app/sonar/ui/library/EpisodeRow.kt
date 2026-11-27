@@ -28,13 +28,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Bold
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.bold.DotsThree
-import com.adamglin.phosphoricons.fill.CheckCircle
-import com.adamglin.phosphoricons.fill.Pause
-import com.adamglin.phosphoricons.fill.Play
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.CircleCheck
+import com.composables.icons.lucide.Ellipsis
+import com.composables.icons.lucide.Pause
+import com.composables.icons.lucide.Play
 import app.sonar.R
 import app.sonar.data.CatalogTrack
 import app.sonar.ui.components.Artwork
@@ -127,7 +125,7 @@ internal fun EpisodeRow(
         ) {
             if (episode.played) {
                 Icon(
-                    PhosphorIcons.Fill.CheckCircle,
+                    Lucide.CircleCheck,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp),
@@ -166,7 +164,7 @@ internal fun EpisodeRow(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    PhosphorIcons.Bold.DotsThree,
+                    Lucide.Ellipsis,
                     contentDescription = stringResource(R.string.more),
                     tint = dim,
                     modifier = Modifier.size(18.dp),
@@ -181,7 +179,7 @@ internal fun EpisodeRow(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    if (isCurrent && playing) PhosphorIcons.Fill.Pause else PhosphorIcons.Fill.Play,
+                    if (isCurrent && playing) Lucide.Pause else Lucide.Play,
                     contentDescription = stringResource(R.string.play),
                     // Whatever reads on the ink it sits on, the page's own
                     // colour being anything the cover made it.

@@ -35,11 +35,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.fill.Heart
-import com.adamglin.phosphoricons.regular.Check
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Check
+import com.composables.icons.lucide.Heart
 import app.sonar.ui.glass.backdrop.Backdrop
 import app.sonar.R
 import app.sonar.data.CatalogPlaylist
@@ -270,21 +268,21 @@ private fun PlaylistRow(
             )
 
             liked -> Icon(
-                PhosphorIcons.Fill.Heart,
+                Lucide.Heart,
                 contentDescription = stringResource(R.string.remove_from_liked),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp),
             )
 
             inIt -> Icon(
-                PhosphorIcons.Regular.Check,
+                Lucide.Check,
                 contentDescription = stringResource(R.string.remove_from_playlist),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp),
             )
 
             added -> Icon(
-                PhosphorIcons.Regular.Check,
+                Lucide.Check,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp),

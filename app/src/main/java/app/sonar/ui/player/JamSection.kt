@@ -45,15 +45,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.Copy
-import com.adamglin.phosphoricons.regular.LinkSimple
-import com.adamglin.phosphoricons.regular.QrCode
-import com.adamglin.phosphoricons.regular.ShareNetwork
-import com.adamglin.phosphoricons.regular.SignOut
-import com.adamglin.phosphoricons.regular.Users
-import com.adamglin.phosphoricons.regular.X
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Copy
+import com.composables.icons.lucide.Link
+import com.composables.icons.lucide.LogOut
+import com.composables.icons.lucide.QrCode
+import com.composables.icons.lucide.Share2
+import com.composables.icons.lucide.Users
+import com.composables.icons.lucide.X
 import app.sonar.R
 import app.sonar.data.Jam
 import kotlinx.coroutines.delay
@@ -139,10 +138,10 @@ private fun JamStart(
 ) {
     val context = LocalContext.current
     Note(stringResource(R.string.jam_start_note))
-    ActionRow(PhosphorIcons.Regular.Users, stringResource(R.string.jam_start), busy, onStart)
+    ActionRow(Lucide.Users, stringResource(R.string.jam_start), busy, onStart)
     // Someone's code, scanned with Google's scanner (Play services' own screen,
     // so no camera permission here).
-    ActionRow(PhosphorIcons.Regular.QrCode, stringResource(R.string.jam_scan), busy) {
+    ActionRow(Lucide.QrCode, stringResource(R.string.jam_scan), busy) {
         runCatching {
             com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(context)
                 .startScan()
@@ -152,7 +151,7 @@ private fun JamStart(
     // A Jam link already copied, offered as it is: the way in that needs no
     // setting changed to have Square open Spotify's links.
     if (fromClipboard != null) {
-        ActionRow(PhosphorIcons.Regular.LinkSimple, stringResource(R.string.jam_join_clipboard), busy) {
+        ActionRow(Lucide.Link, stringResource(R.string.jam_join_clipboard), busy) {
             onJoin(fromClipboard)
         }
     }
@@ -185,8 +184,8 @@ private fun JamNow(
                 )
             }
         }
-        ActionRow(PhosphorIcons.Regular.ShareNetwork, stringResource(R.string.jam_share), false, onShare)
-        ActionRow(PhosphorIcons.Regular.Copy, stringResource(R.string.jam_copy), false, onCopy)
+        ActionRow(Lucide.Share2, stringResource(R.string.jam_share), false, onShare)
+        ActionRow(Lucide.Copy, stringResource(R.string.jam_copy), false, onCopy)
     }
 
     session.members.forEach { member ->
@@ -225,7 +224,7 @@ private fun JamNow(
     }
 
     ActionRow(
-        if (session.ownedByMe) PhosphorIcons.Regular.X else PhosphorIcons.Regular.SignOut,
+        if (session.ownedByMe) Lucide.X else Lucide.LogOut,
         stringResource(if (session.ownedByMe) R.string.jam_end else R.string.jam_leave),
         busy,
         onClose,

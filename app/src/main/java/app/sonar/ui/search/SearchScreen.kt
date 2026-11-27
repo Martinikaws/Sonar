@@ -52,11 +52,8 @@ import app.sonar.ui.settings.WebApiSetup
 import app.sonar.ui.theme.Ink
 import app.sonar.ui.theme.InkDim
 import androidx.compose.foundation.clickable
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.bold.MagnifyingGlass
-import com.adamglin.phosphoricons.bold.X
-import com.adamglin.phosphoricons.regular.DotsThree
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Ellipsis
 
 /** Which kind of result the page is showing. */
 private enum class Kind(@StringRes val label: Int) {
@@ -566,7 +563,7 @@ private fun ResultRow(
         }
         if (onMenu != null) {
             Icon(
-                PhosphorIcons.Regular.DotsThree,
+                Lucide.Ellipsis,
                 contentDescription = stringResource(R.string.more),
                 tint = InkDim,
                 modifier = Modifier

@@ -1,5 +1,6 @@
 package app.sonar.ui.player
 
+import app.sonar.ui.theme.emphasizedMicVocal
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -27,11 +28,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.fill.MicrophoneStage
-import com.adamglin.phosphoricons.regular.MicrophoneStage
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.MicVocal
 import app.sonar.R
 import app.sonar.ui.glass.LocalGlassEffectConfig
 import app.sonar.ui.glass.backdrop.Backdrop
@@ -256,10 +254,10 @@ fun KaraokeDial(
         }
 
         Icon(
-            if (amount > 0f) PhosphorIcons.Fill.MicrophoneStage
-            else PhosphorIcons.Regular.MicrophoneStage,
+            if (amount > 0f) emphasizedMicVocal
+            else Lucide.MicVocal,
             contentDescription = stringResource(R.string.karaoke),
-            // White throughout: the filled glyph is what says it is on, and a
+            // White throughout: the heavier stroke shows that karaoke is on, and a
             // coloured one competed with the artwork behind it.
             tint = Color.White,
             modifier = Modifier

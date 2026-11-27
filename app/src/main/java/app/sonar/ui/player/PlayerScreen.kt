@@ -1,5 +1,6 @@
 package app.sonar.ui.player
 
+import app.sonar.ui.theme.emphasizedCaseSensitive
 import app.sonar.ui.components.GlassChoiceMenu
 import app.sonar.ui.components.copyFrame
 import androidx.compose.animation.AnimatedContent
@@ -130,35 +131,29 @@ import app.sonar.ui.look.LookBackdrop
 import app.sonar.ui.look.rememberLookReducedMotion
 import app.sonar.ui.look.rememberLookStore
 import app.sonar.ui.theme.softShadow
-import com.adamglin.phosphoricons.regular.MonitorPlay
-import com.adamglin.phosphoricons.regular.Gauge
-import com.adamglin.phosphoricons.regular.MusicNotes
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.regular.DeviceRotate
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.Bold
-import com.adamglin.phosphoricons.bold.Waveform
-import com.adamglin.phosphoricons.fill.TextAa
-import com.adamglin.phosphoricons.regular.TextAa
-import com.adamglin.phosphoricons.fill.Heart
-import com.adamglin.phosphoricons.fill.Pause
-import com.adamglin.phosphoricons.fill.MicrophoneStage
-import com.adamglin.phosphoricons.fill.Play
-import com.adamglin.phosphoricons.fill.SkipBack
-import com.adamglin.phosphoricons.fill.SkipForward
-import com.adamglin.phosphoricons.regular.CaretDown
-import com.adamglin.phosphoricons.regular.Devices
-import com.adamglin.phosphoricons.regular.Heart
-import com.adamglin.phosphoricons.regular.Check
-import com.adamglin.phosphoricons.regular.Plus
-import com.adamglin.phosphoricons.regular.Broadcast
-import com.adamglin.phosphoricons.regular.YoutubeLogo
-import com.adamglin.phosphoricons.regular.Repeat
-import com.adamglin.phosphoricons.regular.RepeatOnce
-import com.adamglin.phosphoricons.regular.Sparkle
-import com.adamglin.phosphoricons.regular.Shuffle
-import com.adamglin.phosphoricons.regular.TextAlignLeft
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.AudioWaveform
+import com.composables.icons.lucide.CaseSensitive
+import com.composables.icons.lucide.Check
+import com.composables.icons.lucide.ChevronDown
+import com.composables.icons.lucide.Gauge
+import com.composables.icons.lucide.Heart
+import com.composables.icons.lucide.Mic
+import com.composables.icons.lucide.MonitorPlay
+import com.composables.icons.lucide.MonitorSmartphone
+import com.composables.icons.lucide.Music2
+import com.composables.icons.lucide.Pause
+import com.composables.icons.lucide.Play
+import com.composables.icons.lucide.Plus
+import com.composables.icons.lucide.Radio
+import com.composables.icons.lucide.Repeat
+import com.composables.icons.lucide.Repeat1
+import com.composables.icons.lucide.RotateCw
+import com.composables.icons.lucide.Shuffle
+import com.composables.icons.lucide.SkipBack
+import com.composables.icons.lucide.SkipForward
+import com.composables.icons.lucide.Sparkle
+import com.composables.icons.lucide.SquarePlay
 import kotlin.math.abs
 
 /**
@@ -1479,7 +1474,7 @@ fun PlayerScreen(
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             Icon(
-                                                com.adamglin.PhosphorIcons.Regular.DeviceRotate,
+                                                Lucide.RotateCw,
                                                 contentDescription = stringResource(R.string.rotate_video),
                                                 tint = Color.White,
                                                 modifier = Modifier.size(18.dp),
@@ -1654,7 +1649,7 @@ fun PlayerScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Icon(
-                                        PhosphorIcons.Regular.Gauge,
+                                        Lucide.Gauge,
                                         contentDescription = null,
                                         modifier = Modifier
                                             .padding(end = 8.dp)
@@ -1691,8 +1686,8 @@ fun PlayerScreen(
                                     // like the words beside it: a screen while
                                     // listening, a note while watching.
                                     Icon(
-                                        if (videoMode) PhosphorIcons.Regular.MusicNotes
-                                        else PhosphorIcons.Regular.MonitorPlay,
+                                        if (videoMode) Lucide.Music2
+                                        else Lucide.MonitorPlay,
                                         contentDescription = null,
                                         modifier = Modifier
                                             .padding(end = 8.dp)
@@ -1721,7 +1716,7 @@ fun PlayerScreen(
                             // The library's sort button: the menu grows out of
                             // it in the same liquid glass.
                             app.sonar.ui.components.GlassPullDownButton(
-                                icon = PhosphorIcons.Bold.Waveform,
+                                icon = Lucide.AudioWaveform,
                                 label = streamLabel.orEmpty(),
                                 semanticLabel = stringResource(R.string.stream_quality) + ": " + streamLabel.orEmpty(),
                                 onOpen = { qualityOpen = true },
@@ -1788,7 +1783,7 @@ fun PlayerScreen(
                                         onClick = onRadio,
                                     ) {
                                         Icon(
-                                            PhosphorIcons.Regular.Broadcast,
+                                            Lucide.Radio,
                                             contentDescription = stringResource(R.string.radio),
                                             tint = panelTint(false),
                                             modifier = Modifier.size(20.dp),
@@ -1835,10 +1830,10 @@ fun PlayerScreen(
                                     val hearts = onToggleLike != null
                                     Icon(
                                         when {
-                                            hearts && inLikedSongs -> PhosphorIcons.Fill.Heart
-                                            alreadySaved -> PhosphorIcons.Regular.Check
-                                            !hearts -> PhosphorIcons.Regular.Plus
-                                            else -> PhosphorIcons.Regular.Heart
+                                            hearts && inLikedSongs -> Lucide.Heart
+                                            alreadySaved -> Lucide.Check
+                                            !hearts -> Lucide.Plus
+                                            else -> Lucide.Heart
                                         },
                                         contentDescription = stringResource(
                                             when {
@@ -2326,7 +2321,7 @@ private fun TopBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         GlassButton(backdrop, onClick = onCollapse) {
-            Icon(PhosphorIcons.Regular.CaretDown, contentDescription = stringResource(R.string.close))
+            Icon(Lucide.ChevronDown, contentDescription = stringResource(R.string.close))
         }
         // Names whatever the middle of the screen is currently showing, so the
         // switch below has a label without carrying one.
@@ -2396,7 +2391,7 @@ private fun TopBar(
         if (onWatchVideo != null) {
             GlassButton(backdrop, onClick = onWatchVideo) {
                 Icon(
-                    PhosphorIcons.Regular.YoutubeLogo,
+                    Lucide.SquarePlay,
                     contentDescription = stringResource(R.string.watch_video),
                     // Lit while the video is on, like every other button here
                     // that opens something: it is a switch, not a one-way trip.
@@ -2416,7 +2411,7 @@ private fun TopBar(
                         JamAvatars(inJam.members, size = 22.dp, max = 2)
                     }
                 } else Icon(
-                    PhosphorIcons.Regular.Devices,
+                    Lucide.MonitorSmartphone,
                     contentDescription = stringResource(R.string.devices),
                     // Lit for as long as the music is coming out of another
                     // device, not only while its list is open: on this screen it
@@ -2542,7 +2537,7 @@ private fun TitleBlock(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (state.smartRecommended) {
                     Icon(
-                        PhosphorIcons.Regular.Sparkle,
+                        Lucide.Sparkle,
                         contentDescription = stringResource(R.string.smart_shuffle),
                         tint = GlassInk,
                         modifier = Modifier.padding(end = 8.dp).size(20.dp),
@@ -2690,7 +2685,7 @@ internal fun Controls(
             val togglesOn = toggles > 0.5f
             Box(Modifier.graphicsLayer { alpha = toggles }) {
                 ToggleIcon(
-                    icon = PhosphorIcons.Regular.Shuffle,
+                    icon = Lucide.Shuffle,
                     description = stringResource(if (state.smartShuffle) R.string.smart_shuffle else R.string.shuffle_play),
                     active = state.shuffleEnabled,
                     smart = state.smartShuffle,
@@ -2712,7 +2707,7 @@ internal fun Controls(
                 onClick = onPrevious,
             ) {
                 Icon(
-                    PhosphorIcons.Fill.SkipBack,
+                    Lucide.SkipBack,
                     contentDescription = stringResource(R.string.previous),
                     modifier = Modifier.size(30.dp),
                 )
@@ -2748,7 +2743,7 @@ internal fun Controls(
                         label = "playPause",
                     ) { playing ->
                         Icon(
-                            imageVector = if (playing) PhosphorIcons.Fill.Pause else PhosphorIcons.Fill.Play,
+                            imageVector = if (playing) Lucide.Pause else Lucide.Play,
                             contentDescription = stringResource(if (playing) R.string.pause else R.string.play),
                             modifier = Modifier.size(34.dp),
                         )
@@ -2764,7 +2759,7 @@ internal fun Controls(
                 onClick = onNext,
             ) {
                 Icon(
-                    PhosphorIcons.Fill.SkipForward,
+                    Lucide.SkipForward,
                     contentDescription = stringResource(R.string.next),
                     modifier = Modifier.size(30.dp),
                 )
@@ -2773,9 +2768,9 @@ internal fun Controls(
             Box(Modifier.graphicsLayer { alpha = toggles }) {
                 ToggleIcon(
                     icon = if (state.repeatMode == Player.REPEAT_MODE_ONE) {
-                        PhosphorIcons.Regular.RepeatOnce
+                        Lucide.Repeat1
                     } else {
-                        PhosphorIcons.Regular.Repeat
+                        Lucide.Repeat
                     },
                     description = stringResource(R.string.repeat),
                     active = state.repeatMode != Player.REPEAT_MODE_OFF,
@@ -2823,7 +2818,7 @@ private fun KaraokeBadge(amount: Float, backdrop: Backdrop, onClick: () -> Unit)
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            PhosphorIcons.Fill.MicrophoneStage,
+            Lucide.Mic,
             contentDescription = null,
             // White, like the control it refers to: an accent pulled from the
             // cover lands anywhere, including on the cover itself.
@@ -2907,7 +2902,7 @@ private fun ToggleIcon(
             modifier = Modifier.size(22.dp).align(Alignment.BottomStart),
         )
         if (smart) Icon(
-            PhosphorIcons.Regular.Sparkle,
+            Lucide.Sparkle,
             contentDescription = null,
             tint = if (active) GlassInk else GlassInkDim,
             modifier = Modifier.size(10.dp).align(Alignment.TopEnd),
@@ -3277,8 +3272,8 @@ private fun LyricsStage(
                 busy = romanized && spelt == null,
                 onChange = { romanized = it },
                 backdrop = backdrop,
-                iconOn = com.adamglin.PhosphorIcons.Fill.TextAa,
-                iconOff = com.adamglin.PhosphorIcons.Regular.TextAa,
+                iconOn = emphasizedCaseSensitive,
+                iconOff = Lucide.CaseSensitive,
                 description = stringResource(R.string.pronunciation),
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -3397,15 +3392,15 @@ private fun SongCard(
                 horizontalArrangement = Arrangement.spacedBy(18.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                CardButton(PhosphorIcons.Fill.SkipBack, stringResource(R.string.previous), 40.dp, state.hasPrevious || state.hasItem, onPrevious)
+                CardButton(Lucide.SkipBack, stringResource(R.string.previous), 40.dp, state.hasPrevious || state.hasItem, onPrevious)
                 CardButton(
-                    if (state.wantsPlay) PhosphorIcons.Fill.Pause else PhosphorIcons.Fill.Play,
+                    if (state.wantsPlay) Lucide.Pause else Lucide.Play,
                     stringResource(if (state.wantsPlay) R.string.pause else R.string.play),
                     52.dp,
                     true,
                     onTogglePlay,
                 )
-                CardButton(PhosphorIcons.Fill.SkipForward, stringResource(R.string.next), 40.dp, state.hasNext, onNext)
+                CardButton(Lucide.SkipForward, stringResource(R.string.next), 40.dp, state.hasNext, onNext)
             }
         }
         Column(Modifier.widthIn(max = 420.dp).padding(top = 12.dp)) {

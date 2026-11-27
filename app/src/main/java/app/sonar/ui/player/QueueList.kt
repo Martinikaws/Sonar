@@ -49,14 +49,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Bold
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.bold.Check
-import com.adamglin.phosphoricons.regular.DotsSixVertical
-import com.adamglin.phosphoricons.regular.Sparkle
-import com.adamglin.phosphoricons.regular.Trash
-import com.adamglin.phosphoricons.regular.X
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Check
+import com.composables.icons.lucide.GripVertical
+import com.composables.icons.lucide.Sparkle
+import com.composables.icons.lucide.Trash
 import app.sonar.R
 import app.sonar.ui.glass.pressable
 import sh.calvin.reorderable.ReorderableItem
@@ -227,7 +224,7 @@ internal fun QueueList(queue: List<QueueEntry>, actions: QueueActions) {
                                 trailing = {
                                     if (actions.editable && !selecting) {
                                         Icon(
-                                            PhosphorIcons.Regular.DotsSixVertical,
+                                            Lucide.GripVertical,
                                             contentDescription = stringResource(R.string.queue_reorder),
                                             tint = GlassInkDim,
                                             modifier = Modifier
@@ -367,7 +364,7 @@ private fun TrackRow(
             ) {
                 if (selected) {
                     Icon(
-                        PhosphorIcons.Bold.Check,
+                        Lucide.Check,
                         contentDescription = null,
                         tint = androidx.compose.ui.graphics.Color.Black,
                         modifier = Modifier.size(12.dp),
@@ -391,7 +388,7 @@ private fun TrackRow(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (entry.recommended) {
                     Icon(
-                        PhosphorIcons.Regular.Sparkle,
+                        Lucide.Sparkle,
                         contentDescription = stringResource(R.string.smart_shuffle),
                         tint = GlassInkDim,
                         modifier = Modifier.padding(end = 4.dp).size(12.dp),
@@ -439,7 +436,7 @@ private fun SwipeAway(enabled: Boolean, onSwiped: () -> Unit, content: @Composab
                     ) {
                         if (revealed > 44.dp) {
                             Icon(
-                                PhosphorIcons.Regular.Trash,
+                                Lucide.Trash,
                                 contentDescription = stringResource(R.string.remove_from_queue),
                                 tint = androidx.compose.ui.graphics.Color.White,
                                 modifier = Modifier.size(20.dp),

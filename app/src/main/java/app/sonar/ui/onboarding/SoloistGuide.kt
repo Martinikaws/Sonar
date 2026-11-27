@@ -25,9 +25,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.ArrowLeft
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.ArrowLeft
 import app.sonar.R
 
 /**
@@ -50,7 +49,7 @@ fun SoloistGuide(onClose: () -> Unit) {
         SetupScaffold(
             top = {
                 if (step > 0) {
-                    RoundButton(PhosphorIcons.Regular.ArrowLeft, stringResource(R.string.back)) { step-- }
+                    RoundButton(Lucide.ArrowLeft, stringResource(R.string.back)) { step-- }
                 }
                 Spacer(Modifier.weight(1f))
                 QuietButton(stringResource(R.string.close), onClick = onClose)

@@ -63,7 +63,27 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
-import com.adamglin.phosphoricons.fill.XCircle
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.AudioLines
+import com.composables.icons.lucide.CircleArrowDown
+import com.composables.icons.lucide.CircleX
+import com.composables.icons.lucide.Disc3
+import com.composables.icons.lucide.Download
+import com.composables.icons.lucide.Grid2x2
+import com.composables.icons.lucide.House
+import com.composables.icons.lucide.Link
+import com.composables.icons.lucide.ListOrdered
+import com.composables.icons.lucide.Music2
+import com.composables.icons.lucide.Pencil
+import com.composables.icons.lucide.Pin
+import com.composables.icons.lucide.Play
+import com.composables.icons.lucide.Plus
+import com.composables.icons.lucide.Radio
+import com.composables.icons.lucide.Search
+import com.composables.icons.lucide.SquarePlay
+import com.composables.icons.lucide.Trash
+import com.composables.icons.lucide.Upload
+import com.composables.icons.lucide.User
 import app.sonar.ui.glass.floatingtabbar.FloatingTabBar
 import app.sonar.ui.glass.floatingtabbar.sharedSearchTab
 import app.sonar.ui.glass.floatingtabbar.FloatingTabBarDefaults
@@ -137,18 +157,6 @@ import app.sonar.ui.components.TrackSheetAction
 import app.sonar.ui.components.UpdateSheet
 import app.sonar.update.Updater
 import app.sonar.ui.library.openLink
-import com.adamglin.phosphoricons.regular.Download
-import com.adamglin.phosphoricons.regular.LinkSimple
-import com.adamglin.phosphoricons.regular.PencilSimple
-import com.adamglin.phosphoricons.regular.PushPin
-import com.adamglin.phosphoricons.regular.Plus
-import com.adamglin.phosphoricons.regular.Queue
-import com.adamglin.phosphoricons.regular.SpotifyLogo
-import com.adamglin.phosphoricons.regular.YoutubeLogo
-import com.adamglin.phosphoricons.regular.Export
-import com.adamglin.phosphoricons.regular.Trash
-import com.adamglin.phosphoricons.regular.User
-import com.adamglin.phosphoricons.regular.VinylRecord
 import app.sonar.data.RemoteConnect
 import app.sonar.ui.player.asPlaybackState
 import app.sonar.ui.player.rememberRemotePositionMs
@@ -190,28 +198,6 @@ import app.sonar.library.PlaylistFolderDialog
 import app.sonar.library.canOrganize
 import app.sonar.migration.ASTRAL_IMPORT_ROUTE
 import app.sonar.migration.AstralImportScreen
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.fill.ArrowCircleDown
-import com.adamglin.phosphoricons.fill.Check
-import com.adamglin.phosphoricons.fill.Play
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.Bold
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.fill.House
-import com.adamglin.phosphoricons.fill.MagnifyingGlass
-import com.adamglin.phosphoricons.fill.MusicNotes
-import com.adamglin.phosphoricons.bold.House
-import com.adamglin.phosphoricons.bold.MusicNotes
-import com.adamglin.phosphoricons.bold.SquaresFour
-import com.adamglin.phosphoricons.bold.Broadcast
-import com.adamglin.phosphoricons.bold.MagnifyingGlass
-import com.adamglin.phosphoricons.fill.SquaresFour
-import com.adamglin.phosphoricons.fill.Broadcast
-import com.adamglin.phosphoricons.regular.SquaresFour
-import com.adamglin.phosphoricons.regular.Broadcast
-import com.adamglin.phosphoricons.regular.House
-import com.adamglin.phosphoricons.regular.MagnifyingGlass
-import com.adamglin.phosphoricons.regular.MusicNotes
 
 /** A name being asked for: null playlist means one that does not exist yet. */
 private data class NamingRequest(val playlist: CatalogPlaylist?)
@@ -2902,7 +2888,7 @@ fun SonarApp(
                             ) {
                                 BarTab(
                                     R.string.home,
-                                    PhosphorIcons.Fill.House,
+                                    Lucide.House,
                                     activeTab == Routes.HOME,
                                     tabAccent,
                                     barInk,
@@ -2912,7 +2898,7 @@ fun SonarApp(
                                 }
                                 BarTab(
                                     R.string.tab_new,
-                                    PhosphorIcons.Fill.SquaresFour,
+                                    Lucide.Grid2x2,
                                     activeTab == Routes.NEW,
                                     tabAccent,
                                     barInk,
@@ -2922,7 +2908,7 @@ fun SonarApp(
                                 }
                                 BarTab(
                                     R.string.tab_radio,
-                                    PhosphorIcons.Fill.Broadcast,
+                                    Lucide.Radio,
                                     activeTab == Routes.RADIO,
                                     tabAccent,
                                     barInk,
@@ -2932,7 +2918,7 @@ fun SonarApp(
                                 }
                                 BarTab(
                                     R.string.library,
-                                    PhosphorIcons.Fill.MusicNotes,
+                                    Lucide.Music2,
                                     activeTab == Routes.LIBRARY,
                                     tabAccent,
                                     barInk,
@@ -2946,7 +2932,7 @@ fun SonarApp(
                                     // magnifier reads as a blob at this size,
                                     // and it is the one glyph here whose shape
                                     // is the whole of its meaning.
-                                    PhosphorIcons.Bold.MagnifyingGlass,
+                                    Lucide.Search,
                                     activeTab == Routes.SEARCH,
                                     tabAccent,
                                     barInk,
@@ -3022,7 +3008,7 @@ fun SonarApp(
                             },
                             icon = {
                                 Icon(
-                                    PhosphorIcons.Fill.House,
+                                    Lucide.House,
                                     contentDescription = stringResource(R.string.home),
                                     tint = if (activeTab == Routes.HOME) tabAccent else barInk,
                                     modifier = Modifier.size(TabIcon),
@@ -3055,7 +3041,7 @@ fun SonarApp(
                             },
                             icon = {
                                 Icon(
-                                    PhosphorIcons.Fill.SquaresFour,
+                                    Lucide.Grid2x2,
                                     contentDescription = stringResource(R.string.tab_new),
                                     tint = if (activeTab == Routes.NEW) tabAccent else barInk,
                                     modifier = Modifier.size(TabIcon),
@@ -3088,7 +3074,7 @@ fun SonarApp(
                             },
                             icon = {
                                 Icon(
-                                    PhosphorIcons.Fill.Broadcast,
+                                    Lucide.Radio,
                                     contentDescription = stringResource(R.string.tab_radio),
                                     tint = if (activeTab == Routes.RADIO) tabAccent else barInk,
                                     modifier = Modifier.size(TabIcon),
@@ -3121,7 +3107,7 @@ fun SonarApp(
                             },
                             icon = {
                                 Icon(
-                                    PhosphorIcons.Fill.MusicNotes,
+                                    Lucide.Music2,
                                     contentDescription = stringResource(R.string.library),
                                     tint = if (activeTab == Routes.LIBRARY) tabAccent else barInk,
                                     modifier = Modifier.size(TabIcon),
@@ -3162,7 +3148,7 @@ fun SonarApp(
                                     // reads as a blob at this size, and it is the
                                     // one glyph here whose shape is the whole of
                                     // its meaning.
-                                    PhosphorIcons.Bold.MagnifyingGlass,
+                                    Lucide.Search,
                                     contentDescription = stringResource(R.string.search),
                                     tint = if (activeTab == Routes.SEARCH) tabAccent else barInk,
                                     modifier = Modifier.size(TabIcon),
@@ -3195,7 +3181,7 @@ fun SonarApp(
                                 key = SEARCH_CIRCLE,
                                 icon = {
                                     Icon(
-                                        PhosphorIcons.Bold.MagnifyingGlass,
+                                        Lucide.Search,
                                         contentDescription = stringResource(R.string.search),
                                         tint = barInk,
                                         modifier = Modifier.size(TabIcon),
@@ -3690,7 +3676,7 @@ fun SonarApp(
                         // you are only looking at has no row to move.
                         if (playlistMenuSaved) TrackSheetAction(
                             stringResource(if (isPinned) R.string.unpin else R.string.pin),
-                            PhosphorIcons.Regular.PushPin,
+                            Lucide.Pin,
                         ) {
                             viewModel.togglePinned(shownPlaylist.uri)
                             playlistMenu = null
@@ -3712,7 +3698,7 @@ fun SonarApp(
                                 playlist.kind == MainViewModel.DetailKind.PLAYLIST)
                         ) TrackSheetAction(
                             stringResource(R.string.add_to_playlist),
-                            PhosphorIcons.Regular.Plus,
+                            Lucide.Plus,
                         ) {
                             playlistMenu = null
                             viewModel.openAddAllToPlaylist(playlist.tracks, playlist.name)
@@ -3728,7 +3714,7 @@ fun SonarApp(
                             playlistMenuMine
                         if (editable) TrackSheetAction(
                             stringResource(R.string.edit_playlist),
-                            PhosphorIcons.Regular.PencilSimple,
+                            Lucide.Pencil,
                         ) {
                             viewModel.openEditPlaylist(shownPlaylist)
                             playlistMenu = null
@@ -3742,7 +3728,7 @@ fun SonarApp(
                             } else {
                                 stringResource(R.string.download_get_app)
                             }
-                            TrackSheetAction(label, PhosphorIcons.Regular.Download) {
+                            TrackSheetAction(label, Lucide.Download) {
                                 playlistMenu = null
                                 sendForDownload(context, shownPlaylist.openLink())
                             }
@@ -3778,9 +3764,9 @@ fun SonarApp(
                                     if (isKept) R.string.remove_download else R.string.download,
                                 ),
                                 if (isKept) {
-                                    PhosphorIcons.Regular.Trash
+                                    Lucide.Trash
                                 } else {
-                                    PhosphorIcons.Regular.Download
+                                    Lucide.Download
                                 },
                             ) {
                                 playlistMenu = null
@@ -3798,7 +3784,7 @@ fun SonarApp(
                         // the page is open.
                         TrackSheetAction(
                             stringResource(R.string.copy_link),
-                            PhosphorIcons.Regular.Export,
+                            Lucide.Upload,
                         ) {
                             playlistMenu = null
                             context.startActivity(
@@ -3817,7 +3803,7 @@ fun SonarApp(
                         }
                         if (editable) TrackSheetAction(
                             stringResource(R.string.delete),
-                            PhosphorIcons.Regular.Trash,
+                            Lucide.Trash,
                             destructive = true,
                         ) {
                             // Asked rather than done: see ConfirmDialog.
@@ -3944,11 +3930,11 @@ fun SonarApp(
                                 trackMenu = null
                             }
                         }
-                        TrackSheetAction(stringResource(R.string.play), PhosphorIcons.Fill.Play) {
+                        TrackSheetAction(stringResource(R.string.play), Lucide.Play) {
                             trackMenu = null
                             onPlay(listOf(menu.track), 0, null, false, "", 0L)
                         }
-                        TrackSheetAction(stringResource(R.string.add_to_queue), PhosphorIcons.Regular.Queue) {
+                        TrackSheetAction(stringResource(R.string.add_to_queue), Lucide.ListOrdered) {
                             trackMenu = null
                             onEnqueue(menu.track)
                         }
@@ -3958,12 +3944,12 @@ fun SonarApp(
                         if ((backend == app.sonar.backend.BackendId.SPOTIFY ||
                                 viewModel.canEditPlaylists) && !offlineNow
                         ) {
-                            TrackSheetAction(stringResource(R.string.add_to_playlist), PhosphorIcons.Regular.Plus) {
+                            TrackSheetAction(stringResource(R.string.add_to_playlist), Lucide.Plus) {
                                 trackMenu = null
                                 viewModel.openAddToPlaylist(menu.track.uri, menu.track.name)
                             }
                         }
-                        TrackSheetAction(stringResource(R.string.go_to_artist), PhosphorIcons.Regular.User) {
+                        TrackSheetAction(stringResource(R.string.go_to_artist), Lucide.User) {
                             val track = menu.track
                             trackMenu = null
                             scope.launch {
@@ -3985,7 +3971,7 @@ fun SonarApp(
                         // YouTube has nothing to look up, so its songs offer
                         // this only with the address in hand.
                         if (menu.track.albumUri != null || menu.track.uri.startsWith("spotify:track:")) {
-                            TrackSheetAction(stringResource(R.string.go_to_album), PhosphorIcons.Regular.VinylRecord) {
+                            TrackSheetAction(stringResource(R.string.go_to_album), Lucide.Disc3) {
                                 val track = menu.track
                                 trackMenu = null
                                 scope.launch {
@@ -4028,16 +4014,16 @@ fun SonarApp(
                                     },
                                 ),
                                 if (kept) {
-                                    PhosphorIcons.Fill.ArrowCircleDown
+                                    Lucide.CircleArrowDown
                                 } else {
-                                    PhosphorIcons.Regular.Download
+                                    Lucide.Download
                                 },
                             ) {
                                 trackMenu = null
                                 viewModel.toggleTrackDownload(menu.track)
                             }
                         }
-                        if (viewModel.hasRadio(menu.track.uri)) TrackSheetAction(stringResource(R.string.radio), PhosphorIcons.Regular.Broadcast) {
+                        if (viewModel.hasRadio(menu.track.uri)) TrackSheetAction(stringResource(R.string.radio), Lucide.Radio) {
                             val track = menu.track
                             trackMenu = null
                             scope.launch {
@@ -4062,7 +4048,7 @@ fun SonarApp(
                                 }
                             }
                         }
-                        TrackSheetAction(stringResource(R.string.copy_link), PhosphorIcons.Regular.LinkSimple) {
+                        TrackSheetAction(stringResource(R.string.copy_link), Lucide.Link) {
                             trackMenu = null
                             clipboard.setText(AnnotatedString(menu.track.openLink()))
                         }
@@ -4080,7 +4066,7 @@ fun SonarApp(
                             } else {
                                 stringResource(R.string.download_get_app)
                             }
-                            TrackSheetAction(label, PhosphorIcons.Regular.Download) {
+                            TrackSheetAction(label, Lucide.Download) {
                                 trackMenu = null
                                 sendForDownload(context, menu.track.openLink())
                             }
@@ -4088,7 +4074,7 @@ fun SonarApp(
                         if (menu.removable) {
                             TrackSheetAction(
                                 stringResource(R.string.remove_from_playlist),
-                                PhosphorIcons.Regular.Trash,
+                                Lucide.Trash,
                                 destructive = true,
                             ) {
                                 trackMenu = null
@@ -4191,9 +4177,9 @@ fun SonarApp(
                                 Icon(
                                     when (backend) {
                                         app.sonar.backend.BackendId.SPOTIFY ->
-                                            PhosphorIcons.Regular.SpotifyLogo
+                                            Lucide.AudioLines
                                         app.sonar.backend.BackendId.YOUTUBE_MUSIC ->
-                                            PhosphorIcons.Regular.YoutubeLogo
+                                            Lucide.SquarePlay
                                     },
                                     contentDescription = null,
                                     tint = Ink,
@@ -4363,31 +4349,24 @@ private fun BottomBar(
         ) {
             BottomItem(
                 stringResource(R.string.home),
-                PhosphorIcons.Fill.House,
-                PhosphorIcons.Bold.House,
-                // Nothing is lit while the page on screen is not one of these
-                // two: search is a destination of its own, and leaving Home
-                // filled behind it said the app was somewhere it was not.
+                Lucide.House,
                 routeIndex >= 0 && selected == 0,
             ) {
                 onSelect(Routes.HOME)
             }
             BottomItem(
                 stringResource(R.string.tab_new),
-                PhosphorIcons.Fill.SquaresFour,
-                PhosphorIcons.Bold.SquaresFour,
+                Lucide.Grid2x2,
                 routeIndex >= 0 && selected == 1,
             ) { onSelect(Routes.NEW) }
             BottomItem(
                 stringResource(R.string.tab_radio),
-                PhosphorIcons.Fill.Broadcast,
-                PhosphorIcons.Bold.Broadcast,
+                Lucide.Radio,
                 routeIndex >= 0 && selected == 2,
             ) { onSelect(Routes.RADIO) }
             BottomItem(
                 stringResource(R.string.library),
-                PhosphorIcons.Fill.MusicNotes,
-                PhosphorIcons.Bold.MusicNotes,
+                Lucide.Music2,
                 routeIndex >= 0 && selected == 3,
             ) { onSelect(Routes.LIBRARY) }
             }
@@ -4407,7 +4386,7 @@ private fun BottomBar(
             // reads as clearer glass than the bar it sits next to.
         ) {
             Icon(
-                imageVector = if (searching) PhosphorIcons.Fill.MagnifyingGlass else PhosphorIcons.Bold.MagnifyingGlass,
+                imageVector = Lucide.Search,
                 contentDescription = stringResource(R.string.search),
                 tint = Ink,
                 modifier = Modifier.size(24.dp),
@@ -4416,18 +4395,10 @@ private fun BottomBar(
     }
 }
 
-/**
- * Selected tabs switch to the filled icon as well as to ink.
- *
- * Weight carries the selection, not just colour: the difference between a
- * filled and an outlined glyph survives at a glance and for anyone who cannot
- * separate the two tints.
- */
 @Composable
 private fun RowScope.BottomItem(
     label: String,
-    filled: ImageVector,
-    outlined: ImageVector,
+    icon: ImageVector,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
@@ -4443,7 +4414,7 @@ private fun RowScope.BottomItem(
     // indicator sitting under empty space.
     LiquidBottomTab(onClick = onClick) {
         Icon(
-            imageVector = if (selected) filled else outlined,
+            imageVector = icon,
             contentDescription = label,
             tint = tint,
             modifier = Modifier.size(23.dp),
@@ -4703,7 +4674,7 @@ private fun BarSearchField(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            PhosphorIcons.Regular.MagnifyingGlass,
+            Lucide.Search,
             contentDescription = null,
             tint = iconColor,
             modifier = Modifier.size(20.dp),
@@ -4741,7 +4712,7 @@ private fun BarSearchField(
                 androidx.compose.animation.scaleOut(androidx.compose.animation.core.tween(180)),
         ) {
             Icon(
-                PhosphorIcons.Fill.XCircle,
+                Lucide.CircleX,
                 contentDescription = stringResource(R.string.clear),
                 tint = iconColor,
                 modifier = Modifier

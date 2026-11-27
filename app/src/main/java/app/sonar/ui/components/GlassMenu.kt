@@ -65,8 +65,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.Check
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Check
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 
@@ -933,7 +933,7 @@ private const val MENU_BLUR_SCALE = 2f
 val CHOICE_MENU_WIDTH = 200.dp
 
 private val CheckIcon
-    get() = com.adamglin.PhosphorIcons.Regular.Check
+    get() = Lucide.Check
 
 /** Each row's opacity and scale while its menu morphs, as upstream's _buildListContent. */
 internal fun Modifier.choiceRowMorph(morph: () -> ChoiceRowMorph?): Modifier = graphicsLayer {
