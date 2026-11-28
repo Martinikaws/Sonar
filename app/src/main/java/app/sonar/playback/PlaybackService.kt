@@ -1299,6 +1299,8 @@ class PlaybackService : MediaLibraryService() {
 
     private var trackSources: TrackSources? = null
     private var trackLookup: Job? = null
+    /** Set once Spotify has refused a song in this run; see shouldSkipRefusedSpotify. */
+    private var spotifyRefusedThisRun = false
     private var fallbackAttempt: FallbackAudioAttempt? = null
     private var fallbackSessionPlayer: FallbackSessionPlayer? = null
 
@@ -1424,7 +1426,12 @@ class PlaybackService : MediaLibraryService() {
                 trackSources = it
             }
         val offline = OfflineMode.reason.value
-        if (spotifyUnavailable || freeAccount ||
+        val knownRefused = app.sonar.audiosource.shouldSkipRefusedSpotify(
+            accountRefused = app.sonar.backend.spotify.SpotifyWebPlayback.needed(this),
+            webPlayerConfigured = app.sonar.playback.websdk.WebSdkRecovery.isConfigured(this),
+            refusedThisRun = spotifyRefusedThisRun,
+        ) && !downloadedHere(track.uri)
+        if (spotifyUnavailable || freeAccount || knownRefused ||
             ((offline == OfflineMode.Reason.NO_SESSION || offline == OfflineMode.Reason.MANUAL) && !downloadedHere(track.uri))
         ) {
             sources.spotifyUnavailable = true
@@ -1472,12 +1479,7 @@ class PlaybackService : MediaLibraryService() {
             val lookup = coroutineContext[Job]
             try {
                 yield()
-                val key = SpotifyTrackKey(
-                    id = track.uri.substringAfterLast(':'),
-                    title = track.title,
-                    artists = track.artists.map { it.name }.ifEmpty { track.artist.split(", ") },
-                    durationMs = track.durationMs,
-                )
+                val key = spotifyKeyOf(track)
                 val videoId = if (source == AudioSource.YOUTUBE_MUSIC) findYouTubeAudio(key)?.videoId else null
                 val address = when (source) {
                     AudioSource.FLAC -> container.flacSources.match(key, track.album).takeIf { flacAllowed() }
@@ -1518,6 +1520,7 @@ class PlaybackService : MediaLibraryService() {
                     handedOverAt = System.currentTimeMillis()
                     handingOver = false
                 }
+                if (source == AudioSource.YOUTUBE_MUSIC) prefetchNextYouTubeAudio(owner)
             } finally {
                 if (trackLookup === lookup) {
                     trackLookup = null
@@ -1526,6 +1529,31 @@ class PlaybackService : MediaLibraryService() {
             }
         }
         trackLookup?.start()
+    }
+
+    private fun spotifyKeyOf(track: PlayQueue.Track) = SpotifyTrackKey(
+        id = track.uri.substringAfterLast(':'),
+        title = track.title,
+        artists = track.artists.map { it.name }.ifEmpty { track.artist.split(", ") },
+        durationMs = track.durationMs,
+    )
+
+    /**
+     * The match and stream details of the song after this one, found while this one
+     * plays, so a skip or the end of the song does not wait on a search and a stream
+     * lookup; both are cached where the next lookup reads them.
+     */
+    private fun prefetchNextYouTubeAudio(owner: LibrespotPlayer) {
+        if (container.powerMode.conserving.value) return
+        val next = container.spotifyBackend.queue.items.getOrNull(owner.nextMediaItemIndex) ?: return
+        if (!next.uri.startsWith("spotify:track:") || downloadedHere(next.uri)) return
+        val audible = player
+        scope.launch {
+            // After this song is heard, so the two lookups do not race each other.
+            withTimeoutOrNull(PREFETCH_AFTER_MAX_MS) { while (!audible.isPlaying) delay(PREFETCH_POLL_MS) }
+            val videoId = findYouTubeAudio(spotifyKeyOf(next))?.videoId ?: return@launch
+            app.sonar.backend.youtube.YouTubeStreams.prefetch("${YouTubePlayerFactory.SPOTIFY_AUDIO_PREFIX}$videoId")
+        }
     }
 
     private suspend fun findYouTubeAudio(key: SpotifyTrackKey): app.sonar.audiosource.YtMatch? =
@@ -1830,6 +1858,7 @@ class PlaybackService : MediaLibraryService() {
                 }
             }
             built.onCurrentUnavailable = { track ->
+                spotifyRefusedThisRun = true
                 if (built.currentQueueEntry === track) tryTrackSource(built, spotifyUnavailable = true)
             }
             built.addListener(object : androidx.media3.common.Player.Listener {
@@ -3193,6 +3222,8 @@ class PlaybackService : MediaLibraryService() {
 
     companion object {
         private const val YOUTUBE_LOOKUP_TIMEOUT_MS = 6_000L
+        private const val PREFETCH_AFTER_MAX_MS = 8_000L
+        private const val PREFETCH_POLL_MS = 200L
 
         /** How long after a handover a change of song is the new player settling, not the music. */
         private const val HANDOVER_SETTLE_MS = 4_000L

@@ -199,6 +199,16 @@ object YouTubePlayerFactory {
                             ?.let(YouTubeBackend::videoIdOfUri)
                             ?.takeIf(SongCounterparts::wanted)
                             ?.let { video -> SongCounterparts.known(video)?.let { retitle(exo, video, it) } }
+                        prefetchNext()
+                    }
+
+                    // Also when songs arrive behind the one playing, such as a radio
+                    // added after its first song has started.
+                    override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
+                        if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) prefetchNext()
+                    }
+
+                    private fun prefetchNext() {
                         // The next one asked for now, while this one plays.
                         val next = exo.nextMediaItemIndex
                         if (next >= 0 && (host.context.applicationContext as? app.sonar.SonarApplication)

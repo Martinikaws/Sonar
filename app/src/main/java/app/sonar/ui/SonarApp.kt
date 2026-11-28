@@ -1050,6 +1050,8 @@ fun SonarApp(
         derivedStateOf { expand.value > 0.999f && !expand.isRunning }
     }
     val scope = rememberCoroutineScope()
+    // Which trending tap a radio still belongs to; see onPlayTrending.
+    val trendingTap = remember { intArrayOf(0) }
 
     // Spotify's DJ is played, not opened: as a list it has nothing in it. Its
     // first line takes a few seconds to be synthesised, so the listener is
@@ -1931,16 +1933,20 @@ fun SonarApp(
                                         // dozen songs every time, and none of them
                                         // new (#180). The shelf itself when the
                                         // radio is slow or will not come.
+                                        // The song starts now and the radio is added behind
+                                        // it: waiting for the radio first held every tap
+                                        // silent for up to three seconds.
+                                        onPlay(listOf(seed), 0, viewModel.stationFor(seed.uri), true, radioOf(seed.name), 0L, true)
+                                        val tap = ++trendingTap[0]
                                         scope.launch {
                                             val radio = kotlinx.coroutines.withTimeoutOrNull(3_000L) {
                                                 viewModel.radioFor(seed.uri)
-                                            }.orEmpty()
-                                            if (radio.isEmpty()) {
-                                                onPlay(tracks, index, null, false, trendingLabel, 0L, true)
-                                                return@launch
+                                            }.orEmpty().filterNot { it.uri == seed.uri }
+                                            val rest = radio.ifEmpty { tracks.drop(index + 1) }
+                                            // Not by media id: a music video's entry is renamed to its song.
+                                            if (rest.isNotEmpty() && tap == trendingTap[0] && player?.mediaItemCount == 1) {
+                                                onEnqueueAll(rest)
                                             }
-                                            val queue = listOf(seed) + radio.filterNot { it.uri == seed.uri }
-                                            onPlay(queue, 0, viewModel.stationFor(seed.uri), true, radioOf(seed.name), 0L, true)
                                         }
                                     }
                                 },
