@@ -18,7 +18,20 @@ class GeniusLyricsTest {
 
         val pages = GeniusLyrics.songPages(response, "Halo - Remastered", "Beyonce")
         assertEquals(listOf("https://genius.com/Beyonce-halo-lyrics"), pages.map { it.toString() })
-        assertTrue(GeniusLyrics.songPages("invalid", "Halo", "Beyonce").isEmpty())
+    }
+
+    @Test fun emptyAndMalformedSearchResponsesHaveNoPages() {
+        for (response in listOf("", "{", "{}", """{"response":{"sections":[]}}""")) {
+            assertTrue(GeniusLyrics.songPages(response, "Halo", "Beyonce").isEmpty())
+        }
+    }
+
+    @Test fun duplicateMatchingHitsReturnOnePage() {
+        val url = "https://genius.com/Beyonce-halo-lyrics"
+        val hit = """{"result":{"title":"Halo","artist_names":"Beyonce","url":"$url"}}"""
+        val response = """{"response":{"sections":[{"hits":[$hit]},{"hits":[$hit]}]}}"""
+
+        assertEquals(listOf(url), GeniusLyrics.songPages(response, "Halo", "Beyonce").map { it.toString() })
     }
 
     @Test fun sharedGuestDoesNotMatchWrongLeadArtist() {

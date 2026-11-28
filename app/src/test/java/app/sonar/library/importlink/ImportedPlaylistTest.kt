@@ -44,4 +44,20 @@ class ImportedPlaylistTest {
         assertEquals("Shared list", imported.lists.last().name)
         assertEquals(listOf(second, first), imported.lists.last().tracks)
     }
+
+    @Test
+    fun playlistEditsPreserveOtherListsAndIgnoreBlankNamesAndDuplicateTracks() {
+        val track = CatalogTrack(uri = "spotify:track:first", name = "Caffè", artist = "Artist")
+        val initial = LocalPlaylists().create("selected", "One").create("other", "Two", listOf(track))
+        assertEquals(initial, initial.create("empty", " \t "))
+        assertEquals(initial, initial.rename("selected", "\n"))
+        assertEquals(initial, initial.add("missing", track))
+
+        val edited = initial.rename("selected", " 東京 🎵 ").add("selected", track)
+        assertEquals("東京 🎵", edited.lists.first().name)
+        assertEquals(edited, edited.add("selected", track.copy(name = "Duplicate")))
+        assertEquals(listOf(track), edited.lists.first().tracks)
+        assertEquals(emptyList<CatalogTrack>(), edited.remove("selected", track.uri).lists.first().tracks)
+        assertEquals(listOf(initial.lists.last()), edited.delete("selected").lists)
+    }
 }

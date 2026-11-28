@@ -57,7 +57,7 @@ object SpotifyHome {
         val rows = mutableListOf<HomeShelf>()
         val gathered = LinkedHashMap<String, HomeShelf>()
         for (index in 0 until sections.length()) {
-            val section = sections.getJSONObject(index)
+            val section = sections.optJSONObject(index) ?: continue
             val baseline = section.optJSONObject("data")?.optString("__typename") == BASELINE
             if (!baseline) {
                 shelf(section, podcasts)?.let(rows::add)
@@ -92,7 +92,7 @@ object SpotifyHome {
         val items = section.optJSONObject("sectionItems")?.optJSONArray("items")
             ?: return null
         val entries = (0 until items.length()).mapNotNull { index ->
-            entry(items.getJSONObject(index), podcasts)
+            items.optJSONObject(index)?.let { entry(it, podcasts) }
         }
         return if (entries.isEmpty()) null else HomeShelf(title, entries, section.optString("uri"))
     }

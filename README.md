@@ -54,6 +54,10 @@
   queue or the position, and keep watching in picture-in-picture.
 - Radio from any song, and autoplay of similar songs when the queue ends.
 - Crossfade between songs, with an option to skip trailing silence.
+- AutoMix analyzes beats in adjacent Spotify tracks and lets you edit and save
+  transition plans with cues and overlap. Applying saved plans during playback
+  and previewing transitions are still pending.
+- Live internet radio with station search, favorites and recently played stations.
 - Sleep timer: after 5 to 60 minutes or at the end of the song, fading out
   before it stops.
 
@@ -63,11 +67,16 @@
 - Presets, so "slowed + reverb" is one tap on any song.
 - Karaoke: turn the voice down.
 - Streaming quality that follows the connection, or a fixed one.
+- The player shows the audio format and bitrate when available.
+- Battery and mobile data saver options, a player restart action, and optional
+  15-second headset seek controls for podcasts.
 
 ### Lyrics
 
 - Synced lyrics, word by word where they exist and line by line otherwise.
 - Translation into your language, under the original lines.
+- Genius lyrics and a link to the matching Genius page when available.
+- Optional player haptics and a setting to keep the screen on during lyrics.
 
 ### Library and discovery
 
@@ -77,6 +86,20 @@
   and a **Radio** tab of stations, moods and genres.
 - Search, with your recent searches kept (swipe one away to remove it).
 - The music already on your phone, in a Local files shelf.
+- On-device playlists, Spotify and YouTube Music playlist import by link,
+  and manual ordering of pinned playlists.
+- Hide songs or ban artists from queues and radio, and undo those choices in Settings.
+- Spotify Home filters for music and podcasts, a shelf for new releases from
+  followed artists, and a listening recap by month, year or all time.
+
+### Devices and transfer
+
+- Find and join nearby Jams on the same local network.
+- Discover Cast and Sonos devices in the output picker and use matching Spotify
+  Connect outputs.
+- Transfer a YouTube Music sign-in between phones on the same Wi-Fi with Pass.
+- Import supported settings, sessions, local playlists and matching account
+  history from an encrypted Astral export.
 
 ### Offline
 
@@ -98,8 +121,8 @@
 
 ### Android Auto
 
-- Browse playlists and recently played, search by voice, like a song or start a
-  radio from the car.
+- Browse playlists, recently played and downloads, search by voice, like a song
+  or start a radio from the car.
 
 ### Look and language
 
@@ -107,6 +130,17 @@
   one refracting glass. Blur, refraction and tint are adjustable, with a lighter
   mode for slower phones.
 - Choose English or Italiano independently of the phone's language.
+- Looks settings for cover colors, a custom accent, cover rotation and which
+  player controls to show.
+- Opt-in Apple Music animated artwork for matching releases and a wider
+  layout for tablets and other large windows.
+
+### Extensions and Modules
+
+- Browse the extension catalog and manage checksum-verified packages from the
+  catalog, a file or an HTTPS URL.
+- Open Modules for BackMusic artwork and spectrum or waveform visualization
+  on supported playback.
 
 ## Download
 

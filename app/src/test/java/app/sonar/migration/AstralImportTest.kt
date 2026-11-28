@@ -16,8 +16,10 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
+import org.json.JSONException
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -179,6 +181,34 @@ class AstralImportTest {
         assertThrows(AstralExportTooLarge::class.java) {
             AstralImportZip.read(out.toByteArray(), { false }) { _, _ -> error("Oversized entry reached callback") }
         }
+    }
+
+    @Test
+    fun historySkipsDamagedAndDuplicateRowsAndPreservesUnicode() {
+        val row = """{"key":"spotify:track:fixture","at":1744724400000,"title":"Caffè 東京 🎵","ms":30000}"""
+        val short = row.replace("30000", "29999")
+        val duplicate = row.replace("Caffè 東京 🎵", "Duplicate")
+        val history = AstralDataConverters.history(
+            "\n{broken\n$short\n$row\n$duplicate\n{\"at\":".encodeToByteArray(),
+            ZoneOffset.UTC,
+        )
+        assertEquals("Caffè 東京 🎵", history.single().track.name)
+        assertEquals(30_000L, history.single().listenedMs)
+        assertTrue(AstralDataConverters.history(byteArrayOf(), ZoneOffset.UTC).isEmpty())
+    }
+
+    @Test
+    fun playlistMigrationDistinguishesDamagedEmptyAndUnsupportedExports() {
+        for (input in listOf("", "{", """{"version":1,"playlists":{}}""")) {
+            assertThrows(JSONException::class.java) {
+                AstralDataConverters.playlists(input.encodeToByteArray())
+            }
+        }
+        assertNull(AstralDataConverters.playlists("""{"version":2}""".encodeToByteArray()))
+        assertEquals(
+            emptyList<LocalPlaylist>(),
+            AstralDataConverters.playlists("""{"version":1,"playlists":[]}""".encodeToByteArray()),
+        )
     }
 
     private fun zip(vararg names: String): ByteArray = zip(names.associateWith { "fixture" })

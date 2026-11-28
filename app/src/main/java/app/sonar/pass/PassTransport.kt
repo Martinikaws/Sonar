@@ -116,7 +116,7 @@ internal object PassTransport {
         return Triple(network, link.address as Inet4Address, link.prefixLength)
     }
 
-    private fun parseAddress(host: String): InetAddress {
+    internal fun parseAddress(host: String): InetAddress {
         val parts = host.split('.')
         require(parts.size == 4)
         val bytes = parts.map { part ->
@@ -128,7 +128,7 @@ internal object PassTransport {
         return InetAddress.getByAddress(bytes.toByteArray())
     }
 
-    private fun sameSubnet(local: Inet4Address, remote: InetAddress, prefixLength: Int): Boolean {
+    internal fun sameSubnet(local: Inet4Address, remote: InetAddress, prefixLength: Int): Boolean {
         if (remote !is Inet4Address || !remote.isSiteLocalAddress) return false
         val mask = -1 shl (32 - prefixLength)
         return ((ByteBuffer.wrap(local.address).int xor ByteBuffer.wrap(remote.address).int) and mask) == 0

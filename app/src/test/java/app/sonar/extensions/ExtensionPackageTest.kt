@@ -12,6 +12,10 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.security.MessageDigest
 import java.util.Locale
+import java.util.concurrent.Callable
+import java.util.concurrent.CyclicBarrier
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -146,6 +150,37 @@ class ExtensionPackageTest {
         assertNull(reopened.status(id, Locale.ENGLISH))
         reopened.setEnabled(id, true)
         assertEquals("""{"live":true}""", reopened.status(id, Locale.ENGLISH))
+    }
+
+    @Test
+    fun concurrentInstallsOfTheSameVersionHaveOneWinner() {
+        val bytes = zipOf(
+            "manifest.json" to """{"id":"test.fixture","name":"Fixture","version":"1","author":"Tester"}""",
+            "main.js" to "",
+        )
+        val sha256 = digest(bytes)
+        val root = temp.newFolder()
+        val barrier = CyclicBarrier(2)
+        val workers = Executors.newFixedThreadPool(2)
+        try {
+            val attempts = List(2) {
+                workers.submit(Callable {
+                    val store = ExtensionStore(root)
+                    barrier.await(5, TimeUnit.SECONDS)
+                    runCatching { store.install(bytes, sha256) }
+                })
+            }.map { it.get(10, TimeUnit.SECONDS) }
+
+            assertEquals("test.fixture", attempts.single { it.isSuccess }.getOrThrow().id)
+            assertEquals(
+                "An equal or newer version is already installed",
+                attempts.single { it.isFailure }.exceptionOrNull()?.message,
+            )
+            assertEquals("test.fixture", ExtensionStore(root).load("test.fixture").manifest.id)
+            assertEquals(setOf("test.fixture.zip"), File(root, "extensions").list()!!.toSet())
+        } finally {
+            workers.shutdownNow()
+        }
     }
 
     private fun zipOf(vararg entries: Pair<String, String>): ByteArray {

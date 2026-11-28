@@ -67,6 +67,17 @@ class RadioParsingTest {
         assertFalse(RadioParsing.playable(""))
     }
 
+    @Test fun storedDataRecoversFromEmptyOrCorruptedJson() {
+        for (text in listOf(null, "", "{", "[]", """{"favorites":[{}]}""")) {
+            assertEquals(RadioData(), RadioData.decode(text))
+        }
+        val previous = """{"favorites":[{"uuid":"unique","name":"Caffè 東京 🎵","url":"https://radio.example/live"}],"legacy":true}"""
+        val restored = RadioData.decode(previous)
+        assertEquals("Caffè 東京 🎵", restored.favorites.single().name)
+        assertEquals(emptyList<RadioStation>(), restored.recents)
+        assertEquals(restored, RadioData.decode(RadioData.encode(restored)))
+    }
+
     @Test fun favoritesAndRecentsRoundTrip() {
         fun s(id: String, url: String = "https://x.example.com/$id") = RadioStation(id, id, url, tags = listOf("t"), hls = true)
         var d = RadioData().toggled(s("a")).toggled(s("b")).toggled(s("insecure", "http://x.example.com/i"))

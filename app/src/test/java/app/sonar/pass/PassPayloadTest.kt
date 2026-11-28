@@ -1,5 +1,7 @@
 package app.sonar.pass
 
+import java.net.Inet4Address
+import java.net.InetAddress
 import javax.crypto.AEADBadTagException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -33,6 +35,54 @@ class PassPayloadTest {
         assertThrows(AEADBadTagException::class.java) {
             PassPayload.decode(frame, passphrase)
         }
+    }
+
+    @Test
+    fun rejectsEmptyAndOversizedFramesAndCountsUtf8BytesWhenEncoding() {
+        for (size in listOf(0, PASS_MAX_FRAME + 1)) {
+            assertThrows(IllegalArgumentException::class.java) {
+                PassPayload.decode(ByteArray(size), passphrase)
+            }
+        }
+        val tooLarge = PassPayload("fixture=1", "", "", "è".repeat(PASS_MAX_FRAME / 2), null)
+        assertThrows(IllegalArgumentException::class.java) { tooLarge.encode(passphrase) }
+    }
+
+    @Test
+    fun rejectsEncryptedSessionsWithInvalidCookies() {
+        for (cookie in listOf("", "   ", "SAPISID=test\r\ncookie", "SAPISID=test\u0000cookie")) {
+            val frame = PassPayload(cookie, "", "", "", null).encode(passphrase)
+            assertThrows(IllegalArgumentException::class.java) {
+                PassPayload.decode(frame, passphrase)
+            }
+        }
+    }
+
+    @Test
+    fun invitationLinksRequireAnUnpaddedTokenWithinTheLengthLimit() {
+        val maxToken = "a".repeat(512 - PASS_LINK_PREFIX.length)
+        assertTrue(PassInvite.accepts(PASS_LINK_PREFIX + maxToken))
+        for (token in listOf("", "abc=", "abc?x", "abc#x", "caffè", maxToken + "a")) {
+            assertFalse(PassInvite.accepts(PASS_LINK_PREFIX + token))
+        }
+    }
+
+    @Test
+    fun invitationAddressesRequireFourAsciiOctets() {
+        assertEquals("192.168.1.255", PassTransport.parseAddress("192.168.1.255").hostAddress)
+        for (host in listOf("", "localhost", "192.168.1", "192.168.1.256", "192.168.1.-1", "192.168.1.１", "::1")) {
+            assertThrows(IllegalArgumentException::class.java) { PassTransport.parseAddress(host) }
+        }
+    }
+
+    @Test
+    fun invitationPeerMustBePrivateIpv4WithinTheLocalPrefix() {
+        val local = PassTransport.parseAddress("192.168.1.130") as Inet4Address
+        assertTrue(PassTransport.sameSubnet(local, PassTransport.parseAddress("192.168.1.254"), 25))
+        assertFalse(PassTransport.sameSubnet(local, PassTransport.parseAddress("192.168.1.127"), 25))
+        assertTrue(PassTransport.sameSubnet(local, local, 32))
+        assertFalse(PassTransport.sameSubnet(local, PassTransport.parseAddress("203.0.113.1"), 1))
+        assertFalse(PassTransport.sameSubnet(local, InetAddress.getByAddress(ByteArray(16)), 24))
     }
 
     @Test
