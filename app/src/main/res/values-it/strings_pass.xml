@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pass_title">Pass</string>
+    <string name="pass_instructions">Trasferisci il tuo accesso a YouTube Music tra dispositivi sulla stessa rete Wi-Fi.</string>
+    <string name="pass_send">Mostra il mio codice QR</string>
+    <string name="pass_scan">Scansiona un codice QR</string>
+    <string name="pass_receive">Ricevi l’accesso</string>
+    <string name="pass_accept">Accedi su questo dispositivo</string>
+    <string name="pass_cancel">Annulla</string>
+    <string name="pass_passphrase">Frase segreta</string>
+    <string name="pass_sender_code">Inserisci questa frase segreta sull’altro dispositivo: %1$s</string>
+    <string name="pass_qr_description">Codice QR dell’invito Pass</string>
+    <string name="pass_confirm">Vuoi accedere a YouTube Music con la sessione ricevuta?</string>
+    <string name="pass_no_session">Nessun accesso attivo a YouTube Music da inviare.</string>
+    <string name="pass_existing_session">Su questo dispositivo hai già effettuato l’accesso a YouTube Music.</string>
+    <string name="pass_preparing">Preparazione del codice QR…</string>
+    <string name="pass_waiting">Valido per due minuti. Scansionalo con l’altro dispositivo.</string>
+    <string name="pass_receiving">Ricezione dell’accesso…</string>
+    <string name="pass_sent">Accesso inviato. Confermalo sull’altro dispositivo.</string>
+    <string name="pass_received">Accesso a YouTube Music salvato.</string>
+    <string name="pass_timeout">Il codice QR è scaduto. Generane uno nuovo per riprovare.</string>
+    <string name="pass_wifi_error">Collega entrambi i dispositivi alla stessa rete Wi-Fi e riprova.</string>
+    <string name="pass_invalid_qr">Questo codice QR non è un invito Pass di SONAR.</string>
+    <string name="pass_scan_error">Impossibile aprire lo scanner QR. Riprova.</string>
+    <string name="pass_unlock_error">Impossibile aprire l’invito. Controlla la frase segreta.</string>
+    <string name="pass_error">Trasferimento non riuscito. Genera un nuovo codice e riprova.</string>
+</resources>

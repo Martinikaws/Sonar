@@ -1,0 +1,18 @@
+<resources>
+    <string name="ext_title">Extensions</string>
+    <string name="ext_summary">Install or remove local packages</string>
+    <string name="ext_install">Install extension</string>
+    <string name="ext_choose_package">Choose ZIP file</string>
+    <string name="ext_sha256">SHA-256 checksum</string>
+    <string name="ext_sha256_help">Paste the checksum from a source you trust.</string>
+    <string name="ext_loading">Reading extensions…</string>
+    <string name="ext_empty">No extensions installed</string>
+    <string name="ext_details">Version %1$s · %2$s</string>
+    <string name="ext_load_error">Couldn’t read installed extensions.</string>
+    <string name="ext_install_error">Couldn’t install the extension. Check the package, checksum and version.</string>
+    <string name="ext_picker_error">No file picker available.</string>
+    <string name="ext_remove">Remove %1$s?</string>
+    <string name="ext_remove_confirm">Remove</string>
+    <string name="ext_remove_error">Couldn’t remove the extension.</string>
+    <string name="ext_retry">Try again</string>
+</resources>

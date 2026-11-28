@@ -201,6 +201,10 @@ import app.sonar.library.PlaylistFolderDialog
 import app.sonar.library.canOrganize
 import app.sonar.migration.ASTRAL_IMPORT_ROUTE
 import app.sonar.migration.AstralImportScreen
+import app.sonar.pass.PASS_DESTINATION
+import app.sonar.pass.PASS_ROUTE
+import app.sonar.pass.PassInvite
+import app.sonar.pass.passScreen
 
 /** A name being asked for: null playlist means one that does not exist yet. */
 private data class NamingRequest(val playlist: CatalogPlaylist?)
@@ -1580,6 +1584,10 @@ fun SonarApp(
                 // whatever was on screen.
                 LaunchedEffect(link) {
                     val uri = link?.uri ?: return@LaunchedEffect
+                    if (PassInvite.accepts(uri)) {
+                        navController.navigate("$PASS_ROUTE?invite=${android.net.Uri.encode(uri)}") { launchSingleTop = true }
+                        return@LaunchedEffect
+                    }
                     if (link?.fromWidget == true) {
                         viewModel.openPlaylist(
                             app.sonar.data.CatalogPlaylist(uri = uri, name = link?.name.orEmpty(), artworkUrl = link?.artworkUrl),
@@ -1630,7 +1638,7 @@ fun SonarApp(
                 // Settings is not a place you listen from: it is a full page of
                 // its own, and the tab bar and the now-playing bar step out of
                 // the way for it instead of floating over a form.
-                val chromeHidden = route == Routes.SETTINGS || route == ASTRAL_IMPORT_ROUTE
+                val chromeHidden = route == Routes.SETTINGS || route == ASTRAL_IMPORT_ROUTE || route == PASS_DESTINATION
                 val adaptive = adaptiveLayout(route, navController.previousBackStackEntry?.destination?.route, chromeHidden)
                 val showSearchField = searching && searchOpen
                 val tabletControlsVisible = playback.hasItem || showSearchField
@@ -2163,6 +2171,7 @@ fun SonarApp(
                                 onLogOut = viewModel::logOut,
                                 onShowTutorial = { showTutorial = true },
                                 onAstralImport = { navController.navigate(ASTRAL_IMPORT_ROUTE) },
+                                onPass = { navController.navigate(PASS_ROUTE) },
                                 onPlayFlac = { tracks, index -> onPlay(tracks, index, null, false, "", 0L) },
                                 language = language,
                                 onLanguage = setLanguage,
@@ -2185,6 +2194,8 @@ fun SonarApp(
                                 onBack = { navController.popBackStack() },
                             )
                         }
+
+                        passScreen(onBack = { navController.popBackStack() }, onAccepted = { viewModel.refresh(restart = true) })
 
                         composable(ASTRAL_IMPORT_ROUTE) {
                             AstralImportScreen(onBack = { navController.popBackStack() })

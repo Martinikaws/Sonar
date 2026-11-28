@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -39,6 +40,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -117,6 +119,8 @@ fun JamSection() {
                 onJoin = { token -> scope.launch { Jam.join(token) } },
             )
         }
+
+        if (soloist == true) NearbyJamAction(now, busy)
 
         error?.let {
             Text(
@@ -232,11 +236,12 @@ private fun JamNow(
 }
 
 @Composable
-private fun ActionRow(icon: ImageVector, label: String, busy: Boolean, onClick: () -> Unit) {
+internal fun ActionRow(icon: ImageVector, label: String, busy: Boolean, onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(enabled = !busy, onClick = onClick)
+            .heightIn(min = 44.dp)
+            .clickable(enabled = !busy, role = Role.Button, onClick = onClick)
             .padding(horizontal = 22.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -256,7 +261,7 @@ private fun ActionRow(icon: ImageVector, label: String, busy: Boolean, onClick: 
 }
 
 @Composable
-private fun Note(text: String) {
+internal fun Note(text: String) {
     Text(
         text,
         style = MaterialTheme.typography.bodyMedium,

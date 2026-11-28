@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nearby_find_jam">Cerca Jam nelle vicinanze</string>
+    <string name="nearby_stop_search">Interrompi ricerca</string>
+    <string name="nearby_share_lan">Condividi la Jam su questa rete</string>
+    <string name="nearby_hide_jam">Smetti di condividere su questa rete</string>
+    <string name="nearby_retry">Riprova</string>
+    <string name="nearby_jam_starting">Condivisione della Jam in corso…</string>
+    <string name="nearby_jam_visible">Chiunque su questa rete può partecipare finché il pannello resta aperto.</string>
+    <string name="nearby_jam_searching">Ricerca di Jam su questa rete…</string>
+    <string name="nearby_jam_empty">Nessuna Jam trovata su questa rete. Puoi usare un link di invito.</string>
+    <string name="nearby_jam_error">Le Jam nelle vicinanze non sono disponibili. Puoi usare un link di invito.</string>
+    <string name="nearby_join_jam">Partecipa a una Jam vicina</string>
+    <string name="nearby_join_named_jam">Partecipa alla Jam su %1$s</string>
+    <string name="nearby_join_failed">Impossibile partecipare alla Jam. Riprova o chiedi un nuovo invito.</string>
+    <string name="nearby_output_cast">Cast</string>
+    <string name="nearby_output_cast_group">Gruppo di altoparlanti Cast</string>
+    <string name="nearby_output_sonos">Sonos</string>
+</resources>

@@ -38,6 +38,7 @@ internal enum class SettingsPage(@StringRes val title: Int) {
     Flac(R.string.flac_settings),
     Hidden(R.string.hidden_settings_title),
     LocalPlaylists(R.string.hidden_local_title),
+    Extensions(R.string.ext_title),
 }
 
 /** What choosing an entry does: it is drawn in the list, or it opens a page. */
@@ -77,6 +78,7 @@ internal val SETTINGS_INDEX: List<SettingsEntry> = listOf(
     ),
     SettingsEntry("tutorial", R.string.guide, null, listOf(R.string.see_setup_again), SettingsGroup.SETUP),
     SettingsEntry("astral-import", R.string.astral_import_title, null, emptyList(), SettingsGroup.SETUP),
+    SettingsEntry("pass", R.string.pass_title, null, listOf(R.string.pass_scan), SettingsGroup.SETUP),
 
     SettingsEntry("web-sdk-recovery", R.string.web_sdk_settings_title, null, listOf(R.string.web_sdk_settings_open), SettingsGroup.SOUND),
     SettingsEntry("backend", R.string.backend, null, listOf(R.string.backend_spotify, R.string.backend_youtube), SettingsGroup.SOUND),
@@ -126,7 +128,7 @@ internal val SETTINGS_INDEX: List<SettingsEntry> = listOf(
         listOf(R.string.power_headset_seek, R.string.power_battery_saver, R.string.power_data_saver, R.string.power_restart_player),
         SettingsGroup.LISTENING,
     ),
-    SettingsEntry("crossfade", R.string.crossfade, null, listOf(R.string.trim_silence, R.string.skip_fade), SettingsGroup.LISTENING),
+    SettingsEntry("crossfade", R.string.crossfade, null, listOf(R.string.trim_silence, R.string.skip_fade, R.string.automix_title, R.string.automix_editor), SettingsGroup.LISTENING),
     SettingsEntry("autoplay", R.string.autoplay, null, listOf(R.string.autoplay_infinite_title), SettingsGroup.LISTENING),
     SettingsEntry("spotify-dj", R.string.spotify_dj, null, listOf(R.string.spotify_dj_title), SettingsGroup.LISTENING),
     SettingsEntry("connected-device-label", R.string.connected_device_label, null, emptyList(), SettingsGroup.LISTENING),
@@ -188,6 +190,7 @@ internal val SETTINGS_INDEX: List<SettingsEntry> = listOf(
         "system", R.string.page_app_system, null,
         listOf(R.string.app_system_settings, R.string.app_battery_settings), SettingsGroup.SYSTEM,
     ),
+    SettingsEntry("extensions", R.string.ext_title, null, listOf(R.string.ext_install), SettingsGroup.SYSTEM, SettingsAction.Open(SettingsPage.Extensions)),
     SettingsEntry("links", R.string.spotify_links, null, listOf(R.string.open_by_default), SettingsGroup.SYSTEM),
 
     SettingsEntry("author", R.string.fix2_upstream_credit, null, emptyList(), SettingsGroup.ABOUT),

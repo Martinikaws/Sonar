@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nearby_find_jam">Find nearby Jams</string>
+    <string name="nearby_stop_search">Stop searching</string>
+    <string name="nearby_share_lan">Share the Jam on this network</string>
+    <string name="nearby_hide_jam">Stop sharing on this network</string>
+    <string name="nearby_retry">Try again</string>
+    <string name="nearby_jam_starting">Sharing the Jam…</string>
+    <string name="nearby_jam_visible">Anyone on this network can join while this panel is open.</string>
+    <string name="nearby_jam_searching">Looking for Jams on this network…</string>
+    <string name="nearby_jam_empty">No Jams found on this network. You can still use an invite link.</string>
+    <string name="nearby_jam_error">Nearby Jams are unavailable. You can still use an invite link.</string>
+    <string name="nearby_join_jam">Join nearby Jam</string>
+    <string name="nearby_join_named_jam">Join Jam on %1$s</string>
+    <string name="nearby_join_failed">Couldn’t join the Jam. Try again or ask for a new invite.</string>
+    <string name="nearby_output_cast">Cast</string>
+    <string name="nearby_output_cast_group">Cast speaker group</string>
+    <string name="nearby_output_sonos">Sonos</string>
+</resources>

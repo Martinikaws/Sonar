@@ -3,6 +3,7 @@ package app.sonar.backend.youtube
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import app.sonar.pass.PassPayload
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.YouTubeChannel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -171,6 +172,38 @@ class YouTubeAccount(context: Context) {
             // waiting for the disk over, and an asynchronous write was lost
             // when the app stopped straight after it.
             .commit()
+        applySavedSession(name)
+    }
+
+    internal fun passSession(): PassPayload? {
+        val session = prefs.all
+        val cookie = session[KEY_COOKIE] as? String ?: return null
+        return PassPayload(
+            cookie, (session[KEY_VISITOR_DATA] as? String).orEmpty(),
+            (session[KEY_DATA_SYNC_ID] as? String).orEmpty(),
+            (session[KEY_NAME] as? String).orEmpty(), session[KEY_PAGE_ID] as? String,
+        )
+    }
+
+    internal fun acceptPass(session: PassPayload): Boolean {
+        if (isSignedIn) return false
+        val saved = prefs.edit()
+            .putString(KEY_COOKIE, session.cookie)
+            .putString(KEY_VISITOR_DATA, session.visitorData)
+            .putString(KEY_DATA_SYNC_ID, session.dataSyncId)
+            .putString(KEY_NAME, session.name)
+            .putString(KEY_PAGE_ID, session.pageId)
+            .commit()
+        if (!saved) {
+            prefs.edit().clear().apply()
+            return false
+        }
+        _pageId.value = session.pageId
+        applySavedSession(session.name)
+        return true
+    }
+
+    private fun applySavedSession(name: String) {
         _accountName.value = name
         // A new sign-in is a new session: whatever the old one was refused on
         // says nothing about this one.

@@ -180,6 +180,7 @@ fun SettingsScreen(
     /** After switching channel: the library and the home belong to the new one. */
     onYouTubeChannelChange: () -> Unit = {},
     onAstralImport: () -> Unit,
+    onPass: () -> Unit,
     onPlayFlac: (List<app.sonar.data.CatalogTrack>, Int) -> Unit = { _, _ -> },
 ) {
     val ready = state as? MainViewModel.UiState.Ready
@@ -451,6 +452,8 @@ fun SettingsScreen(
             ) { goTo(SettingsPage.WebApi) }
         }
 
+        "pass" -> Section(null) { ActionRow(stringResource(R.string.pass_title), destructive = false, onClick = onPass) }
+
         "astral-import" -> Section(null) {
             ActionRow(
                 label = stringResource(R.string.astral_import_title),
@@ -595,6 +598,7 @@ fun SettingsScreen(
 
         "crossfade" -> {
             CrossfadeSection(backdrop)
+            app.sonar.playback.automix.AutoMixSettings()
         }
 
         // Autoplay: automatically append similar tracks when queue reaches the end.
@@ -845,6 +849,7 @@ fun SettingsScreen(
         }
 
         // The settings that are Android's rather than the app's.
+        "extensions" -> Section(null) { PageRow(stringResource(R.string.ext_title), stringResource(R.string.ext_summary)) { goTo(SettingsPage.Extensions) } }
         "system" -> {
             Section(stringResource(R.string.page_app_system)) {
                 ActionRow(
@@ -1061,6 +1066,7 @@ fun SettingsScreen(
         label = "settingsPage",
     ) { shown ->
     when (shown) {
+        SettingsPage.Extensions -> app.sonar.extensions.ExtensionsPage(listPadding) { heading(shown) }
         SettingsPage.Looks -> app.sonar.ui.looks.LooksPage(sonarApp.preferences, listPadding) { heading(shown) }
         SettingsPage.Equalizer -> EqualizerPage(
             contentPadding = contentPadding,

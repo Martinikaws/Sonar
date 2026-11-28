@@ -213,6 +213,7 @@ android {
 }
 
 dependencies {
+    implementation("org.mozilla:rhino:1.8.1")
     testImplementation("junit:junit:4.13.2")
     // The real org.json for the JVM tests: android.jar carries only stubs.
     testImplementation("org.json:json:20240303")

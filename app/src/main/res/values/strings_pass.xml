@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pass_title">Pass</string>
+    <string name="pass_instructions">Transfer your YouTube Music sign-in between devices on the same Wi-Fi.</string>
+    <string name="pass_send">Show my QR code</string>
+    <string name="pass_scan">Scan a QR code</string>
+    <string name="pass_receive">Retrieve sign-in</string>
+    <string name="pass_accept">Sign in on this device</string>
+    <string name="pass_cancel">Cancel</string>
+    <string name="pass_passphrase">Passphrase</string>
+    <string name="pass_sender_code">Enter this passphrase on your other device: %1$s</string>
+    <string name="pass_qr_description">Pass invitation QR code</string>
+    <string name="pass_confirm">Use the transferred YouTube Music sign-in?</string>
+    <string name="pass_no_session">No active YouTube Music sign-in to send.</string>
+    <string name="pass_existing_session">This device already has a YouTube Music sign-in.</string>
+    <string name="pass_preparing">Preparing the QR code…</string>
+    <string name="pass_waiting">Ready for two minutes. Scan with your other device.</string>
+    <string name="pass_receiving">Retrieving the sign-in…</string>
+    <string name="pass_sent">Sign-in sent. Confirm it on your other device.</string>
+    <string name="pass_received">YouTube Music sign-in saved.</string>
+    <string name="pass_timeout">The QR code expired. Generate a new one to try again.</string>
+    <string name="pass_wifi_error">Connect both devices to the same Wi-Fi and try again.</string>
+    <string name="pass_invalid_qr">This QR code is not a SONAR Pass invitation.</string>
+    <string name="pass_scan_error">Could not open the QR scanner. Try again.</string>
+    <string name="pass_unlock_error">Could not unlock the invitation. Check the passphrase.</string>
+    <string name="pass_error">Transfer failed. Generate a new code and try again.</string>
+</resources>

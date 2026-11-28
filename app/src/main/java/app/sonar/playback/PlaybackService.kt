@@ -160,6 +160,8 @@ class PlaybackService : MediaLibraryService() {
     private var lastAutoplayTrackUri: String? = null
 
     private val buttonsListener = object : androidx.media3.common.Player.Listener {
+        override fun onEvents(player: Player, events: Player.Events) = app.sonar.playback.automix.AutoMix.observe(this@PlaybackService, player, player === librespot && librespot?.isRemotePlayback == false)
+
         override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) = redrawButtons()
 
         override fun onRepeatModeChanged(repeatMode: Int) = redrawButtons()
@@ -3171,6 +3173,7 @@ class PlaybackService : MediaLibraryService() {
             }
         }
         releasing = true
+        app.sonar.playback.automix.AutoMix.resetPair()
         scope.cancel()
         fallbackSessionPlayer?.detach()
         if (::player.isInitialized) {

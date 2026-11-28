@@ -1,0 +1,11 @@
+<resources>
+    <string name="ext_review_check_status">Verifica stato</string>
+    <string name="ext_review_status_loading">Verifica dello stato in corso…</string>
+    <string name="ext_review_status_title">Stato dell’estensione</string>
+    <string name="ext_review_status_live">Attiva</string>
+    <string name="ext_review_status_inactive">Inattiva</string>
+    <string name="ext_review_status_unavailable">Nessuno stato comunicato.</string>
+    <string name="ext_review_status_error">Impossibile verificare lo stato dell’estensione.</string>
+    <string name="ext_review_unreadable">Impossibile leggere questo pacchetto.</string>
+    <string name="ext_review_close">Chiudi</string>
+</resources>

@@ -1,0 +1,11 @@
+<resources>
+    <string name="ext_review_check_status">Check status</string>
+    <string name="ext_review_status_loading">Checking extension status…</string>
+    <string name="ext_review_status_title">Extension status</string>
+    <string name="ext_review_status_live">Active</string>
+    <string name="ext_review_status_inactive">Inactive</string>
+    <string name="ext_review_status_unavailable">No status reported.</string>
+    <string name="ext_review_status_error">Couldn’t check the extension status.</string>
+    <string name="ext_review_unreadable">Couldn’t read this package.</string>
+    <string name="ext_review_close">Close</string>
+</resources>

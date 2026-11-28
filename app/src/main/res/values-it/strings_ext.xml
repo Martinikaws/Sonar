@@ -1,0 +1,18 @@
+<resources>
+    <string name="ext_title">Estensioni</string>
+    <string name="ext_summary">Installa o rimuovi pacchetti locali</string>
+    <string name="ext_install">Installa estensione</string>
+    <string name="ext_choose_package">Scegli file ZIP</string>
+    <string name="ext_sha256">Checksum SHA-256</string>
+    <string name="ext_sha256_help">Incolla il checksum da una fonte affidabile.</string>
+    <string name="ext_loading">Lettura delle estensioni…</string>
+    <string name="ext_empty">Nessuna estensione installata</string>
+    <string name="ext_details">Versione %1$s · %2$s</string>
+    <string name="ext_load_error">Impossibile leggere le estensioni installate.</string>
+    <string name="ext_install_error">Impossibile installare l’estensione. Controlla il pacchetto, il checksum e la versione.</string>
+    <string name="ext_picker_error">Nessun selettore di file disponibile.</string>
+    <string name="ext_remove">Rimuovere %1$s?</string>
+    <string name="ext_remove_confirm">Rimuovi</string>
+    <string name="ext_remove_error">Impossibile rimuovere l’estensione.</string>
+    <string name="ext_retry">Riprova</string>
+</resources>

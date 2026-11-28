@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="automix_title">AutoMix</string>
+    <string name="automix_beat_match">Match beats</string>
+    <string name="automix_crossfade_required">Turn on crossfade to use AutoMix.</string>
+    <string name="automix_no_pair">Play a Spotify track with another track in the queue.</string>
+    <string name="automix_clear_analysis">Clear analysis cache (%1$d)</string>
+    <string name="automix_loading">Loading beat analysis…</string>
+    <string name="automix_analysis_unavailable">Beat analysis unavailable</string>
+    <string name="automix_editor">Edit transition</string>
+    <string name="automix_close_editor">Close editor</string>
+    <string name="automix_pair">%1$s → %2$s</string>
+    <string name="automix_out_cue">Outgoing cue</string>
+    <string name="automix_in_cue">Incoming cue</string>
+    <string name="automix_overlap">Overlap</string>
+    <string name="automix_snap">Snap to bar starts</string>
+    <string name="automix_save">Save transition</string>
+    <string name="automix_reset">Reset to automatic</string>
+    <string name="automix_timing">%1$s · %2$.2f s</string>
+    <string name="automix_nudge_back">−100 ms</string>
+    <string name="automix_nudge_forward">+100 ms</string>
+    <string name="automix_no_timing">Track durations are unavailable.</string>
+    <string name="automix_copy_diagnostics">Copy diagnostics</string>
+    <string name="automix_diagnostics">Cached tracks: %1$d. Outgoing bar markers: %2$d. Incoming bar markers: %3$d.</string>
+</resources>

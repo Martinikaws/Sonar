@@ -292,6 +292,10 @@ class MainActivity : ComponentActivity() {
             return
         }
         if (intent.action != android.content.Intent.ACTION_VIEW) return
+        intent.dataString?.takeIf { app.sonar.pass.PassInvite.accepts(it) }?.let {
+            link = LinkRequest(it, (link?.n ?: 0) + 1)
+            return
+        }
         app.sonar.data.jamInviteToken(intent.dataString)?.let {
             pendingJam = it
             return

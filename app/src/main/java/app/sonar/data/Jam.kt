@@ -5,6 +5,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
@@ -54,6 +56,7 @@ object Jam {
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+    private val sessionLock = Mutex()
 
     /**
      * Started from this phone in this run: shown as a Jam from the moment it
@@ -71,11 +74,21 @@ object Jam {
 
     /** The account's Jam as it is now. */
     suspend fun refresh() {
+        if (_busy.value || !sessionLock.tryLock()) return
+        try {
+            refreshSession()
+        } finally {
+            sessionLock.unlock()
+        }
+    }
+
+    private suspend fun refreshSession() {
         // Read in the background: what goes wrong here (no engine yet, no
         // network) is not shown under the section as if a button had failed.
-        val found = request("GET", "/social-connect/v2/sessions/current", quiet = true)
+        val found = request("GET", "/social-connect/v2/sessions/current", quiet = true) ?: return
         val was = _session.value
-        val now = found?.let(::parse)?.takeIf(::worthShowing)
+        val parsed = if (found.isEmpty()) null else parse(found) ?: return
+        val now = parsed?.takeIf(::worthShowing)
         _session.value = now
         // Someone new in a Jam this phone plays: shown what is playing.
         if (now != null && now.ownedByMe && was != null && was.id == now.id && now.members.size > was.members.size) nudge()
@@ -141,10 +154,10 @@ object Jam {
     private fun soloist(): String? = app.sonar.playback.soloist.SoloistEngine.deviceId
 
     private suspend fun act(block: suspend () -> Boolean): Boolean {
-        _busy.value = true
+        if (!_busy.compareAndSet(expect = false, update = true)) return false
         _error.value = null
         return try {
-            block()
+            sessionLock.withLock { block() }
         } finally {
             _busy.value = false
         }
@@ -158,19 +171,18 @@ object Jam {
     private suspend fun request(method: String, path: String, quiet: Boolean = false): String? =
         withContext(Dispatchers.IO) {
             runCatching { app.sonar.nativecore.NativeBridge.spclient(method, path) }
-                .onSuccess { if (quiet) _error.value = null }
                 .onFailure {
                     val missing = it.message?.contains("404") == true
                     val log = "$method ${redactJamTokens(path.substringBefore('?'))}"
                     if (quiet) {
                         // No Jam (404) is an answer; anything else is said in the log only.
-                        if (missing) _error.value = null else Log.i(TAG, log)
+                        if (!missing) Log.i(TAG, log)
                     } else {
                         Log.w(TAG, log)
                         _error.value = it.message?.let(::redactJamTokens)
                     }
                 }
-                .getOrNull()
+                .getOrElse { if (quiet && it.message?.contains("404") == true) "" else null }
         }
 
     private fun parse(body: String): Session? = runCatching {

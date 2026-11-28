@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -136,11 +137,7 @@ fun DevicePicker(
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
-                        state.devices.forEach { device ->
-                            DeviceRow(device, switching = state.switchingTo == device.id) {
-                                onSelect(device.id)
-                            }
-                        }
+                        ReceiverRows(state, onSelect)
                     }
                 }
             }
@@ -220,11 +217,7 @@ fun DeviceList(
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
-                        state.devices.forEach { device ->
-                            DeviceRow(device, switching = state.switchingTo == device.id) {
-                                onSelect(device.id)
-                            }
-                        }
+                        ReceiverRows(state, onSelect)
                     }
                 }
                 // Listening together, on the devices above.
@@ -233,16 +226,18 @@ fun DeviceList(
 }
 
 @Composable
-private fun DeviceRow(
+internal fun DeviceRow(
     device: MainViewModel.SpotifyDevice,
     /** Whether this is the row the playback is moving to right now. */
     switching: Boolean = false,
+    label: String = device.type,
     onClick: () -> Unit,
 ) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(enabled = !device.isActive && !switching, onClick = onClick)
+            .heightIn(min = 44.dp)
+            .clickable(enabled = !device.isActive && !switching, role = Role.Button, onClick = onClick)
             .padding(horizontal = 22.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -270,7 +265,7 @@ private fun DeviceRow(
                 when {
                     switching -> stringResource(R.string.switching)
                     device.isActive -> stringResource(R.string.now_playing)
-                    else -> device.type
+                    else -> label
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = GlassInkDim,
