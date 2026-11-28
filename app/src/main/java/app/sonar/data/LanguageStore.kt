@@ -149,4 +149,5 @@ val AppLanguages: List<Pair<String, String>> = listOf(
     "" to "",
     "en" to "English",
     "it" to "Italiano",
+    "zh-CN" to "简体中文",
 )

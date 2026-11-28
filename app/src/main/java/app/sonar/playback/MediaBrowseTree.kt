@@ -314,6 +314,7 @@ class MediaBrowseTree(
                 return scope.future {
                     try {
                         if (player is LibrespotPlayer) player.cycleShuffle()
+                        else if (player is app.sonar.playback.soloist.SoloistPlayer) player.cycleShuffle()
                         else player.shuffleModeEnabled = !player.shuffleModeEnabled
                         SessionResult(SessionResult.RESULT_SUCCESS)
                     } catch (e: Exception) {

@@ -1,6 +1,6 @@
 # Changelog
 
-## Next version (draft)
+## 1.1.0
 
 ### Features
 
@@ -30,6 +30,10 @@
 
 ### Fixes
 
+- Soloist and Spotify Connect playback is more reliable, Spotify data is fetched from its own gateway first with the Web API as a fallback, and YouTube playback handles the new player script (ported from Square 2.11.3).
+- Spotify playback starts faster: radio is queued behind the tapped song, the next YouTube stream is prefetched, and a refused Spotify track is skipped after the first refusal.
+- Artist pages list every single and EP, tapping a recommended song plays it, and covers animate on mobile data.
+- Added Simplified Chinese.
 - A Spotify audio key refusal during playback startup can trigger source fallback immediately. Repeated refusals are handled per affected track.
 - Route live radio to the local player and keep live stations out of the saved song queue. Ignore stale radio entries on restore.
 - Apply hidden song and banned artist filters when new tracks arrive through queue continuations.

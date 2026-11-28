@@ -30,6 +30,7 @@ import app.sonar.nativecore.NativeBridge
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -566,13 +567,36 @@ class PlaybackService : MediaLibraryService() {
 
         // Offline (no network, or asked for): Soloist can play nothing, and
         // librespot plays what is downloaded, so the queue goes to it.
+        //
+        // Not while Soloist is still playing: it holds the song it is on, and
+        // the network dropping for a moment with the screen off (the phone
+        // changing cell, or Wi-Fi going to sleep) took the music away from it
+        // mid-song for librespot, which stayed in front once the network was
+        // back. It goes when Soloist stops for want of the network, and comes
+        // back to Soloist with the network.
         scope.launch {
-            app.sonar.playback.OfflineMode.active.collect { offline ->
+            app.sonar.playback.OfflineMode.active.collectLatest { offline ->
                 redrawButtons()
                 if (offline && playerKind == PlayerKind.SOLOIST) {
+                    while (playerKind == PlayerKind.SOLOIST && player.isPlaying &&
+                        app.sonar.playback.OfflineMode.reason.value != app.sonar.playback.OfflineMode.Reason.MANUAL
+                    ) {
+                        delay(2_000)
+                    }
+                    if (playerKind != PlayerKind.SOLOIST) return@collectLatest
+                    android.util.Log.i(TAG, "offline: the queue goes to librespot and the downloads")
+                    leftSoloistOffline = true
                     val offlinePlayer = if (AudioSource.SPOTIFY in sourceOrder) PlayerKind.SPOTIFY
                         else PlayerKind.SPOTIFY_UNAVAILABLE
                     swapPlayer(offlinePlayer, restore = true)
+                } else if (!offline && leftSoloistOffline) {
+                    leftSoloistOffline = false
+                    if (soloistWanted() && playerKind == PlayerKind.SPOTIFY &&
+                        !downloadedHere(player.currentMediaItem?.mediaId)
+                    ) {
+                        android.util.Log.i(TAG, "online again: the queue goes back to Soloist")
+                        swapPlayer(PlayerKind.SOLOIST, restore = true)
+                    }
                 }
             }
         }
@@ -589,9 +613,7 @@ class PlaybackService : MediaLibraryService() {
                     if (container.preferences.backend.value != app.sonar.backend.BackendId.SPOTIFY ||
                         container.preferences.spotifyFreeAccount.value
                     ) return@collect
-                    if (on && playerKind == PlayerKind.SPOTIFY &&
-                        sourceOrder == listOf(AudioSource.SPOTIFY)
-                    ) {
+                    if (on && playerKind == PlayerKind.SPOTIFY && spotifyOnly()) {
                         swapPlayer(PlayerKind.SOLOIST, restore = true)
                     } else if (!on && playerKind == PlayerKind.SOLOIST) {
                         swapPlayer(PlayerKind.SPOTIFY, restore = true)
@@ -806,6 +828,15 @@ class PlaybackService : MediaLibraryService() {
         // The crossfade is part of the same configuration and just as fixed, so
         // it takes the same road: a new engine, with the queue put back where
         // it was.
+        // The normalisation amount: Soloist's at once, librespot's with a new
+        // player, as for the crossfade below.
+        scope.launch {
+            container.preferences.normalisationDb.drop(1).collect { db ->
+                app.sonar.playback.soloist.SoloistEngine.setNormalisation(this@PlaybackService, db)
+                applyNormalisation(db)
+                if (playerKind != PlayerKind.SOLOIST) reconfigureEngine("normalisation")
+            }
+        }
         scope.launch {
             crossfade.seconds.drop(1).collect {
                 // Soloist's libpulse reads it while it runs: no new run, which
@@ -848,6 +879,10 @@ class PlaybackService : MediaLibraryService() {
                     // the artist and the cover of what plays elsewhere.
                     val described = elsewhere?.let { describeRemote(it) }
                     librespot?.showRemote(described)
+                    // And Soloist's player, when it is the one in front: its
+                    // session is the one the notification and the volume keys
+                    // read.
+                    (player as? app.sonar.playback.soloist.SoloistPlayer)?.showRemote(described)
                 }
         }
 
@@ -880,6 +915,9 @@ class PlaybackService : MediaLibraryService() {
         SPOTIFY, YOUTUBE, LOCAL, VIDEO, SPOTIFY_WEB, SOLOIST,
         SPOTIFY_YOUTUBE_AUDIO, SPOTIFY_FLAC_AUDIO, SPOTIFY_VIA_YOUTUBE, SPOTIFY_UNAVAILABLE,
     }
+
+    /** Soloist was let go of for the network gone; it is taken back with the network. */
+    private var leftSoloistOffline = false
 
     private var playerKind = PlayerKind.SPOTIFY
         set(value) {
@@ -1062,6 +1100,12 @@ class PlaybackService : MediaLibraryService() {
 
     private fun flacAllowed(): Boolean = AudioSource.FLAC in sourceOrder && container.flacSources.available()
 
+    /** Nothing but Spotify can play (FLAC and YouTube not set up): Soloist's case. */
+    private fun spotifyOnly(): Boolean = container.sourcePriority.priority.value.spotifyOnly(
+        flacReady = container.flacSources.available(),
+        youtubeAllowed = container.preferences.youtubeFallback.value,
+    )
+
     private fun spotifyPlayer(): PlayerKind {
         if (webPlaybackNeeded()) {
             if (app.sonar.playback.websdk.WebSdkRecovery.isConfigured(this)) return PlayerKind.SPOTIFY_WEB
@@ -1106,7 +1150,7 @@ class PlaybackService : MediaLibraryService() {
             ) return PlayerKind.SPOTIFY_WEB
             if (AudioSource.YOUTUBE_MUSIC in order) return PlayerKind.SPOTIFY
         }
-        if (order == listOf(AudioSource.SPOTIFY) || !uri.startsWith("spotify:track:")) {
+        if (spotifyOnly() || !uri.startsWith("spotify:track:")) {
             return when {
                 soloistWanted() && !downloadedHere(uri) -> PlayerKind.SOLOIST
                 uri.startsWith("spotify:") && AudioSource.SPOTIFY !in order -> PlayerKind.SPOTIFY_UNAVAILABLE
@@ -1629,7 +1673,7 @@ class PlaybackService : MediaLibraryService() {
     private fun soloistWanted(): Boolean =
         container.preferences.backend.value == app.sonar.backend.BackendId.SPOTIFY &&
             !container.preferences.spotifyFreeAccount.value &&
-            sourceOrder == listOf(AudioSource.SPOTIFY) &&
+            spotifyOnly() &&
             app.sonar.playback.soloist.SoloistEngine.isEnabled(this)
 
     private fun webPlaybackNeeded(): Boolean =
@@ -1813,7 +1857,15 @@ class PlaybackService : MediaLibraryService() {
                     AudioSource.SPOTIFY in sourceOrder && !OfflineMode.active.value && downloadedHere(uri)
                 },
                 elsewhere = ::playElsewhere,
-            )
+            ).also { made ->
+                // What another device is playing already, mirrored from the
+                // start rather than from its next change.
+                scope.launch {
+                    app.sonar.data.RemoteConnect.playback.value
+                        ?.takeIf { !OfflineMode.active.value }
+                        ?.let { made.showRemote(describeRemote(it)) }
+                }
+            }
         }
     }
 
@@ -2118,7 +2170,7 @@ class PlaybackService : MediaLibraryService() {
         if (engine != null) {
             if (container.spotifySignedIn) {
                 connectEngine()
-            } else if (sourceOrder != listOf(AudioSource.SPOTIFY)) {
+            } else if (!spotifyOnly()) {
                 val selection = selectionVersion
                 scope.launch { routeInitialQueue(engine, selection) }
             }
@@ -2416,8 +2468,8 @@ class PlaybackService : MediaLibraryService() {
                 runCatching {
                     android.util.Log.i(
                         TAG,
-                        "quality: asking for ${'$'}{quality.bitrateKbps()} kbps" +
-                            " (link estimate ${'$'}{quality.linkKbps()} kbps)",
+                        "quality: asking for ${quality.bitrateKbps()} kbps" +
+                            " (link estimate ${quality.linkKbps()} kbps)",
                     )
                     NativeBridge.setQuality(quality.bitrateKbps(), crossfade.durationMs())
                 }
@@ -2518,7 +2570,7 @@ class PlaybackService : MediaLibraryService() {
                     // session's client id — so the two have to agree or the
                     // access point rejects every catalogue call.
                     clientId = SpotifyOAuth.CLIENT_ID,
-                    deviceName = android.os.Build.MODEL ?: "Android",
+                    deviceName = app.sonar.playback.ConnectName.of(this@PlaybackService),
                     // Kept across launches, so the account sees this phone as
                     // one device rather than a new one every time.
                     deviceId = container.preferences.deviceId(),
@@ -2536,9 +2588,10 @@ class PlaybackService : MediaLibraryService() {
                     bitrateKbps = quality.bitrateKbps().also {
                         android.util.Log.i(
                             TAG,
-                            "quality: starting at ${'$'}it kbps" +
-                                " (link estimate ${'$'}{quality.linkKbps()} kbps)",
+                            "quality: starting at $it kbps" +
+                                " (link estimate ${quality.linkKbps()} kbps)",
                         )
+                        applyNormalisation(container.preferences.normalisationDb.value)
                     },
                     // Off is zero, which is upstream librespot's own behaviour.
                     crossfadeMs = crossfade.durationMs(),
@@ -2608,13 +2661,43 @@ class PlaybackService : MediaLibraryService() {
                     player.currentPosition, playing = player.playWhenReady,
                 )
             } else if (restoreQueue) {
-                val spotifyOnly = sourceOrder == listOf(AudioSource.SPOTIFY)
+                val spotifyOnly = spotifyOnly()
                 if (spotifyOnly) restoreQueue()
                 routeInitialQueue(engine, selectionAtConnect)
                 if (!spotifyOnly && player === engine) restoreQueue()
             }
+            restoreMix()
+            // With Soloist chosen, the queue belongs in front of it: the engine
+            // is up behind it for the catalogue and for Connect.
+            // Not when the song put back is a downloaded one, which plays
+            // from its file on librespot.
+            if (soloistWanted() && playerKind == PlayerKind.SPOTIFY &&
+                !downloadedHere(player.currentMediaItem?.mediaId)
+            ) {
+                swapPlayer(PlayerKind.SOLOIST, restore = true)
+                (player as? app.sonar.playback.soloist.SoloistPlayer)?.preload()
+            }
             observeForSaving()
         }
+    }
+
+    /** The mix of the playlist the queue put back comes from; see Mixes.restore. */
+    private fun restoreMix() {
+        val saved = playbackStore.load() ?: return
+        val uri = saved.contextUri?.takeIf { saved.contextOrdered } ?: return
+        val durations = saved.tracks.filter { it.durationMs > 0 }.associate { it.uri to it.durationMs }
+        scope.launch {
+            val mix = withContext(Dispatchers.IO) { app.sonar.playback.Mixes.restore(this@PlaybackService, uri, durations) }
+                ?: return@launch
+            app.sonar.playback.Mixes.set(uri, mix)
+        }
+    }
+
+    /** librespot's normalisation, for the player built next; see NativeBridge.setNormalisation. */
+    private fun applyNormalisation(db: Int) {
+        val off = db == app.sonar.data.Normalisation.OFF
+        runCatching { NativeBridge.setNormalisation(!off, if (off) 0f else db.toFloat()) }
+            .onFailure { android.util.Log.w(TAG, "normalisation not set: $it") }
     }
 
     /** See the note where it is called, as the engine starts. */
@@ -2840,8 +2923,11 @@ class PlaybackService : MediaLibraryService() {
             } finally {
                 sampledPlayer?.removeListener(listener)
                 val event = sampler.sample(null, false, System.currentTimeMillis(), android.os.SystemClock.elapsedRealtime())
-                if (event != null && owner != null) kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
-                    container.listeningStore.record(event, owner!!)
+                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                    if (event != null && owner != null) container.listeningStore.record(event, owner!!)
+                    // Written now: the service is going, and the process may
+                    // go with it before the store's own delay is up.
+                    container.listeningStore.flush()
                 }
             }
         }

@@ -4,6 +4,8 @@ import app.sonar.audiosource.AudioSource.FLAC
 import app.sonar.audiosource.AudioSource.SPOTIFY
 import app.sonar.audiosource.AudioSource.YOUTUBE_MUSIC
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -14,6 +16,18 @@ class SourcePriorityTest {
         assertEquals(listOf(SPOTIFY, FLAC, YOUTUBE_MUSIC), priority.order)
         assertEquals(emptySet<AudioSource>(), priority.disabled)
         assertEquals(priority.order, priority.effective())
+    }
+
+    @Test
+    fun spotifyOnlyIgnoresSourcesNotSetUp() {
+        val priority = SourcePriority()
+        assertTrue(priority.spotifyOnly(flacReady = false, youtubeAllowed = false))
+        assertFalse(priority.spotifyOnly(flacReady = true, youtubeAllowed = false))
+        assertFalse(priority.spotifyOnly(flacReady = false, youtubeAllowed = true))
+        assertTrue(priority.move(FLAC, 0).spotifyOnly(flacReady = false, youtubeAllowed = false))
+        assertFalse(priority.setEnabled(SPOTIFY, false).spotifyOnly(flacReady = false, youtubeAllowed = false))
+        assertTrue(priority.setEnabled(FLAC, false).spotifyOnly(flacReady = true, youtubeAllowed = false))
+        assertTrue(SourcePriority(disabled = AudioSource.entries.toSet()).spotifyOnly(true, true))
     }
 
     @Test

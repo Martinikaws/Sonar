@@ -871,11 +871,11 @@ fun SonarApp(
     // Once, on the first composition that has a usable Web API session. The
     // ViewModel keeps what it fetched, so navigating away and back does not
     // spend the quota again.
+    // The gateway answers them without one; the Web API, once connected, is
+    // asked for what the gateway will not give.
     LaunchedEffect(webApi.connected) {
-        if (webApi.connected) {
-            viewModel.loadFeed()
-            viewModel.loadProfile()
-        }
+        viewModel.loadFeed()
+        viewModel.loadProfile()
     }
     // Two layers, and the split is not optional.
     //
@@ -4657,6 +4657,20 @@ private fun UpdatePrompt(
     val prefs = remember(context) { app.sonar.data.PreferencesStore(context) }
     val scope = rememberCoroutineScope()
     val state by updater.state.collectAsStateWithLifecycle()
+
+    // The installer's dialog, started from here: a window in front is the one
+    // place Android lets it start from (#229). Collected only while the app is
+    // in front, so a download finished in the background asks on return.
+    val confirm by updater.confirm.collectAsStateWithLifecycle()
+    LaunchedEffect(confirm) {
+        val intent = confirm ?: return@LaunchedEffect
+        updater.confirmShown()
+        runCatching { context.startActivity(intent) }
+            .onFailure {
+                android.util.Log.w("Updater", "installer dialog refused: $it")
+                updater.installAbandoned()
+            }
+    }
 
     // Each time the app comes to the front, not only when it is launched. A
     // music app is rarely launched: it stays in the background between

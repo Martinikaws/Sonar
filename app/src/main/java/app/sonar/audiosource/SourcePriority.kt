@@ -37,6 +37,20 @@ data class SourcePriority(
         order.filterNot { it in disabled }.ifEmpty { listOf(AudioSource.SPOTIFY) }
 
     /**
+     * Spotify is the only source that can actually play: FLAC and YouTube Music
+     * count only once set up, so the default order (all enabled, none set up)
+     * still leaves Soloist free to play.
+     */
+    fun spotifyOnly(flacReady: Boolean, youtubeAllowed: Boolean): Boolean =
+        effective().filter {
+            when (it) {
+                AudioSource.SPOTIFY -> true
+                AudioSource.FLAC -> flacReady
+                AudioSource.YOUTUBE_MUSIC -> youtubeAllowed
+            }
+        } == listOf(AudioSource.SPOTIFY)
+
+    /**
      * The enabled sources still to try for a track once [tried] have failed,
      * best first. FLAC requires a configured provider.
      */

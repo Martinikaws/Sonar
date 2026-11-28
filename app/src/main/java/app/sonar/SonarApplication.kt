@@ -252,6 +252,11 @@ class SonarApplication : Application(), ImageLoaderFactory {
         app.sonar.data.Gateway(pathfinderKeys)
     }
 
+    /** The account's library, gateway first; see [app.sonar.data.SpotifyLibrary]. */
+    val spotifyLibrary: app.sonar.data.SpotifyLibrary by lazy {
+        app.sonar.data.SpotifyLibrary(gateway) { api }
+    }
+
     /** Which stretcher works out speed and pitch. */
     val effectQuality: app.sonar.data.EffectQualityStore by lazy {
         app.sonar.data.EffectQualityStore(this)

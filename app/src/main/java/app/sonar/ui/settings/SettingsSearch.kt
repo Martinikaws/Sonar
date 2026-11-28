@@ -129,6 +129,7 @@ internal val SETTINGS_INDEX: List<SettingsEntry> = listOf(
         SettingsGroup.LISTENING,
     ),
     SettingsEntry("crossfade", R.string.crossfade, null, listOf(R.string.trim_silence, R.string.skip_fade, R.string.automix_title, R.string.automix_editor), SettingsGroup.LISTENING),
+    SettingsEntry("normalisation", R.string.normalisation, null, listOf(R.string.normalisation_note), SettingsGroup.LISTENING),
     SettingsEntry("autoplay", R.string.autoplay, null, listOf(R.string.autoplay_infinite_title), SettingsGroup.LISTENING),
     SettingsEntry("spotify-dj", R.string.spotify_dj, null, listOf(R.string.spotify_dj_title), SettingsGroup.LISTENING),
     SettingsEntry("connected-device-label", R.string.connected_device_label, null, emptyList(), SettingsGroup.LISTENING),

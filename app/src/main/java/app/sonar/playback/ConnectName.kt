@@ -1,0 +1,20 @@
+package app.sonar.playback
+
+import android.content.Context
+
+/**
+ * What this phone is called in Spotify's device list: the phone's own name,
+ * as its owner set it in the system, and the app's after it, so two phones
+ * running Sonar are told apart ("OnePlus 8T (Sonar)" and "Phone (3a) (Sonar)")
+ * rather than both reading "Sonar".
+ */
+object ConnectName {
+    fun of(context: Context): String {
+        val phone = runCatching {
+            android.provider.Settings.Global.getString(context.contentResolver, "device_name")
+        }.getOrNull()?.trim()?.takeIf { it.isNotEmpty() }
+            ?: listOfNotNull(android.os.Build.MANUFACTURER?.replaceFirstChar { it.uppercase() }, android.os.Build.MODEL)
+                .joinToString(" ").trim().ifEmpty { "Android" }
+        return "$phone (Sonar)"
+    }
+}

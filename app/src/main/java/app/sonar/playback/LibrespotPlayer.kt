@@ -395,6 +395,47 @@ class LibrespotPlayer(
         return true
     }
 
+    /** What the other device's volume was just set to, shown until the account says it too. */
+    private var remoteVolumeShown: Int? = null
+    private var remoteVolumeAt = 0L
+
+    private fun setRemoteVolume(steps: Int) {
+        val playback = remote ?: return
+        val target = steps.coerceIn(0, REMOTE_VOLUME_STEPS)
+        remoteVolumeShown = target
+        remoteVolumeAt = System.currentTimeMillis()
+        handler.postDelayed({
+            if (System.currentTimeMillis() - remoteVolumeAt >= REMOTE_VOLUME_HOLD_MS) {
+                remoteVolumeShown = null
+                invalidateState()
+            }
+        }, REMOTE_VOLUME_HOLD_MS)
+        val raw = target * 65535 / REMOTE_VOLUME_STEPS
+        Thread({ app.sonar.data.RemoteConnect.setVolume(playback.deviceId, raw) }, "square-remote-volume").start()
+        invalidateState()
+    }
+
+    private fun currentRemoteVolume(): Int? = remoteVolumeShown
+        ?: remote?.let { playback ->
+            app.sonar.data.RemoteConnect.devices.value.firstOrNull { it.id == playback.deviceId }
+                ?.let { it.volume.toLong().times(REMOTE_VOLUME_STEPS).plus(32767).div(65535).toInt() }
+        }
+
+    override fun handleSetDeviceVolume(deviceVolume: Int, flags: Int): ListenableFuture<*> {
+        setRemoteVolume(deviceVolume)
+        return Futures.immediateVoidFuture()
+    }
+
+    override fun handleIncreaseDeviceVolume(flags: Int): ListenableFuture<*> {
+        currentRemoteVolume()?.let { setRemoteVolume(it + 1) }
+        return Futures.immediateVoidFuture()
+    }
+
+    override fun handleDecreaseDeviceVolume(flags: Int): ListenableFuture<*> {
+        currentRemoteVolume()?.let { setRemoteVolume(it - 1) }
+        return Futures.immediateVoidFuture()
+    }
+
     override fun getState(): State {
         remote?.let { return remoteState(it) }
 
@@ -473,8 +514,24 @@ class LibrespotPlayer(
             }
         }.also { cachedPlaylist = it }
 
-        return State.Builder()
-            .setAvailableCommands(COMMANDS)
+        // The other device's volume, as Spotify's own app offers it: the
+        // session says it is playing remotely, and the phone's volume keys and
+        // its volume panel move that device's volume instead of this phone's.
+        val device = app.sonar.data.RemoteConnect.devices.value.firstOrNull { it.id == playback.deviceId }
+        val volume = remoteVolumeShown ?: device?.let { it.volume.toLong().times(REMOTE_VOLUME_STEPS).plus(32767).div(65535).toInt() }
+        val builder = State.Builder()
+        if (volume != null) {
+            builder
+                .setDeviceInfo(
+                    androidx.media3.common.DeviceInfo.Builder(androidx.media3.common.DeviceInfo.PLAYBACK_TYPE_REMOTE)
+                        .setMinVolume(0)
+                        .setMaxVolume(REMOTE_VOLUME_STEPS)
+                        .build(),
+                )
+                .setDeviceVolume(volume.coerceIn(0, REMOTE_VOLUME_STEPS))
+        }
+        return builder
+            .setAvailableCommands(if (volume != null) REMOTE_COMMANDS else COMMANDS)
             .setPlaybackState(Player.STATE_READY)
             .setPlayWhenReady(playback.playing, Player.PLAY_WHEN_READY_CHANGE_REASON_REMOTE)
             .setContentPositionMs(playback.positionMs)
@@ -1230,10 +1287,12 @@ class LibrespotPlayer(
         // other device alone; see engine.rs.
         // Offline there is no account to take it from: the track plays from
         // the phone, and asking Spotify first only holds it up.
-        if (!OfflineMode.active.value && runCatching { NativeBridge.playbackElsewhere }.getOrDefault(false) &&
-            !playingOnSoloist()
-        ) {
-            android.util.Log.i("SonarPlayer", "taking playback back for this device")
+        // From this app's own Soloist too (a downloaded song, played here):
+        // taking over is an activation, not a transfer, so Soloist's song is
+        // not started here first. Not activated, the load was dropped as one
+        // for a device not playing, and the downloaded song never began.
+        if (!OfflineMode.active.value && runCatching { NativeBridge.playbackElsewhere }.getOrDefault(false)) {
+            android.util.Log.i("SonarPlayer", "taking playback back for this device${if (playingOnSoloist()) " from Soloist" else ""}")
             runCatching { NativeBridge.takeOver() }
                 .onFailure { android.util.Log.w("SonarPlayer", "could not take over", it) }
         }
@@ -2131,6 +2190,11 @@ class LibrespotPlayer(
                                     queue.contextUri?.let {
                                         putString(app.sonar.ui.EXTRA_CONTEXT_URI, it)
                                     }
+                                    // Kept through a handover to Soloist, so a
+                                    // playlist in its own order goes on as that
+                                    // playlist there, not as a list of this app's
+                                    // that no other device can be moved to.
+                                    putBoolean(app.sonar.ui.EXTRA_CONTEXT_ORDERED, queue.contextIsOrdered)
                                     track.artistUri?.let {
                                         putString(app.sonar.ui.EXTRA_ARTIST_URI, it)
                                     }
@@ -2201,6 +2265,19 @@ class LibrespotPlayer(
          */
         const val OWN_QUEUE_MS = 6_000L
 
+
+        /** Steps of another device's volume on the phone's keys, as Spotify's app has it. */
+        const val REMOTE_VOLUME_STEPS = 16
+        const val REMOTE_VOLUME_HOLD_MS = 2_000L
+
+        /** [COMMANDS], and the other device's volume. */
+        val REMOTE_COMMANDS: Player.Commands by lazy {
+            COMMANDS.buildUpon().addAll(
+                Player.COMMAND_GET_DEVICE_VOLUME,
+                Player.COMMAND_SET_DEVICE_VOLUME_WITH_FLAGS,
+                Player.COMMAND_ADJUST_DEVICE_VOLUME_WITH_FLAGS,
+            ).build()
+        }
 
         /** Ducked volume, as a fraction of the current one. */
         const val DUCK_FACTOR = 0.3

@@ -329,7 +329,7 @@ fun SettingsScreen(
     val soloistSetup = if (soloistOffered) rememberSoloistSetup() else null
     val available: (String) -> Boolean = { id ->
         when (id) {
-            "account", "webapi", "tutorial", "audio-sources", "spotify-dj", "connected-device-label", "spicy-lyrics" -> showSpotify
+            "account", "webapi", "tutorial", "audio-sources", "normalisation", "spotify-dj", "connected-device-label", "spicy-lyrics" -> showSpotify
             // YouTube Music's own; the account section draws nothing on Spotify.
             "youtube-account", "youtube-quality" -> !showSpotify
             // Spotify's sign-out, so only while Spotify is the source.
@@ -600,6 +600,10 @@ fun SettingsScreen(
         "crossfade" -> {
             CrossfadeSection(backdrop)
             app.sonar.playback.automix.AutoMixSettings()
+        }
+
+        "normalisation" -> {
+            NormalisationSection()
         }
 
         // Autoplay: automatically append similar tracks when queue reaches the end.
@@ -1769,6 +1773,40 @@ private fun CrossfadeSection(backdrop: Backdrop) {
         RowDivider()
         Text(
             stringResource(R.string.quality_restarts),
+            style = MaterialTheme.typography.bodySmall,
+            color = InkDim,
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
+        )
+    }
+}
+
+@Composable
+private fun NormalisationSection() {
+    val context = LocalContext.current
+    val preferences = remember(context) {
+        (context.applicationContext as app.sonar.SonarApplication).preferences
+    }
+    val chosen by preferences.normalisationDb.collectAsStateWithLifecycle()
+
+    Section(stringResource(R.string.normalisation)) {
+        app.sonar.data.Normalisation.STEPS.forEachIndexed { index, db ->
+            if (index > 0) RowDivider()
+            ChoiceRow(
+                label = stringResource(
+                    when (db) {
+                        app.sonar.data.Normalisation.OFF -> R.string.normalisation_off
+                        -5 -> R.string.normalisation_quiet
+                        0 -> R.string.normalisation_normal
+                        3 -> R.string.normalisation_loud
+                        else -> R.string.normalisation_louder
+                    },
+                ),
+                selected = db == chosen,
+            ) { preferences.setNormalisationDb(db) }
+        }
+        RowDivider()
+        Text(
+            stringResource(R.string.normalisation_note),
             style = MaterialTheme.typography.bodySmall,
             color = InkDim,
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
