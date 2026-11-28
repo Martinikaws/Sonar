@@ -1536,6 +1536,10 @@ fn spawn_event_pump(
                 }
 
                 let (kind, uri, position_ms) = match event {
+                    PlayerEvent::TrackChanged {
+                        audio_item,
+                        is_download,
+                    } => ("track_source", audio_item.uri, i64::from(is_download)),
                     PlayerEvent::Playing {
                         track_id,
                         position_ms,
@@ -1654,7 +1658,7 @@ impl History {
 
     fn observe(&mut self, event: &PlayerEvent) {
         match event {
-            PlayerEvent::TrackChanged { audio_item } => {
+            PlayerEvent::TrackChanged { audio_item, .. } => {
                 // Kept for whenever this track starts; see `durations`. The map
                 // is bounded by the queue, and a queue is not unbounded.
                 if audio_item.duration_ms > 0 {

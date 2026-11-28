@@ -1,6 +1,9 @@
 package app.sonar.data
 
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption.ATOMIC_MOVE
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.time.LocalDate
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CancellationException
@@ -47,8 +50,13 @@ class FollowedReleases(
         return gathered.distinctBy { it.id ?: it.uri }
     }
 
-    suspend fun load(force: Boolean = false, onProgress: (Int, Int) -> Unit = { _, _ -> }): Result {
-        val artists = artists()
+    suspend fun load(
+        force: Boolean = false,
+        accountId: String? = null,
+        onProgress: (Int, Int) -> Unit = { _, _ -> },
+    ): Result {
+        val gatewayArtists = gateway?.followedArtists()
+        val artists = gatewayArtists ?: webArtists()
         val limit = Semaphore(5)
         val completed = AtomicInteger()
         val failed = AtomicInteger()
@@ -81,7 +89,20 @@ class FollowedReleases(
             }.awaitAll().flatten()
         }
         return Result(recentReleases(albums, cutoff, LocalDate.now()), artists.size, failed.get())
-            .also { if (it.failedArtists == 0) save(it) }
+            .also {
+                if (it.failedArtists == 0 && !accountId.isNullOrBlank() &&
+                    (gatewayArtists != null || webAccountMatches(accountId))
+                ) save(accountId, it)
+            }
+    }
+
+    // The Web API can be signed into a different account from playback.
+    private suspend fun webAccountMatches(accountId: String): Boolean = try {
+        api.me().id == accountId
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        false
     }
 
     /**
@@ -110,25 +131,31 @@ class FollowedReleases(
     }
 
     /** What the last load found, to show while the next one runs. */
-    suspend fun saved(): Result? = withContext(Dispatchers.IO) {
+    suspend fun saved(accountId: String): Result? = withContext(Dispatchers.IO) {
+        if (accountId.isBlank()) return@withContext null
         runCatching {
             val saved = json.decodeFromString<Saved>(File(directory, SAVED).readText())
+            if (saved.accountId != accountId) return@withContext null
             Result(recentReleases(saved.albums, LocalDate.now().minusMonths(12), LocalDate.now()), saved.artistCount, 0)
         }.getOrNull()
     }
 
-    private suspend fun save(result: Result) = withContext(Dispatchers.IO) {
+    private suspend fun save(accountId: String, result: Result) = withContext(Dispatchers.IO) {
         runCatching {
             directory.mkdirs()
-            val temp = File(directory, "$SAVED.tmp")
-            temp.writeText(json.encodeToString(Saved.serializer(), Saved(result.albums, result.artistCount)))
-            check(temp.renameTo(File(directory, SAVED)))
+            val temp = File.createTempFile("last-result-", ".tmp", directory)
+            try {
+                temp.writeText(json.encodeToString(Saved.serializer(), Saved(accountId, result.albums, result.artistCount)))
+                Files.move(temp.toPath(), File(directory, SAVED).toPath(), ATOMIC_MOVE, REPLACE_EXISTING)
+            } finally {
+                temp.delete()
+            }
         }
         Unit
     }
 
     @Serializable
-    private data class Saved(val albums: List<AlbumDto>, val artistCount: Int)
+    private data class Saved(val accountId: String, val albums: List<AlbumDto>, val artistCount: Int)
 
     private suspend fun read(id: String): Entry? = withContext(Dispatchers.IO) {
         runCatching { json.decodeFromString<Entry>(file(id).readText()) }.getOrNull()

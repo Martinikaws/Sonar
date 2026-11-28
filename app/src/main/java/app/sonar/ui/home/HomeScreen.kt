@@ -73,6 +73,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.material3.Icon
 import app.sonar.R
+import app.sonar.home.HomeFilter as Feed
+import app.sonar.home.HomeFacet
+import app.sonar.home.HomeSubFilter
+import app.sonar.home.parseHomeFacet
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import app.sonar.data.CatalogPlaylist
 import app.sonar.data.CatalogTrack
 import app.sonar.data.SearchItem
@@ -90,30 +98,6 @@ import app.sonar.ui.theme.Ink
 import app.sonar.ui.theme.InkDim
 import app.sonar.ui.theme.softShadow
 import java.util.Calendar
-
-/**
- * What the feed is showing.
- *
- * Chips rather than a second tab bar: they sit inside the page, under the name,
- * and "Tutto" is genuinely the whole thing rather than a fourth view. The
- * sections keep their order in every one of them, so switching never rearranges
- * what stays on screen.
- *
- * Each chip is a part of Spotify's own home: what it made for the account,
- * what the editors put there, and the rows about an artist; see
- * TabContents.chipOf. There used to be a chip for the library and one for new
- * releases, which were two other tabs of this app said again on this one.
- */
-private enum class Feed(@StringRes val label: Int, val chip: app.sonar.data.TabContents.Chip?) {
-    ALL(R.string.feed_all, null),
-    FOR_YOU(R.string.feed_for_you, app.sonar.data.TabContents.Chip.FOR_YOU),
-    ARTISTS(R.string.artists, app.sonar.data.TabContents.Chip.ARTISTS),
-    /**
-     * Spotify's own podcast page rather than a part of this one: its shows
-     * and episodes come from a home of their own, asked for when the chip is.
-     */
-    PODCASTS(R.string.podcasts, null),
-}
 
 /**
  * The home page.
@@ -182,12 +166,12 @@ fun HomeScreen(
     shelves: List<app.sonar.data.HomeShelf> = emptyList(),
     /** Spotify's shelves are on their way; their outline stands in until then. */
     shelvesLoading: Boolean = false,
-    /** Spotify's podcast home, for the chip of it; asked for with [onWantPodcasts]. */
-    podcastShelves: List<app.sonar.data.HomeShelf> = emptyList(),
-    podcastsLoading: Boolean = false,
-    onWantPodcasts: () -> Unit = {},
+    spotifyHomeSession: Int,
+    loadHomeFacet: suspend (String) -> String?,
     /** An episode tile: played, not opened. */
     onPlayEpisode: (CatalogPlaylist, String) -> Unit = { _, _ -> },
+    followed: MainViewModel.FollowedReleaseState,
+    onLoadFollowed: (Boolean) -> Unit,
 ) {
     if (youtubeMode) {
         YouTubeHome(
@@ -252,17 +236,27 @@ fun HomeScreen(
             // page that forgets which shelf you were reading is the same
             // complaint as one that forgets where you were in it.
             var filterName by rememberSaveable { mutableStateOf(Feed.ALL.name) }
-            // Only the chips that have something under them, and none at all
-            // when Spotify's home did not answer: the page is then this app's
-            // own sections, which is one view with nothing to filter.
-            val chips = remember(shelves) {
-                listOf(Feed.ALL) + Feed.entries.filter { entry ->
-                    entry.chip != null &&
-                        shelves.any { app.sonar.data.TabContents.chipOf(it) == entry.chip }
-                } + listOfNotNull(Feed.PODCASTS.takeIf { shelves.isNotEmpty() })
+            val filter = Feed.entries.firstOrNull { it.name == filterName } ?: Feed.ALL
+            var subFilter by rememberSaveable(spotifyHomeSession) { mutableStateOf<String?>(null) }
+            var retryFacet by remember(spotifyHomeSession) { mutableStateOf(0) }
+            val parent = filter.facet
+            val rootKey = parent?.let { it to null }
+            val facetKey = parent?.let { it to subFilter }
+            var facetPages by remember(spotifyHomeSession) { mutableStateOf(emptyMap<Pair<String, String?>, HomeFacet>()) }
+            var failedFacet by remember(spotifyHomeSession) { mutableStateOf<Pair<String, String?>?>(null) }
+            LaunchedEffect(spotifyHomeSession, facetKey, retryFacet, loadHomeFacet) {
+                if (facetKey != null && rootKey != null && parent != null && facetKey !in facetPages) {
+                    failedFacet = null
+                    val root = facetPages[rootKey] ?: loadHomeFacet(parent)?.let { parseHomeFacet(it, parent) }
+                    if (root != null) facetPages = facetPages + (rootKey to root)
+                    val child = facetKey.second
+                    if (child != null && root != null) {
+                        val page = loadHomeFacet(child)?.let { parseHomeFacet(it, parent) }
+                        if (page != null) facetPages = facetPages + (facetKey to page)
+                    }
+                    if (facetKey !in facetPages) failedFacet = facetKey
+                }
             }
-            val filter = chips.firstOrNull { it.name == filterName } ?: Feed.ALL
-            LaunchedEffect(filter) { if (filter == Feed.PODCASTS) onWantPodcasts() }
             // Read once here rather than inside the rows: the label travels
             // with the play so the player can say where the song came from,
             // and that is a plain string by the time it leaves this screen.
@@ -292,6 +286,19 @@ fun HomeScreen(
             // off screen means measuring items that no longer exist.
             val offline by app.sonar.playback.OfflineMode.active
                 .collectAsStateWithLifecycle()
+            LaunchedEffect(offline, filter) {
+                if (!offline && filter == Feed.ALL) onLoadFollowed(false)
+            }
+            val followedItems = remember(followed.albums) {
+                followed.albums.map { album ->
+                    SearchItem(
+                        uri = album.uri ?: "spotify:album:${album.id}",
+                        title = album.name,
+                        subtitle = album.artists.joinToString(", ") { it.name },
+                        artworkUrl = album.images.firstOrNull()?.url,
+                    )
+                }.distinctBy { it.uri }
+            }
 
             val collapse by remember {
                 derivedStateOf {
@@ -310,10 +317,11 @@ fun HomeScreen(
             // is every time the listener comes back from a playlist. The page
             // they left halfway down was being scrolled to the top under them
             // for a filter that had not changed at all.
-            var scrolledFor by rememberSaveable { mutableStateOf(filter.name) }
-            LaunchedEffect(filter) {
-                if (scrolledFor != filter.name) {
-                    scrolledFor = filter.name
+            val scrollKey = "${filter.name}:${subFilter.orEmpty()}"
+            var scrolledFor by rememberSaveable { mutableStateOf(scrollKey) }
+            LaunchedEffect(scrollKey) {
+                if (scrolledFor != scrollKey) {
+                    scrolledFor = scrollKey
                     listState.scrollToItem(0)
                 }
             }
@@ -334,16 +342,25 @@ fun HomeScreen(
                     highlighted = filter,
                     backdrop = backdrop,
                     topPadding = contentPadding.calculateTopPadding(),
-                    onFilter = { filterName = it.name },
-                    chips = chips,
-                    showFilters = chips.size > 1,
+                    onFilter = {
+                        if (filter == it && subFilter != null) subFilter = null
+                        else {
+                            filterName = (if (filter == it) Feed.ALL else it).name
+                            subFilter = null
+                        }
+                    },
+                    chips = Feed.entries,
+                    showFilters = true,
+                    subFilters = rootKey?.let(facetPages::get)?.children.orEmpty(),
+                    selectedSubFilter = subFilter,
+                    onSubFilter = { subFilter = it.takeUnless { it == subFilter } },
                     onOpenSettings = onOpenSettings,
                     friends = friends,
                     onOpenFriends = onOpenFriends,
                 )
 
                 AnimatedContent(
-                    targetState = filter,
+                    targetState = filter to facetKey,
                     transitionSpec = {
                         // Short and vertical: the sections do not move sideways
                         // when they are filtered, so neither should the change.
@@ -351,7 +368,7 @@ fun HomeScreen(
                             .togetherWith(fadeOut(tween(120)))
                     },
                     label = "feed",
-                ) { current ->
+                ) { (current, shownFacet) ->
                 // "Everything" means Spotify's own home when there is one.
                 //
                 // The sections below it are this app standing in for a home
@@ -424,19 +441,24 @@ fun HomeScreen(
                 // placeholder the page arrived in two halves and shifted under
                 // whatever was being read.
                 run {
-                    val visible = when (filter) {
-                        Feed.ALL -> shelves
-                        Feed.PODCASTS -> podcastShelves
-                        else -> shelves.filter { app.sonar.data.TabContents.chipOf(it) == filter.chip }
-                    }
-                    // Their outline while they come, and a fade as they land
-                    // rather than the rows appearing in one frame.
-                    if (visible.isEmpty() &&
-                        ((shelvesLoading && filter == Feed.ALL) || (podcastsLoading && filter == Feed.PODCASTS))
-                    ) {
+                    val facetPage = shownFacet?.let(facetPages::get)
+                    val visible = if (current == Feed.ALL) shelves else facetPage?.shelves.orEmpty()
+                    val waiting = if (current == Feed.ALL) shelvesLoading else facetPage == null && failedFacet != shownFacet
+                    if (visible.isEmpty() && waiting) {
                         items(SHELF_OUTLINES, key = { "shelf-outline-$it" }, contentType = { "skeleton" }) {
                             Box(Modifier.animateItem(fadeInSpec = null, placementSpec = null, fadeOutSpec = tween(200))) {
                                 SkeletonSection(tileWidth = 152.dp, tileHeight = 152.dp)
+                            }
+                        }
+                    }
+                    if (current != Feed.ALL && visible.isEmpty() && !waiting) {
+                        item(key = "facet-empty") {
+                            Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
+                                val failed = failedFacet == shownFacet
+                                Text(stringResource(if (failed) R.string.home_feed_error else R.string.home_feed_empty))
+                                if (failed) {
+                                    TextButton(onClick = { retryFacet++ }) { Text(stringResource(R.string.retry)) }
+                                }
                             }
                         }
                     }
@@ -473,8 +495,8 @@ fun HomeScreen(
                 }
 
                 if (showForYou && feed.topTracks.isNotEmpty()) {
-                    item(contentType = Feed.FOR_YOU.name) { Heading(stringResource(R.string.on_repeat)) }
-                    item(contentType = Feed.FOR_YOU.name) {
+                    item(contentType = "for-you") { Heading(stringResource(R.string.on_repeat)) }
+                    item(contentType = "for-you") {
                         TrackRow(feed.topTracks) { index ->
                             onPlayFeed(feed.topTracks, index, onRepeatLabel)
                         }
@@ -488,8 +510,8 @@ fun HomeScreen(
                 }
 
                 if (showForYou && feed.jumpBackIn.isNotEmpty()) {
-                    item(contentType = Feed.FOR_YOU.name) { Heading(stringResource(R.string.jump_back_in)) }
-                    item(contentType = Feed.FOR_YOU.name) {
+                    item(contentType = "for-you") { Heading(stringResource(R.string.jump_back_in)) }
+                    item(contentType = "for-you") {
                         Carousel(feed.jumpBackIn, key = { it.uri }) { item ->
                             FeedTile(item) { onOpenItem(item) }
                         }
@@ -504,6 +526,24 @@ fun HomeScreen(
                             key = { it.uri },
                         ) { playlist ->
                             PlaylistTile(playlist) { onOpenPlaylist(playlist) }
+                        }
+                    }
+                }
+
+                if (filter == Feed.ALL && !offline) {
+                    item(key = "followed-heading") {
+                        Heading(stringResource(R.string.followed_home_title))
+                    }
+                    if (followedItems.isNotEmpty()) {
+                        item(key = "followed-releases") {
+                            Carousel(followedItems, key = { it.uri }) { release ->
+                                FeedTile(release) { onOpenItem(release) }
+                            }
+                        }
+                    }
+                    if (followed.albums.isEmpty() || followed.error != null || followed.failedArtists > 0) {
+                        item(key = "followed-status") {
+                            app.sonar.releases.FollowedReleaseStatus(followed, onOpenSettings) { onLoadFollowed(true) }
                         }
                     }
                 }
@@ -533,8 +573,8 @@ fun HomeScreen(
                 // under the catalogue-wide releases on purpose: it is the
                 // narrower of the two and the one worth reaching first.
                 if ((showReleases || showForYou) && feed.fromYourArtists.isNotEmpty()) {
-                    item(contentType = Feed.FOR_YOU.name) { Heading(stringResource(R.string.new_from_your_artists)) }
-                    item(contentType = Feed.FOR_YOU.name) {
+                    item(contentType = "for-you") { Heading(stringResource(R.string.new_from_your_artists)) }
+                    item(contentType = "for-you") {
                         Carousel(feed.fromYourArtists, key = { it.uri }) { item ->
                             FeedTile(item) { onOpenItem(item) }
                         }
@@ -548,7 +588,7 @@ fun HomeScreen(
                 }
 
                 if (showArtists && feed.topArtists.isNotEmpty()) {
-                    item(contentType = Feed.ARTISTS.name) { Heading(stringResource(R.string.listening_artists)) }
+                    item(contentType = "artists") { Heading(stringResource(R.string.listening_artists)) }
                     // A grid rather than a carousel. A row shows three artists
                     // and hides the rest behind a sideways scroll nobody makes
                     // twice; the same list down the page is read at a glance.
@@ -557,7 +597,7 @@ fun HomeScreen(
                     items(
                         feed.topArtists.chunked(ARTIST_COLUMNS),
                         key = { row -> row.first().uri },
-                        contentType = { Feed.ARTISTS.name },
+                        contentType = { "artists" },
                     ) { row ->
                         Row(
                             Modifier
@@ -595,8 +635,8 @@ fun HomeScreen(
                 // Last, because it is the least of a surprise: everything above
                 // changes month to month, this is the account's own constants.
                 if (showForYou && feed.allTimeTracks.isNotEmpty()) {
-                    item(contentType = Feed.FOR_YOU.name) { Heading(stringResource(R.string.all_time_favourites)) }
-                    item(contentType = Feed.FOR_YOU.name) {
+                    item(contentType = "for-you") { Heading(stringResource(R.string.all_time_favourites)) }
+                    item(contentType = "for-you") {
                         TrackRow(feed.allTimeTracks) { index ->
                             onPlayFeed(feed.allTimeTracks, index, classicsLabel)
                         }
@@ -658,6 +698,9 @@ private fun Header(
      * whatever shelves the service itself sent.
      */
     showFilters: Boolean = true,
+    subFilters: List<HomeSubFilter> = emptyList(),
+    selectedSubFilter: String? = null,
+    onSubFilter: (String) -> Unit = {},
 ) {
     Column(
         modifier
@@ -808,12 +851,20 @@ private fun Header(
 
         // The chips carry the header's bottom margin with them; without them
         // the list would start against the app's own name.
-        if (showFilters) FilterRow(highlighted, chips, backdrop, onFilter) else Spacer(Modifier.height(16.dp))
+        if (showFilters) FilterRow(highlighted, chips, backdrop, onFilter, subFilters, selectedSubFilter, onSubFilter) else Spacer(Modifier.height(16.dp))
     }
 }
 
 @Composable
-private fun FilterRow(selected: Feed, chips: List<Feed>, backdrop: Backdrop, onSelect: (Feed) -> Unit) {
+private fun FilterRow(
+    selected: Feed,
+    chips: List<Feed>,
+    backdrop: Backdrop,
+    onSelect: (Feed) -> Unit,
+    subFilters: List<HomeSubFilter>,
+    selectedSubFilter: String?,
+    onSubFilter: (String) -> Unit,
+) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -825,6 +876,16 @@ private fun FilterRow(selected: Feed, chips: List<Feed>, backdrop: Backdrop, onS
                 label = stringResource(entry.label),
                 selected = entry == selected,
                 onClick = { onSelect(entry) },
+                modifier = Modifier.minimumInteractiveComponentSize().semantics { this.selected = entry == selected },
+            )
+        }
+        items(subFilters, key = { "sub:${it.id}" }) { entry ->
+            app.sonar.ui.components.FilterChip(
+                backdrop = backdrop,
+                label = entry.label,
+                selected = entry.id == selectedSubFilter,
+                onClick = { onSubFilter(entry.id) },
+                modifier = Modifier.minimumInteractiveComponentSize().semantics { this.selected = entry.id == selectedSubFilter },
             )
         }
     }

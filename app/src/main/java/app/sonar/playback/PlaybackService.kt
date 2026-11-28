@@ -2797,8 +2797,10 @@ class PlaybackService : MediaLibraryService() {
                         artworkUrl = metadata?.artworkUri?.toString(),
                     ) else null
                     val tick = android.os.SystemClock.elapsedRealtime()
-                    val event = sampler.sample(track, player.isPlaying && !remote, System.currentTimeMillis(), tick)
-                    if (event != null && (tick - lastSaved >= 10_000 || previouslyPlaying != player.isPlaying || event.track.uri != track?.uri)) {
+                    val downloaded = track != null && (player as? LibrespotPlayer)?.downloadedPlaybackUri == track.uri
+                    val event = sampler.sample(track, player.isPlaying && !remote, System.currentTimeMillis(), tick, downloaded)
+                    if (event != null && (tick - lastSaved >= 10_000 || previouslyPlaying != player.isPlaying ||
+                            event.track.uri != track?.uri || event.downloaded != downloaded)) {
                         account?.let { container.listeningStore.record(event, it) }
                         lastSaved = tick
                     }

@@ -317,6 +317,17 @@ private fun SourceRow(name: String, status: String?, selected: Boolean, enabled:
  */
 @Composable
 fun LyricsCreditLine(credit: app.sonar.data.LyricsCredit, modifier: Modifier = Modifier) {
+    val providerUrl = credit.providerUrl
+    if (providerUrl != null) {
+        val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+        androidx.compose.material3.TextButton(
+            onClick = { runCatching { uriHandler.openUri(providerUrl) } },
+            modifier = modifier,
+        ) {
+            Text(stringResource(R.string.followed_open_genius), color = GlassInk)
+        }
+        return
+    }
     val from = stringResource(R.string.lyrics_from, credit.provider)
     val uploadedBy = stringResource(R.string.lyrics_uploaded_by)
     val madeBy = stringResource(R.string.lyrics_made_by)

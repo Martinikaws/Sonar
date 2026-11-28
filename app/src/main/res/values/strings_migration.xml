@@ -1,0 +1,5 @@
+<resources>
+    <string name="migration_existing_logins">Sonar keeps your existing sign-ins.</string>
+    <string name="migration_local_audio">To play imported local playlists, give Sonar access to your audio files before importing.</string>
+    <string name="migration_history_account">To import account history, sign in to the matching Spotify account in Sonar and run the import again.</string>
+</resources>

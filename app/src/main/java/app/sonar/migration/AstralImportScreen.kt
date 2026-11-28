@@ -140,6 +140,8 @@ internal fun AstralImportScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(stringResource(R.string.fix2_import_instructions))
+            Text(stringResource(R.string.migration_existing_logins))
+            Text(stringResource(R.string.migration_local_audio))
             Button(
                 enabled = !busy,
                 modifier = Modifier.heightIn(min = 48.dp),
@@ -213,6 +215,9 @@ private fun ImportSummary(result: AstralImport.Result) {
             style = MaterialTheme.typography.titleMedium,
         )
         Text(stringResource(R.string.fix2_import_files_count, result.filesImported, result.filesSkipped))
+        if (result.historyNeedsAccount) {
+            Text(stringResource(R.string.migration_history_account))
+        }
         Text(stringResource(
             R.string.fix2_import_settings_count,
             result.preferencesImported, result.preferencesSkipped, result.preferenceFilesSkipped,

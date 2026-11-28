@@ -1852,8 +1852,15 @@ class LibrespotPlayer(
         NativeBridge.setMixPlan(transition?.planJson().orEmpty())
     }
 
+    internal var downloadedPlaybackUri: String? = null
+        private set
+
     private fun applyEvent(type: String, uri: String, eventPositionMs: Long) {
         if (released) return
+        if (type == "track_source") {
+            downloadedPlaybackUri = uri.takeIf { eventPositionMs != 0L }
+            return
+        }
         if (nativePlaybackHeld && type != "cluster") {
             if (type == "playing") engine("pause for fallback") { NativeBridge.pause() }
             return

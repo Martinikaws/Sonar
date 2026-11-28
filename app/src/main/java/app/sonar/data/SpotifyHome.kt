@@ -44,9 +44,7 @@ object SpotifyHome {
     private const val BASELINE = "HomeFeedBaselineSectionData"
 
     /**
-     * @param podcasts whether shows and episodes are tiles too. Off for the
-     *   music home, where they used to be dropped; on for the Podcast chip,
-     *   which is nothing but them.
+     * @param podcasts whether the selected feed includes shows and episodes.
      */
     fun parse(json: String, podcasts: Boolean = false): List<HomeShelf> = runCatching {
         val sections = JSONObject(json)
@@ -131,8 +129,6 @@ object SpotifyHome {
                 ),
             )
 
-            // Shows open as their list of episodes and an episode plays; both
-            // only on the podcast page, where they are what was asked for.
             "Podcast" -> if (podcasts) SpotifyPodcasts.showTile(data) else null
             "Episode" -> if (podcasts) SpotifyPodcasts.episodeTile(data) else null
 

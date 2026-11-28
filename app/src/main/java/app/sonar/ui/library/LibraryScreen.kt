@@ -187,7 +187,6 @@ fun LibraryScreen(
     onOpenRadio: (() -> Unit)? = null,
     listeningEvents: List<app.sonar.data.ListeningEvent>? = null,
     /** Whether those were played from Spotify, rather than YouTube Music. */
-    listeningFromSpotify: Boolean = true,
     backdrop: Backdrop,
 ) {
     when (state) {
@@ -377,9 +376,8 @@ fun LibraryScreen(
                 label = "libraryRecap",
             ) { showRecap ->
             if (showRecap) {
-                MonthlyListeningPage(
+                app.sonar.recap.ListeningRecapPage(
                     events = listeningEvents.orEmpty(),
-                    fromSpotify = listeningFromSpotify,
                     backdrop = backdrop,
                     contentPadding = contentPadding,
                     onBack = { recapOpen = false },
@@ -769,7 +767,7 @@ private fun Header(
                             contentHeight = 42.dp, contentPadding = 0.dp,
                         ) {
                             Icon(Lucide.ChartNoAxesColumn,
-                                contentDescription = stringResource(R.string.recap_title),
+                                contentDescription = stringResource(R.string.home_recap_title),
                                 tint = Ink, modifier = Modifier.size(20.dp))
                         }
                     }

@@ -43,6 +43,10 @@ class ListeningStore(context: Context) {
 
     private val mutable = MutableStateFlow(account?.let(::read).orEmpty())
     val events = mutable.asStateFlow()
+    private val recap = MutableStateFlow(readRecap())
+    val recapEvents = recap.asStateFlow()
+
+    private fun readRecap(): List<ListeningEvent> = account?.let(::read).orEmpty() + read(YOUTUBE_OWNER)
 
     /** Who a source's listens are filed under; null while Spotify has no account. */
     fun ownerOf(source: Source): String? = when (source) {
@@ -63,12 +67,20 @@ class ListeningStore(context: Context) {
         prefs.edit().putString("account", id).apply { if (old != null) remove(key(old)) }.apply()
         old?.let(cache::remove)
         if (source == Source.SPOTIFY) mutable.value = read(id)
+        recap.value = readRecap()
     } }
 
     suspend fun record(event: ListeningEvent, owner: String) = withContext(Dispatchers.IO) { lock.withLock {
         if (!known(owner)) return@withLock
         save(owner, ListeningHistory.record(read(owner), event))
     } }
+
+    internal suspend fun importMeasured(imported: List<ListeningEvent>, owner: String): Boolean =
+        withContext(Dispatchers.IO) { lock.withLock {
+            if (account != owner) return@withLock false
+            save(owner, imported.fold(read(owner), ListeningHistory::record))
+            true
+        } }
 
     suspend fun import(plays: List<Pair<CatalogTrack, Long>>, owner: String) = withContext(Dispatchers.IO) { lock.withLock {
         if (!known(owner)) return@withLock
@@ -100,6 +112,7 @@ class ListeningStore(context: Context) {
         prefs.edit().remove("account").apply { if (old != null) remove(key(old)) }.apply()
         old?.let(cache::remove)
         if (source == Source.SPOTIFY) mutable.value = emptyList()
+        recap.value = readRecap()
     } }
 
     private fun known(owner: String) = owner == YOUTUBE_OWNER || owner == account
@@ -116,6 +129,7 @@ class ListeningStore(context: Context) {
         cache[owner] = events
         prefs.edit().putString(key(owner), json.encodeToString(serializer, events)).apply()
         if (ownerOf(source) == owner) mutable.value = events
+        recap.value = readRecap()
     }
 
     companion object {

@@ -1,0 +1,18 @@
+﻿<resources>
+    <string name="home_music">Music</string>
+    <string name="home_feed_empty">No recommendations here yet.</string>
+    <string name="home_feed_error">Couldn’t load recommendations.</string>
+    <string name="home_recap_title">Listening recap</string>
+    <string name="home_recap_month">Month</string>
+    <string name="home_recap_year">Year</string>
+    <string name="home_recap_all">All time</string>
+    <string name="home_recap_previous_year">Previous year</string>
+    <string name="home_recap_next_year">Next year</string>
+    <string name="home_recap_top_track">Most played</string>
+    <string name="home_recap_empty">No listens in this period.</string>
+    <string name="home_recap_albums">Most played albums</string>
+    <string name="home_recap_sources">Listening by source</string>
+    <string name="home_recap_other">Other</string>
+    <string name="home_recap_source_total">%1$d plays · %2$d min</string>
+    <string name="home_recap_history_note">Includes saved listens and available account history. Only Sonar measures listening time.</string>
+</resources>

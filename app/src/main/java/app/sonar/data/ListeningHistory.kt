@@ -1,5 +1,7 @@
 package app.sonar.data
 
+import app.sonar.recap.RecapPeriod
+import app.sonar.recap.listeningRecap
 import kotlinx.serialization.Serializable
 import java.time.Instant
 import java.time.YearMonth
@@ -15,6 +17,7 @@ data class ListeningEvent(
     val qualified: Boolean = false,
     val measuredMonths: Map<String, Long> = emptyMap(),
     val spotifyAt: Long? = null,
+    val downloaded: Boolean = false,
 )
 
 data class MonthlyListening(
@@ -46,7 +49,8 @@ object ListeningHistory {
     fun merge(events: List<ListeningEvent>, track: CatalogTrack, at: Long): List<ListeningEvent> {
         if (events.any { it.spotifyAt == at && it.track.uri == track.uri }) return events
         // Match a local play only once. Repeated listens to the same song stay distinct.
-        val match = events.filter { it.spotifyAt == null && it.id.startsWith("local:") &&
+        val match = events.filter { it.spotifyAt == null &&
+            (it.id.startsWith("local:") || it.id.startsWith("astral:")) &&
             it.track.uri == track.uri && at in (it.startedAt - 15_000)..(it.endedAt + 15_000) }
             .minByOrNull { kotlin.math.abs(it.startedAt - at) }
         return if (match != null) events.map {
@@ -72,16 +76,8 @@ object ListeningHistory {
     }
 
     fun summarize(events: List<ListeningEvent>, month: YearMonth, zone: ZoneId = ZoneId.systemDefault()): MonthlyListening {
-        val start = month.atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
-        val end = month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
-        val counted = events.filter { it.qualified && (it.spotifyAt ?: it.startedAt) in start until end }
-        val tracks = counted.groupBy { it.track.uri }.values.map { it.last().track to it.size }
-            .sortedWith(compareByDescending<Pair<CatalogTrack, Int>> { it.second }.thenBy { it.first.name })
-        val artists = counted.flatMap { event ->
-            event.track.artists.map { it.name }.ifEmpty { listOf(event.track.artist) }.filter { it.isNotBlank() }.distinct()
-        }.groupingBy { it }.eachCount().toList().sortedWith(compareByDescending<Pair<String, Int>> { it.second }.thenBy { it.first })
-        val ms = events.sumOf { it.measuredMonths[month.toString()] ?: 0L }
-        return MonthlyListening(month, counted.size, ms / 60_000, tracks, artists)
+        val recap = listeningRecap(events, RecapPeriod.MONTH, month, zone)
+        return MonthlyListening(month, recap.plays, recap.minutes, recap.tracks, recap.artists)
     }
 }
 
@@ -90,16 +86,16 @@ class ListeningSampler {
     private var event: ListeningEvent? = null
     private var lastTick: Long? = null
     private var wasPlaying = false
-    fun sample(track: CatalogTrack?, playing: Boolean, now: Long, tick: Long): ListeningEvent? {
+    fun sample(track: CatalogTrack?, playing: Boolean, now: Long, tick: Long, downloaded: Boolean = false): ListeningEvent? {
         val previous = event
-        if (track == null || previous?.track?.uri != track.uri) {
-            event = track?.takeIf { playing }?.let { ListeningEvent("local:$now:${it.uri}", it, now) }
+        if (track == null || previous == null || previous.track.uri != track.uri || previous.downloaded != downloaded) {
+            event = track?.takeIf { playing }?.let { ListeningEvent("local:$now:${it.uri}", it, now, downloaded = downloaded) }
             lastTick = tick
             wasPlaying = playing
             return previous
         }
         val delta = if (playing && wasPlaying) (tick - (lastTick ?: tick)).coerceIn(0, 2_000) else 0
-        val updated = (previous ?: return null).copy(track = track, endedAt = now, listenedMs = previous.listenedMs + delta)
+        val updated = previous.copy(track = track, endedAt = now, listenedMs = previous.listenedMs + delta)
         val threshold = if (track.durationMs > 0) minOf(track.durationMs / 2, 240_000) else 30_000
         val measured = previous.measuredMonths.toMutableMap()
         if (delta > 0) {

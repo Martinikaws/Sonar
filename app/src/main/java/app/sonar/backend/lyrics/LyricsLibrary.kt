@@ -29,6 +29,7 @@ enum class LyricsSource(val label: String) {
     NETEASE("NetEase"),
     KUGOU("KuGou"),
     LYRICS_OVH("Lyrics.ovh"),
+    GENIUS("Genius"),
 }
 
 /** The song the words are asked for. */
@@ -100,7 +101,7 @@ object LyricsLibrary {
                 LyricsSource.AMLL, LyricsSource.SPICY_LYRICS.takeIf { SpicyLyrics.enabled },
                 LyricsSource.APPLE_MUSIC, LyricsSource.BETTER_LYRICS,
                 LyricsSource.SPOTIFY, LyricsSource.LRCLIB, LyricsSource.NETEASE,
-                LyricsSource.KUGOU, LyricsSource.LYRICS_OVH,
+                LyricsSource.KUGOU, LyricsSource.LYRICS_OVH, LyricsSource.GENIUS,
             )
         } else {
             // The phone's own song's own words first: whoever wrote an LRC for
@@ -108,7 +109,7 @@ object LyricsLibrary {
             listOfNotNull(
                 LyricsSource.LOCAL_FILE.takeIf { LocalLyrics.handles(uri) },
                 LyricsSource.APPLE_MUSIC, LyricsSource.BETTER_LYRICS, LyricsSource.LRCLIB,
-                LyricsSource.NETEASE, LyricsSource.KUGOU, LyricsSource.LYRICS_OVH,
+                LyricsSource.NETEASE, LyricsSource.KUGOU, LyricsSource.LYRICS_OVH, LyricsSource.GENIUS,
             )
         }
 
@@ -130,6 +131,7 @@ object LyricsLibrary {
             LyricsSource.NETEASE -> NetEase.lyrics(title, artist, duration)
             LyricsSource.KUGOU -> KuGou.lyrics(title, artist, duration)
             LyricsSource.LYRICS_OVH -> LyricsOvh.lyrics(title, artist, duration)
+            LyricsSource.GENIUS -> app.sonar.lyrics.GeniusLyrics.lyrics(title, artist)
         }?.copy(source = source.name)
     }
 

@@ -1,0 +1,18 @@
+﻿<resources>
+    <string name="home_music">Musica</string>
+    <string name="home_feed_empty">Per ora non ci sono consigli.</string>
+    <string name="home_feed_error">Impossibile caricare i consigli.</string>
+    <string name="home_recap_title">Riepilogo degli ascolti</string>
+    <string name="home_recap_month">Mese</string>
+    <string name="home_recap_year">Anno</string>
+    <string name="home_recap_all">Sempre</string>
+    <string name="home_recap_previous_year">Anno precedente</string>
+    <string name="home_recap_next_year">Anno successivo</string>
+    <string name="home_recap_top_track">Il brano più ascoltato</string>
+    <string name="home_recap_empty">Nessun ascolto in questo periodo.</string>
+    <string name="home_recap_albums">Album più ascoltati</string>
+    <string name="home_recap_sources">Ascolti per fonte</string>
+    <string name="home_recap_other">Altro</string>
+    <string name="home_recap_source_total">%1$d ascolti · %2$d min</string>
+    <string name="home_recap_history_note">Include gli ascolti salvati e la cronologia disponibile. I minuti sono misurati in Sonar.</string>
+</resources>

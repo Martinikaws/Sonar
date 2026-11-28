@@ -5,17 +5,18 @@ import android.net.Uri
 import android.util.Xml
 import android.webkit.CookieManager
 import app.sonar.SonarApplication
+import app.sonar.data.ListeningEvent
+import app.sonar.data.LocalLibrary
 import app.sonar.data.PreferencesStore
+import app.sonar.library.LocalPlaylist
 import java.io.ByteArrayOutputStream
 import java.io.EOFException
-import java.io.File
 import java.io.IOException
 import java.io.Serializable
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.nio.file.FileAlreadyExistsException
-import java.nio.file.Files
 import java.time.Instant
+import java.time.ZoneId
 import java.util.zip.ZipException
 import java.util.zip.ZipInputStream
 import kotlin.coroutines.resume
@@ -45,6 +46,7 @@ internal object AstralImport {
         val cookiesSkipped: Int,
         val cookieRecordsSkipped: Int,
         val cookiesSkippedForExistingSession: Int,
+        val historyNeedsAccount: Boolean,
     ) : Serializable
 
     private val mutex = Mutex()
@@ -59,9 +61,6 @@ internal object AstralImport {
         "prefs/playback_service.xml" to mapOf("keep_playing_on_close" to PreferencesStore::setKeepPlayingOnClose),
     )
 
-    // Only add paths whose on-disk schema Sonar can read directly.
-    private val compatibleFiles = emptySet<String>()
-
     private val spotifyUrls = setOf(
         "https://open.spotify.com/", "https://accounts.spotify.com/",
         "https://open.spotify.com/login", "https://accounts.spotify.com/login",
@@ -75,11 +74,22 @@ internal object AstralImport {
         "domain", "path", "expires", "max-age", "secure", "httponly", "samesite", "partitioned",
     )
 
-    private data class Preference(val apply: (PreferencesStore, Boolean) -> Unit, val value: Boolean)
+    internal data class Preference(val apply: (PreferencesStore, Boolean) -> Unit, val value: Boolean)
     private data class CookieRecord(val url: String, val header: String, val profile: String?)
-    private data class Cookie(val url: String, val value: String)
+    internal data class Cookie(val url: String, val value: String)
     private data class CookieInstall(val accepted: Int, val skippedForSession: Int)
-    private data class CookiePlan(val values: Set<Cookie>, val skippedPairs: Int, val skippedRecords: Int)
+    internal data class CookiePlan(val values: Set<Cookie>, val skippedPairs: Int, val skippedRecords: Int)
+    internal data class Archive(
+        val files: Int,
+        val preferences: List<Preference>,
+        val preferencesSkipped: Int,
+        val preferenceFilesSkipped: Int,
+        val cookies: CookiePlan,
+        val playlists: List<LocalPlaylist>?,
+        val history: List<ListeningEvent>,
+        val historyFiles: Int,
+        val hasHistory: Boolean,
+    )
 
     /** Takes ownership of the passphrase, including when opening the document fails. */
     suspend fun importDocument(context: Context, uri: Uri, passphrase: CharArray): Result {
@@ -102,8 +112,42 @@ internal object AstralImport {
     }
 
     private suspend fun restore(application: SonarApplication, zip: ByteArray): Result {
+        val owner = application.listeningStore.account?.takeIf { application.spotifySignedIn }
+        val archive = readArchive(zip, owner)
+        currentCoroutineContext().ensureActive()
+        var filesImported = 0
+        archive.playlists?.let { lists ->
+            val store = application.localPlaylists
+            val deviceTracks = if (lists.any { it.tracks.isNotEmpty() } && LocalLibrary.granted(application)) {
+                LocalLibrary.tracks(application)
+            } else emptyList()
+            store.mergeImported(lists, deviceTracks)
+            filesImported++
+        }
+        val restoredHistory = owner != null && archive.historyFiles > 0 &&
+            application.listeningStore.importMeasured(archive.history, owner)
+        if (restoredHistory) {
+            filesImported += archive.historyFiles
+        }
+        val plan = archive.cookies
+        val (accepted, skippedForSession) = withContext(Dispatchers.Main) {
+            val installed = installCookies(application, plan.values)
+            archive.preferences.forEach { it.apply(application.preferences, it.value) }
+            installed
+        }
+        return Result(
+            filesImported, archive.files - filesImported,
+            archive.preferences.size, archive.preferencesSkipped, archive.preferenceFilesSkipped,
+            accepted, plan.skippedPairs + plan.values.size - accepted, plan.skippedRecords, skippedForSession,
+            archive.hasHistory && !restoredHistory,
+        )
+    }
+
+    internal fun readArchive(zip: ByteArray, owner: String?, zone: ZoneId = ZoneId.systemDefault()): Archive {
         val preferences = mutableListOf<Preference>()
         val files = mutableMapOf<String, ByteArray>()
+        val key = owner?.let(AstralDataConverters::ownerKey)
+        val parked = key?.let(AstralDataConverters::parkedHistory)
         var preferencesSkipped = 0
         var preferenceFilesSkipped = 0
         var manifest: ByteArray? = null
@@ -112,7 +156,9 @@ internal object AstralImport {
         val inventory = try {
             AstralImportZip.read(zip, retain = { name ->
                 name == "manifest.json" || name == "cookies.json" ||
-                    name in settings || name.removePrefix("files/") in compatibleFiles
+                    name in settings || name == AstralDataConverters.PLAYLISTS ||
+                    (key != null && (name == parked || name == AstralDataConverters.HISTORY ||
+                        name == AstralDataConverters.HISTORY_OWNER))
             }) { name, content ->
                 when {
                     name == "manifest.json" -> manifest = content
@@ -123,7 +169,7 @@ internal object AstralImport {
                         if (preferences.size == before) preferenceFilesSkipped++
                     }
                     name.startsWith("prefs/") -> preferenceFilesSkipped++
-                    content != null -> files[name.removePrefix("files/")] = content
+                    content != null -> files[name] = content
                     else -> Unit
                 }
             }.also { names ->
@@ -140,18 +186,24 @@ internal object AstralImport {
         } catch (_: IllegalArgumentException) {
             throw InvalidAstralExport()
         }
-        val plan = cookies ?: throw InvalidAstralExport()
-        currentCoroutineContext().ensureActive()
-        val filesImported = files.count { (name, content) -> restoreFile(application.filesDir, name, content) }
-        val (accepted, skippedForSession) = withContext(Dispatchers.Main) {
-            val installed = installCookies(plan.values)
-            preferences.forEach { it.apply(application.preferences, it.value) }
-            installed
-        }
-        return Result(
-            filesImported, inventory.count { it.startsWith("files/") } - filesImported,
-            preferences.size, preferencesSkipped, preferenceFilesSkipped,
-            accepted, plan.skippedPairs + plan.values.size - accepted, plan.skippedRecords, skippedForSession,
+        val activeOwner = files[AstralDataConverters.HISTORY_OWNER]?.toString(Charsets.UTF_8)?.trim()
+        val historyFiles = listOfNotNull(
+            files[AstralDataConverters.HISTORY].takeIf { key != null && key == activeOwner },
+            parked?.let(files::get),
+        )
+        return Archive(
+            inventory.count { it.startsWith("files/") }, preferences, preferencesSkipped, preferenceFilesSkipped,
+            cookies ?: throw InvalidAstralExport(),
+            files[AstralDataConverters.PLAYLISTS]?.let {
+                try {
+                    AstralDataConverters.playlists(it)
+                } catch (_: JSONException) {
+                    null
+                }
+            },
+            historyFiles.flatMap { AstralDataConverters.history(it, zone) }.distinctBy { it.id },
+            historyFiles.size,
+            inventory.any { it == AstralDataConverters.HISTORY || it.startsWith("files/listen-history/") },
         )
     }
 
@@ -265,14 +317,18 @@ internal object AstralImport {
         return CookiePlan(values, skippedPairs, skippedRecords)
     }
 
-    private suspend fun installCookies(cookies: Set<Cookie>): CookieInstall {
+    private suspend fun installCookies(application: SonarApplication, cookies: Set<Cookie>): CookieInstall {
         if (cookies.isEmpty()) return CookieInstall(0, 0)
         return try {
             val manager = CookieManager.getInstance()
             // Check all related origins before replaying any cookie for that service.
             val occupiedUrls = listOf(spotifyUrls, youtubeUrls)
                 .filter { urls -> urls.any { !manager.getCookie(it).isNullOrBlank() } }
-                .flatten().toSet()
+                .flatten().toMutableSet()
+            if (application.spotifySignedIn || application.webApi.isReady || application.spotifySdkAccount.tokens.isLoggedIn) {
+                occupiedUrls.addAll(spotifyUrls)
+            }
+            if (application.youtubeAccount.isSignedIn) occupiedUrls.addAll(youtubeUrls)
             val (preserved, pending) = cookies.partition { it.url in occupiedUrls }
             if (pending.isEmpty()) return CookieInstall(0, preserved.size)
             var accepted = 0
@@ -295,28 +351,6 @@ internal object AstralImport {
         }
     }
 
-    private fun restoreFile(root: File, name: String, content: ByteArray): Boolean {
-        val target = File(root, name)
-        val canonicalRoot = root.canonicalFile.toPath()
-        val destination = target.canonicalFile.toPath()
-        if (!destination.startsWith(canonicalRoot) ||
-            destination != canonicalRoot.resolve(name) || Files.exists(target.toPath())
-        ) return false
-        val parent = target.parentFile ?: throw InvalidAstralExport()
-        if (!parent.isDirectory && !parent.mkdirs() && !parent.isDirectory) {
-            throw IOException("Cannot create import directory")
-        }
-        val staged = File.createTempFile("astral-import-", ".tmp", parent)
-        return try {
-            staged.writeBytes(content)
-            Files.move(staged.toPath(), target.toPath())
-            true
-        } catch (_: FileAlreadyExistsException) {
-            false
-        } finally {
-            Files.deleteIfExists(staged.toPath())
-        }
-    }
 }
 
 /** ZIP validation is independent of Android so malformed archives can be tested on the JVM. */

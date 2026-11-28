@@ -2,6 +2,7 @@ package app.sonar.library
 
 import android.content.Context
 import app.sonar.data.CatalogTrack
+import app.sonar.data.LocalLibrary
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,6 +31,27 @@ data class LocalPlaylists(val lists: List<LocalPlaylist> = emptyList()) {
     fun remove(id: String, trackUri: String): LocalPlaylists =
         edit(id) { it.copy(tracks = it.tracks.filterNot { t -> t.uri == trackUri }) }
 
+    internal fun mergeImported(
+        id: String,
+        playlist: LocalPlaylist,
+        deviceTracks: List<CatalogTrack>,
+    ): LocalPlaylists {
+        fun resolve(tracks: List<CatalogTrack>) = tracks.map { track ->
+            val match = if (LocalLibrary.isSpotifyLocal(track.uri)) LocalLibrary.match(track, deviceTracks) else null
+            if (match != null) track.copy(uri = match.uri, localFile = match.localFile) else track
+        }.distinctBy { it.uri }
+        val resolved = resolve(playlist.tracks)
+        val tags = playlist.tracks.map(LocalLibrary::spotifyUri)
+        val resolvedTags = resolved.map(LocalLibrary::spotifyUri)
+        val existing = lists.firstOrNull { list ->
+            list.name == playlist.name && list.tracks.all {
+                LocalLibrary.isLocal(it.uri) || LocalLibrary.isSpotifyLocal(it.uri)
+            } && list.tracks.map(LocalLibrary::spotifyUri).let { it == tags || it == resolvedTags }
+        }
+        return if (existing == null) create(id, playlist.name, resolved)
+        else edit(existing.id) { it.copy(tracks = resolve(it.tracks)) }
+    }
+
     private fun edit(id: String, change: (LocalPlaylist) -> LocalPlaylist) =
         copy(lists = lists.map { if (it.id == id) change(it) else it })
 }
@@ -46,6 +68,12 @@ class LocalPlaylistStore(context: Context) {
     fun delete(id: String) = update { it.delete(id) }
     fun add(id: String, track: CatalogTrack) = update { it.add(id, track) }
     fun remove(id: String, trackUri: String) = update { it.remove(id, trackUri) }
+
+    internal fun mergeImported(playlists: List<LocalPlaylist>, deviceTracks: List<CatalogTrack>) = update { current ->
+        playlists.fold(current) { state, playlist ->
+            state.mergeImported(UUID.randomUUID().toString(), playlist, deviceTracks)
+        }
+    }
 
     @Synchronized
     private fun update(change: (LocalPlaylists) -> LocalPlaylists) {

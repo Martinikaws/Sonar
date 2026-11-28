@@ -22,6 +22,7 @@ use crate::{convert::i24, player::duration_to_coefficient};
 #[derive(Clone)]
 pub struct DownloadedTrack {
     pub path: PathBuf,
+    pub is_download: bool,
     /// `None` for the rare unencrypted file, matching `AudioDecrypt`'s own
     /// convention that a missing key means "pass the bytes through".
     pub key: Option<[u8; 16]>,

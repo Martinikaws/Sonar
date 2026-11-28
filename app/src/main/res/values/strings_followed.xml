@@ -1,0 +1,5 @@
+<resources>
+    <string name="followed_home_title">New from Artists You Follow</string>
+    <string name="followed_loading">Loading releases…</string>
+    <string name="followed_open_genius">Open lyrics on Genius</string>
+</resources>

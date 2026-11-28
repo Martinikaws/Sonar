@@ -179,7 +179,7 @@ fun SettingsScreen(
     onYouTubeSignIn: () -> Unit = {},
     /** After switching channel: the library and the home belong to the new one. */
     onYouTubeChannelChange: () -> Unit = {},
-    onAstralImport: () -> Unit = {},
+    onAstralImport: () -> Unit,
     onPlayFlac: (List<app.sonar.data.CatalogTrack>, Int) -> Unit = { _, _ -> },
 ) {
     val ready = state as? MainViewModel.UiState.Ready

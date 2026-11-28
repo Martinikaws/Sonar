@@ -297,7 +297,7 @@ fn lookup_download(track_id: &SpotifyId) -> Option<DownloadedTrack> {
     let path = audio_path(&root, &id)?;
 
     let value = read_sidecar(&meta)?;
-    track_from_sidecar(&value, path)
+    track_from_sidecar(&value, path, true)
 }
 
 // ------------------------------------------------------- heard, and cached
@@ -354,7 +354,7 @@ fn lookup_heard(track_id: &SpotifyId) -> Option<DownloadedTrack> {
     if fs::metadata(&path).ok()?.len() != bytes {
         return None;
     }
-    track_from_sidecar(&value, path)
+    track_from_sidecar(&value, path, false)
 }
 
 /// The sink handed to `PlayerConfig`; see [`remember_heard`].
@@ -362,7 +362,7 @@ pub fn heard_sink() -> librespot_playback::config::HeardSink {
     Arc::new(remember_heard)
 }
 
-fn track_from_sidecar(value: &Value, path: PathBuf) -> Option<DownloadedTrack> {
+fn track_from_sidecar(value: &Value, path: PathBuf, is_download: bool) -> Option<DownloadedTrack> {
     let format = format_from_name(value.get("format")?.as_str()?)?;
 
     let key = value
@@ -386,6 +386,7 @@ fn track_from_sidecar(value: &Value, path: PathBuf) -> Option<DownloadedTrack> {
 
     Some(DownloadedTrack {
         path,
+        is_download,
         key,
         format,
         name: value

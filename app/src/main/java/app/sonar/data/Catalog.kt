@@ -155,6 +155,7 @@ data class LyricsCredit(
     val uploaderUrl: String? = null,
     val maker: String? = null,
     val makerUrl: String? = null,
+    val providerUrl: String? = null,
 )
 
 /**

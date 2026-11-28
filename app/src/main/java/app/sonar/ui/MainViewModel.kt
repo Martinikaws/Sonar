@@ -358,6 +358,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val completed: Int = 0,
         val failedArtists: Int = 0,
         val error: String? = null,
+        val needsSpotifyConnection: Boolean = false,
     )
     private val followedReleaseRepository by lazy {
         MvFollowedReleases(
@@ -375,23 +376,34 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (container.activeBackend.id != BackendId.SPOTIFY || followedReleaseJob?.isActive == true) return
         if (!force && _followedReleases.value.loaded && System.currentTimeMillis() - followedReleaseLoadedAt < 15 * 60 * 1_000L) return
         if (!container.webApi.isReady) {
-            _followedReleases.value = FollowedReleaseState(error = string(R.string.followed_releases_connect))
+            _followedReleases.value = FollowedReleaseState(
+                error = string(R.string.followed_releases_connect), needsSpotifyConnection = true,
+            )
             return
         }
-        _followedReleases.value = _followedReleases.value.copy(loading = true, completed = 0, error = null)
+        _followedReleases.value = _followedReleases.value.copy(
+            loading = true, completed = 0, error = null, needsSpotifyConnection = false,
+        )
         followedReleaseJob = viewModelScope.launch {
             try {
+                val accountId = try {
+                    Catalog.username().takeIf { it.isNotBlank() }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    null
+                }
                 // The last answer straight away, while this one is worked out:
                 // reading every followed artist takes seconds, and the row and
                 // the cards at the top waited on it with nothing to show.
                 if (_followedReleases.value.albums.isEmpty()) {
-                    followedReleaseRepository.saved()?.let { saved ->
+                    accountId?.let { followedReleaseRepository.saved(it) }?.let { saved ->
                         _followedReleases.value = _followedReleases.value.copy(
                             albums = saved.albums, artistCount = saved.artistCount,
                         )
                     }
                 }
-                val result = followedReleaseRepository.load(force) { done, total ->
+                val result = followedReleaseRepository.load(force, accountId = accountId) { done, total ->
                     _followedReleases.value = _followedReleases.value.copy(completed = done, artistCount = total)
                 }
                 _followedReleases.value = FollowedReleaseState(
@@ -403,9 +415,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 throw e
             } catch (e: Exception) {
                 android.util.Log.w(TAG, "followed releases unavailable: ${describe(e)}")
-                _followedReleases.value = _followedReleases.value.copy(loading = false, error = string(
-                    if (e is HttpException && e.code() in listOf(401, 403)) R.string.followed_releases_connect else R.string.followed_releases_error,
-                ))
+                val needsConnection = e is HttpException && e.code() in listOf(401, 403)
+                _followedReleases.value = _followedReleases.value.copy(
+                    loading = false,
+                    error = string(if (needsConnection) R.string.followed_releases_connect else R.string.followed_releases_error),
+                    needsSpotifyConnection = needsConnection,
+                )
             }
         }
     }
@@ -2207,7 +2222,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _videoMode.value = !_videoMode.value && _videoFileId.value != null
     }
 
-    val listeningEvents = container.listeningStore.events
+    val listeningEvents = container.listeningStore.recapEvents
 
     init {
         // The month in music is the one of the source in use.
@@ -2440,6 +2455,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 .onSuccess {
                     container.preferences.setSpotifyFreeAccount(false)
                     container.tokenStore.save(it)
+                    _spotifyHomeSession.value++
                     // The service was created before this session existed, so it has
                     // to be told to authenticate the native engine now.
                     PlaybackService.connect(getApplication())
@@ -2466,6 +2482,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         loginJob?.cancel()
         SpotifyOAuth.cancelActiveAuthorization()
         container.tokenStore.clear()
+        _spotifyHomeSession.value++
         container.preferences.setSpotifyFreeAccount(false)
         resetFollowedReleases()
         container.webApi.disconnect()
@@ -6863,30 +6880,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             .onFailure { android.util.Log.w(TAG, "saved albums unavailable: ${describe(it)}") }
     }
 
-    private val _podcastShelves = MutableStateFlow<List<HomeShelf>>(emptyList())
+    suspend fun loadHomeFacet(facet: String): String? = if (awaitEngine()) container.gateway.homeFacet(facet) else null
 
-    /** Spotify's own podcast home, for Home's chip of it; see [loadPodcastShelves]. */
-    val podcastShelves: StateFlow<List<HomeShelf>> = _podcastShelves.asStateFlow()
-    private val _podcastsLoading = MutableStateFlow(false)
-    val podcastsLoading: StateFlow<Boolean> = _podcastsLoading.asStateFlow()
-    private var podcastShelvesJob: Job? = null
-
-    /** Once a session, when the chip is first chosen. */
-    fun loadPodcastShelves() {
-        if (podcastShelvesJob?.isActive == true || _podcastShelves.value.isNotEmpty()) return
-        _podcastsLoading.value = true
-        podcastShelvesJob = viewModelScope.launch {
-            try {
-                if (!awaitEngine()) return@launch
-                val json = container.gateway.homeFacet(PODCASTS_FACET) ?: return@launch
-                _podcastShelves.value = withContext(Dispatchers.Default) {
-                    app.sonar.data.SpotifyHome.parse(json, podcasts = true)
-                }
-            } finally {
-                _podcastsLoading.value = false
-            }
-        }
-    }
+    private val _spotifyHomeSession = MutableStateFlow(0)
+    val spotifyHomeSession = _spotifyHomeSession.asStateFlow()
 
     private val _savedShows = MutableStateFlow<List<CatalogPlaylist>>(emptyList())
 
@@ -7118,7 +7115,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         const val PAGE_HISTORY = 12
 
         /** Spotify's name for its home's podcast chip. */
-        const val PODCASTS_FACET = "podcasts-chip"
 
         /** Followed podcasts read, and how many of them asked for new episodes, how many at once. */
         const val MAX_SHOWS = 500

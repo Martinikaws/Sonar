@@ -633,6 +633,7 @@ pub enum PlayerEvent {
     },
     TrackChanged {
         audio_item: Box<AudioItem>,
+        is_download: bool,
     },
     SessionConnected {
         connection_id: String,
@@ -1130,6 +1131,7 @@ struct PlayerLoadedTrackData {
     duration_ms: u32,
     stream_position_ms: u32,
     is_explicit: bool,
+    is_download: bool,
 }
 
 enum PlayerPreload {
@@ -1167,6 +1169,7 @@ enum PlayerState {
         stream_position_ms: u32,
         suggested_to_preload_next_track: bool,
         is_explicit: bool,
+        is_download: bool,
     },
     Playing {
         track_id: SpotifyUri,
@@ -1182,6 +1185,7 @@ enum PlayerState {
         reported_nominal_start_time: Option<Instant>,
         suggested_to_preload_next_track: bool,
         is_explicit: bool,
+        is_download: bool,
     },
     EndOfTrack {
         track_id: SpotifyUri,
@@ -1302,6 +1306,7 @@ impl PlayerState {
                 stream_loader_controller,
                 stream_position_ms,
                 is_explicit,
+                is_download,
                 audio_item,
                 ..
             } => {
@@ -1317,6 +1322,7 @@ impl PlayerState {
                         duration_ms,
                         stream_position_ms,
                         is_explicit,
+                        is_download,
                     },
                 };
             }
@@ -1344,6 +1350,7 @@ impl PlayerState {
                 stream_position_ms,
                 suggested_to_preload_next_track,
                 is_explicit,
+                is_download,
             } => {
                 *self = Playing {
                     track_id,
@@ -1360,6 +1367,7 @@ impl PlayerState {
                         .checked_sub(Duration::from_millis(stream_position_ms as u64)),
                     suggested_to_preload_next_track,
                     is_explicit,
+                    is_download,
                 };
             }
             _ => {
@@ -1386,6 +1394,7 @@ impl PlayerState {
                 stream_position_ms,
                 suggested_to_preload_next_track,
                 is_explicit,
+                is_download,
                 ..
             } => {
                 *self = Paused {
@@ -1401,6 +1410,7 @@ impl PlayerState {
                     stream_position_ms,
                     suggested_to_preload_next_track,
                     is_explicit,
+                    is_download,
                 };
             }
             _ => {
@@ -1663,6 +1673,7 @@ impl PlayerTrackLoader {
             duration_ms,
             stream_position_ms,
             is_explicit: downloaded.is_explicit,
+            is_download: downloaded.is_download,
             audio_item: AudioItem {
                 duration_ms,
                 uri: track_uri.to_uri().unwrap_or_default(),
@@ -1879,6 +1890,7 @@ impl PlayerTrackLoader {
                             name: audio_item.name.clone(),
                             duration_ms: audio_item.duration_ms,
                             is_explicit: audio_item.is_explicit,
+                            is_download: false,
                             album: album.clone(),
                             album_artists: album_artists.clone(),
                             number: *number,
@@ -2046,6 +2058,7 @@ impl PlayerTrackLoader {
                 duration_ms,
                 stream_position_ms,
                 is_explicit,
+                is_download: false,
             });
         }
     }
@@ -2138,6 +2151,7 @@ impl PlayerTrackLoader {
             duration_ms: duration.as_millis() as u32,
             stream_position_ms,
             is_explicit: false,
+            is_download: false,
             audio_item: AudioItem {
                 duration_ms: duration.as_millis() as u32,
                 uri: track_uri.to_uri().unwrap_or_default(),
@@ -3329,7 +3343,10 @@ impl PlayerInternal {
         );
         let audio_item = Box::new(loaded_track.audio_item.clone());
 
-        self.send_event(PlayerEvent::TrackChanged { audio_item });
+        self.send_event(PlayerEvent::TrackChanged {
+            audio_item,
+            is_download: loaded_track.is_download,
+        });
 
         let position_ms = loaded_track.stream_position_ms;
 
@@ -3376,6 +3393,7 @@ impl PlayerInternal {
                     .checked_sub(Duration::from_millis(position_ms as u64)),
                 suggested_to_preload_next_track: false,
                 is_explicit: loaded_track.is_explicit,
+                is_download: loaded_track.is_download,
             };
         } else {
             self.ensure_sink_stopped(false);
@@ -3393,6 +3411,7 @@ impl PlayerInternal {
                 stream_position_ms: loaded_track.stream_position_ms,
                 suggested_to_preload_next_track: false,
                 is_explicit: loaded_track.is_explicit,
+                is_download: loaded_track.is_download,
             };
 
             self.send_event(PlayerEvent::Paused {
@@ -3539,6 +3558,7 @@ impl PlayerInternal {
                     duration_ms,
                     normalisation_data,
                     is_explicit,
+                    is_download,
                     ..
                 }
                 | PlayerState::Paused {
@@ -3550,6 +3570,7 @@ impl PlayerInternal {
                     duration_ms,
                     normalisation_data,
                     is_explicit,
+                    is_download,
                     ..
                 } = old_state
                 {
@@ -3562,6 +3583,7 @@ impl PlayerInternal {
                         duration_ms,
                         stream_position_ms,
                         is_explicit,
+                        is_download,
                     };
 
                     self.preload = PlayerPreload::None;

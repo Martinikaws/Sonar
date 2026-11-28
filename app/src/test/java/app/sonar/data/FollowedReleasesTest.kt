@@ -69,10 +69,12 @@ class FollowedReleasesTest {
 
     @Test fun cachesDiscographiesButReadsFollowsAgainAndPreservesCacheOnFailure() = runBlocking {
         var fail = false
+        var webAccountId = "account-one"
         var albumRequests = 0
         var followedRequests = 0
         val api = api { name, _ ->
             when (name) {
+                "me" -> UserDto(webAccountId)
                 "followedArtists" -> {
                     followedRequests++
                     FollowedArtistsDto(ArtistCursorPageDto(listOf(ArtistDto(id = "A1", name = "Artist"))))
@@ -88,12 +90,20 @@ class FollowedReleasesTest {
         val dir = Files.createTempDirectory("followed-releases-test").toFile()
         try {
             val repository = FollowedReleases(api, dir)
-            val first = repository.load()
-            assertEquals(first.albums, repository.load().albums)
+            dir.resolve("last-result.json").writeText("""{"albums":[],"artistCount":0}""")
+            assertNull(repository.saved("account-one"))
+            val first = repository.load(accountId = "account-one")
+            assertEquals(first.albums, repository.saved("account-one")?.albums)
+            assertNull(repository.saved("account-two"))
+            assertEquals(first.albums, repository.load(accountId = "account-two").albums)
+            assertNull(repository.saved("account-two"))
+            webAccountId = "account-two"
+            assertEquals(first.albums, repository.load(accountId = "account-two").albums)
             // One request for the albums, one for the singles.
             assertEquals(2, albumRequests)
-            assertEquals(2, followedRequests)
-            assertEquals(first.albums, repository.saved()?.albums)
+            assertEquals(3, followedRequests)
+            assertNull(repository.saved("account-one"))
+            assertEquals(first.albums, repository.saved("account-two")?.albums)
             fail = true
             val failed = repository.load(force = true)
             assertEquals(first.albums, failed.albums)

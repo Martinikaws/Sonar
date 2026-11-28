@@ -1,7 +1,13 @@
 package app.sonar.migration
 
+import app.sonar.data.CatalogTrack
+import app.sonar.data.ListeningHistory
+import app.sonar.data.LocalLibrary
+import app.sonar.library.LocalPlaylist
+import app.sonar.library.LocalPlaylists
 import java.io.ByteArrayOutputStream
 import java.security.SecureRandom
+import java.time.ZoneOffset
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.crypto.AEADBadTagException
@@ -17,6 +23,80 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AstralImportTest {
+    @Test
+    fun syntheticExportProducesAccountScopedHistoryAndPortablePlaylists() {
+        val account = "listener"
+        val parked = "files/listen-history/${AstralDataConverters.ownerKey(account)}.jsonl"
+        val entries = linkedMapOf(
+            "cookies.json" to """[
+                {"url":"https://open.spotify.com/","cookie":"sample=default"},
+                {"url":"https://open.spotify.com/","cookie":"sample=other","profile":"other"}
+            ]""",
+            "files/listen_history.owner" to AstralDataConverters.ownerKey("another-listener"),
+            "files/listen_history.jsonl" to
+                """{"key":"spotify:track:other","at":1744724400000,"title":"Another account","ms":31000}""",
+            parked to
+                """{"key":"spotify:track:fixture","at":1744724400000,"title":"Song","artist":"Artist","ms":42000}""",
+            "files/local_playlists.json" to """{"version":1,"playlists":[{"id":"list","name":"Commute","items":[
+                {"key":"item","uri":"content://media/external/audio/media/42","title":"Local song",
+                 "artist":"Artist","album":"Album","duration":120000}
+            ]}],"additions":{}}""",
+        )
+        val inventory = entries.keys.joinToString(",") { "\"$it\"" }
+        entries["manifest.json"] = """{"formatVersion":1,"appId":"com.music.spotui","appVersion":"1",
+            "createdAt":"2025-04-15T13:00:00Z","entries":[$inventory]}"""
+        val passphrase = "test passphrase".toCharArray()
+        val encrypted = encryptLikeAstral(zip(entries), passphrase)
+        val plaintext = SonarImportCrypto.decrypt(encrypted.inputStream(), passphrase)
+
+        val archive = AstralImport.readArchive(plaintext, account, ZoneOffset.UTC)
+
+        assertEquals(1, archive.historyFiles)
+        val listen = archive.history.single()
+        assertEquals("spotify:track:fixture", listen.track.uri)
+        assertEquals(42_000L, listen.listenedMs)
+        assertEquals(mapOf("2025-04" to 42_000L), listen.measuredMonths)
+        val playlist = archive.playlists!!.single()
+        assertEquals("Commute", playlist.name)
+        assertEquals("spotify:local:Artist:Album:Local+song:120", playlist.tracks.single().uri)
+        assertEquals("sample=default; Path=/; Secure", archive.cookies.values.single().value)
+        assertEquals(1, archive.cookies.skippedRecords)
+        assertTrue(AstralImport.readArchive(plaintext, null, ZoneOffset.UTC).history.isEmpty())
+    }
+
+    @Test
+    fun measuredAstralPlayReconcilesWithSpotifyInBothImportOrders() {
+        val row = """{"key":"spotify:track:fixture","at":1744724400000,"title":"Song","ms":42000}"""
+        val measured = AstralDataConverters.history(row.toByteArray(), ZoneOffset.UTC).single()
+        val at = measured.startedAt + 1_000
+        val expected = listOf(measured.copy(spotifyAt = at))
+
+        val astralFirst = ListeningHistory.merge(listOf(measured), measured.track, at)
+        val spotifyFirst = ListeningHistory.record(ListeningHistory.merge(emptyList(), measured.track, at), measured)
+
+        assertEquals(expected, astralFirst)
+        assertEquals(expected, spotifyFirst)
+        assertEquals(expected, ListeningHistory.record(astralFirst, measured))
+        assertEquals(expected, ListeningHistory.merge(spotifyFirst, measured.track, at))
+    }
+
+    @Test
+    fun playlistReimportResolvesExistingTracksAfterAudioAccessIsGranted() {
+        val deviceTrack = CatalogTrack(
+            uri = "local:track:42", name = "Song", artist = "Artist", album = "Album",
+            durationMs = 120_000, localFile = "/music/song.mp3",
+        )
+        val portable = deviceTrack.copy(uri = LocalLibrary.spotifyUri(deviceTrack), localFile = null)
+        val playlist = LocalPlaylist("astral-id", "Commute", listOf(portable))
+        val original = LocalPlaylists().mergeImported("sonar-id", playlist, emptyList())
+        assertEquals(listOf(portable), original.lists.single().tracks)
+
+        val repaired = original.mergeImported("unused-id", playlist, listOf(deviceTrack))
+
+        assertEquals(listOf(LocalPlaylist("sonar-id", "Commute", listOf(deviceTrack))), repaired.lists)
+        assertEquals(repaired, repaired.mergeImported("unused-id", playlist, emptyList()))
+    }
+
     @Test
     fun roundTripWithAstralExporter() {
         val original = zip("files/listen_history.jsonl")
@@ -101,12 +181,14 @@ class AstralImportTest {
         }
     }
 
-    private fun zip(vararg names: String): ByteArray {
+    private fun zip(vararg names: String): ByteArray = zip(names.associateWith { "fixture" })
+
+    private fun zip(entries: Map<String, String>): ByteArray {
         val out = ByteArrayOutputStream()
         ZipOutputStream(out).use { zip ->
-            for (name in names) {
+            for ((name, content) in entries) {
                 zip.putNextEntry(ZipEntry(name))
-                zip.write("fixture".toByteArray())
+                zip.write(content.toByteArray())
                 zip.closeEntry()
             }
         }

@@ -1,4 +1,4 @@
-package app.sonar.ui.library
+package app.sonar.recap
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -28,6 +29,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,8 +52,7 @@ import com.composables.icons.lucide.ChevronRight
 import app.sonar.R
 import app.sonar.data.CatalogTrack
 import app.sonar.data.ListeningEvent
-import app.sonar.data.ListeningHistory
-import app.sonar.data.MonthlyListening
+import app.sonar.ui.components.FilterChip
 import app.sonar.ui.components.Artwork
 import app.sonar.ui.glass.LiquidButton
 import app.sonar.ui.glass.backdrop.Backdrop
@@ -62,30 +66,20 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-/**
- * The month in music, as a page of the library.
- *
- * It takes the library's place rather than sitting over it: it was a Material
- * dialog, then a panel over the dimmed page, and either way a box from
- * somewhere else on top of the library. Here it has the library's own heading,
- * with the same way back the settings pages have, and it leads with the
- * month's song as a picture rather than a row, the way a recap is read: the
- * song first, then how much, then the rest of the ranking.
- */
 @Composable
-fun MonthlyListeningPage(
+internal fun ListeningRecapPage(
     events: List<ListeningEvent>,
-    /** Which note goes at the bottom: what Square can and cannot count. */
-    fromSpotify: Boolean,
     backdrop: Backdrop,
     contentPadding: PaddingValues,
     onBack: () -> Unit,
 ) {
     BackHandler(onBack = onBack)
     val current = YearMonth.now()
-    var month by remember { mutableStateOf(current) }
+    var period by rememberSaveable { mutableStateOf(RecapPeriod.MONTH) }
+    var monthKey by rememberSaveable { mutableStateOf(current.toString()) }
+    val month = YearMonth.parse(monthKey)
     val first = remember(events) {
-        events.minOfOrNull { it.spotifyAt ?: it.startedAt }?.let {
+        events.minOfOrNull { minOf(it.startedAt, it.spotifyAt ?: it.startedAt) }?.let {
             YearMonth.from(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()))
         }?.coerceAtMost(current) ?: current
     }
@@ -106,33 +100,57 @@ fun MonthlyListeningPage(
                 Icon(Lucide.ArrowLeft, contentDescription = stringResource(R.string.back))
             }
             Text(
-                stringResource(R.string.recap_title),
+                stringResource(R.string.home_recap_title),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 maxLines = 2,
                 modifier = Modifier.padding(start = 14.dp),
             )
         }
-        Header(
-            month = month,
-            canGoBack = month > first,
-            canGoForward = month < current,
-            onBack = { month = month.minusMonths(1) },
-            onForward = { month = month.plusMonths(1) },
-        )
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            for (choice in RecapPeriod.entries) {
+                val label = when (choice) {
+                    RecapPeriod.MONTH -> R.string.home_recap_month
+                    RecapPeriod.YEAR -> R.string.home_recap_year
+                    RecapPeriod.ALL -> R.string.home_recap_all
+                }
+                FilterChip(
+                    label = stringResource(label),
+                    selected = period == choice,
+                    onClick = { period = choice },
+                    backdrop = backdrop,
+                    modifier = Modifier.minimumInteractiveComponentSize().semantics { selected = period == choice },
+                )
+            }
+        }
+        if (period != RecapPeriod.ALL) {
+            val yearly = period == RecapPeriod.YEAR
+            val step = if (yearly) 12L else 1L
+            Header(
+                month = month,
+                yearly = yearly,
+                canGoBack = if (yearly) month.year > first.year else month > first,
+                canGoForward = if (yearly) month.year < current.year else month < current,
+                onBack = { monthKey = month.minusMonths(step).coerceAtLeast(first).toString() },
+                onForward = { monthKey = month.plusMonths(step).coerceAtMost(current).toString() },
+            )
+        }
         AnimatedContent(
-            targetState = month,
+            targetState = period to month,
             transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
-            label = "recapMonth",
-        ) { shown ->
-            val summary = remember(events, shown) { ListeningHistory.summarize(events, shown) }
+            label = "recapPeriod",
+        ) { (shownPeriod, shownMonth) ->
+            val summary = remember(events, shownPeriod, shownMonth) { listeningRecap(events, shownPeriod, shownMonth) }
             Column(
                 Modifier.padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
-                Body(summary)
+                Body(summary, shownPeriod)
                 Text(
-                    stringResource(if (fromSpotify) R.string.recap_partial else R.string.recap_partial_youtube),
+                    stringResource(R.string.home_recap_history_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = InkDim,
                 )
@@ -144,6 +162,7 @@ fun MonthlyListeningPage(
 @Composable
 private fun Header(
     month: YearMonth,
+    yearly: Boolean,
     canGoBack: Boolean,
     canGoForward: Boolean,
     onBack: () -> Unit,
@@ -159,9 +178,9 @@ private fun Header(
             Modifier.fillMaxWidth().padding(top = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Step(Lucide.ChevronLeft, stringResource(R.string.recap_previous), canGoBack, onBack)
+            Step(Lucide.ChevronLeft, stringResource(if (yearly) R.string.home_recap_previous_year else R.string.recap_previous), canGoBack, onBack)
             Text(
-                month.format(DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault()))
+                month.format(DateTimeFormatter.ofPattern(if (yearly) "yyyy" else "LLLL yyyy", Locale.getDefault()))
                     .replaceFirstChar { it.titlecase(Locale.getDefault()) },
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
@@ -170,7 +189,7 @@ private fun Header(
                 maxLines = 1,
                 modifier = Modifier.weight(1f),
             )
-            Step(Lucide.ChevronRight, stringResource(R.string.recap_next), canGoForward, onForward)
+            Step(Lucide.ChevronRight, stringResource(if (yearly) R.string.home_recap_next_year else R.string.recap_next), canGoForward, onForward)
         }
     }
 }
@@ -184,8 +203,8 @@ private fun Step(
 ) {
     Box(
         Modifier
-            .size(40.dp)
-            .clip(ContinuousRoundedRectangle(20.dp))
+            .size(48.dp)
+            .clip(ContinuousRoundedRectangle(24.dp))
             .background(if (enabled) FILM else Color.Transparent)
             .pressable(onClick, pressedScale = 0.9f, enabled = enabled),
         contentAlignment = Alignment.Center,
@@ -200,29 +219,30 @@ private fun Step(
 }
 
 @Composable
-private fun Body(summary: MonthlyListening) {
+private fun Body(summary: ListeningRecap, period: RecapPeriod) {
     val top = summary.tracks.firstOrNull()?.first
-    if (top != null) SongOfTheMonth(top)
+    if (top != null) TopTrack(top, period)
 
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Stat(summary.plays.toString(), stringResource(R.string.recap_stat_plays), Modifier.weight(1f))
         Stat(summary.minutes.toString(), stringResource(R.string.recap_stat_minutes), Modifier.weight(1f))
     }
 
-    if (summary.plays == 0) {
+    if (summary.sources.isEmpty()) {
         Text(
-            stringResource(R.string.recap_empty),
+            stringResource(R.string.home_recap_empty),
             style = MaterialTheme.typography.bodyLarge,
             color = InkDim,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
         )
-        return
     }
 
-    Section(stringResource(R.string.recap_tracks))
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        summary.tracks.take(RANKED).forEachIndexed { at, (track, count) -> TrackRank(at + 1, track, count) }
+    if (summary.tracks.isNotEmpty()) {
+        Section(stringResource(R.string.recap_tracks))
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            summary.tracks.take(RANKED).forEachIndexed { at, (track, count) -> TrackRank(at + 1, track, count) }
+        }
     }
 
     if (summary.artists.isNotEmpty()) {
@@ -234,11 +254,45 @@ private fun Body(summary: MonthlyListening) {
             }
         }
     }
+
+    if (summary.albums.isNotEmpty()) {
+        Section(stringResource(R.string.home_recap_albums))
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            summary.albums.take(RANKED).forEachIndexed { at, (track, count) ->
+                TrackRank(at + 1, track, count, title = track.album.ifBlank { track.name })
+            }
+        }
+    }
+
+    if (summary.sources.isNotEmpty()) {
+        Section(stringResource(R.string.home_recap_sources))
+        for (source in RecapSource.entries) {
+            val total = summary.sources[source] ?: continue
+            val label = when (source) {
+                RecapSource.SPOTIFY -> R.string.backend_spotify
+                RecapSource.YOUTUBE_MUSIC -> R.string.backend_youtube
+                RecapSource.DOWNLOAD -> R.string.recap_downloads
+                RecapSource.LOCAL -> R.string.local_files
+                RecapSource.OTHER -> R.string.home_recap_other
+            }
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(stringResource(label), color = Ink, modifier = Modifier.weight(1f))
+                Text(
+                    stringResource(R.string.home_recap_source_total, total.plays, total.milliseconds / 60_000),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = InkDim,
+                )
+            }
+        }
+    }
 }
 
-/** The month's most played song, as a picture with its name written on it. */
 @Composable
-private fun SongOfTheMonth(track: CatalogTrack) {
+private fun TopTrack(track: CatalogTrack, period: RecapPeriod) {
     val shape = ContinuousRoundedRectangle(26.dp)
     Box(
         Modifier
@@ -258,7 +312,7 @@ private fun SongOfTheMonth(track: CatalogTrack) {
                 .padding(18.dp),
         ) {
             Text(
-                stringResource(R.string.recap_song_of_month).uppercase(),
+                stringResource(if (period == RecapPeriod.MONTH) R.string.recap_song_of_month else R.string.home_recap_top_track),
                 style = MaterialTheme.typography.labelSmall,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
@@ -333,17 +387,17 @@ private fun Rank(place: Int) {
 }
 
 @Composable
-private fun TrackRank(place: Int, track: CatalogTrack, plays: Int) {
+private fun TrackRank(place: Int, track: CatalogTrack, plays: Int, title: String = track.name) {
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Rank(place)
-        Artwork(track.artworkUrl, track.name, Modifier.size(46.dp), corner = 10.dp)
+        Artwork(track.artworkUrl, title, Modifier.size(46.dp), corner = 10.dp)
         Column(Modifier.weight(1f)) {
             Text(
-                track.name,
+                title,
                 style = MaterialTheme.typography.bodyLarge,
                 color = Ink,
                 maxLines = 1,

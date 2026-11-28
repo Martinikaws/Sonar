@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
@@ -47,7 +46,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.setValue
 import app.sonar.ui.components.FriendsPanel
 import app.sonar.ui.components.SharedTrackCard
@@ -133,6 +131,9 @@ import app.sonar.ui.glass.backdrop.backdrops.rememberLayerBackdrop
 import app.sonar.ui.glass.backdrop.backdrops.rememberCombinedBackdrop
 import app.sonar.ui.glass.backdrop.drawBackdrop
 import app.sonar.R
+import app.sonar.ui.adaptive.BottomControls
+import app.sonar.ui.adaptive.TabletRail
+import app.sonar.ui.adaptive.adaptiveLayout
 import app.sonar.ui.components.SonarStackedLogo
 import app.sonar.data.CanvasClip
 import app.sonar.data.Catalog
@@ -764,8 +765,6 @@ fun SonarApp(
     val followedArtists by viewModel.followedArtists.collectAsStateWithLifecycle()
     val savedAlbums by viewModel.savedAlbums.collectAsStateWithLifecycle()
     val savedShows by viewModel.savedShows.collectAsStateWithLifecycle()
-    val podcastShelves by viewModel.podcastShelves.collectAsStateWithLifecycle()
-    val podcastsLoading by viewModel.podcastsLoading.collectAsStateWithLifecycle()
     val newEpisodes by viewModel.newEpisodes.collectAsStateWithLifecycle()
     val videoFileId by viewModel.videoFileId.collectAsStateWithLifecycle()
     val spotifyVideoOn by app.sonar.backend.spotify.SpotifyVideoMode.enabled
@@ -1632,6 +1631,9 @@ fun SonarApp(
                 // its own, and the tab bar and the now-playing bar step out of
                 // the way for it instead of floating over a form.
                 val chromeHidden = route == Routes.SETTINGS || route == ASTRAL_IMPORT_ROUTE
+                val adaptive = adaptiveLayout(route, navController.previousBackStackEntry?.destination?.route, chromeHidden)
+                val showSearchField = searching && searchOpen
+                val tabletControlsVisible = playback.hasItem || showSearchField
                 val chrome by animateFloatAsState(
                     if (chromeHidden) 0f else 1f,
                     tween(220),
@@ -1642,7 +1644,9 @@ fun SonarApp(
                 // scrolling behind them.
                 val listPadding = PaddingValues(
                     top = statusBar,
-                    bottom = barHeight + if (playback.hasItem) MiniPlayerHeight else 0.dp,
+                    bottom = adaptive.bottomPadding(
+                        navBar, tabletControlsVisible, barHeight + if (playback.hasItem) MiniPlayerHeight else 0.dp,
+                    ),
                 )
 
                 // Nothing floats over settings, so nothing has to be left free
@@ -1730,7 +1734,7 @@ fun SonarApp(
                     }
 
                     Box(
-                        Modifier
+                        adaptive.pageModifier
                             .nestedScroll(tabBarScroll)
                             .nestedScroll(scrollActivity)
                             // Touching the page puts the keyboard away.
@@ -1750,9 +1754,60 @@ fun SonarApp(
                                 }
                             },
                     ) {
+                        val libraryContent: @Composable () -> Unit = {
+                            LaunchedEffect(backend, state is MainViewModel.UiState.Ready) { viewModel.syncListeningHistory() }
+                            LibraryScreen(
+                                organizationStore = organizationStore,
+                                organization = organization,
+                                state = state,
+                                contentPadding = listPadding,
+                                onLogIn = viewModel::logIn,
+                                onRetry = { viewModel.retryFailed() },
+                                onGoOffline = viewModel::goOffline,
+                                onLogOut = viewModel::logOut,
+                                onOpenPlaylist = openList,
+                                listeningEvents = listeningEvents,
+                                playlistOrder = playlistOrder,
+                                pinned = pinnedPlaylists,
+                                canEdit = viewModel.canEditPlaylists,
+                                onCreatePlaylist = { naming = NamingRequest(null) },
+                                onPlaylistMenu = {
+                                    // Whose it is, from the library's own index;
+                                    // unknown is still offered, as before.
+                                    playlistMenuMine = viewModel.canEditPlaylists && it.mine != false
+                                    playlistMenuSaved = true
+                                    playlistMenu = it
+                                },
+                                artists = followedArtists,
+                                albums = savedAlbums,
+                                podcasts = savedShows,
+                                onRetryOnline = viewModel::retryOnline,
+                                signInHint = backend == app.sonar.backend.BackendId.YOUTUBE_MUSIC &&
+                                    youtubeAccountName == null,
+                                onSignIn = { showYouTubeLogin = true },
+                                onUseYouTube = {
+                                    preferences.setBackend(app.sonar.backend.BackendId.YOUTUBE_MUSIC)
+                                },
+                                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                                onOpenRadio = { navController.navigate(app.sonar.radio.RADIO_ROUTE) },
+                                onOpenArtist = { artist ->
+                                    viewModel.openContext(
+                                        artist.uri,
+                                        artist.title,
+                                        artist.artworkUrl,
+                                    )
+                                    if (navController.currentDestination?.route != Routes.PLAYLIST) {
+                                        navController.navigate(Routes.PLAYLIST) { launchSingleTop = true }
+                                    }
+                                },
+                                backdrop = artBackdrop,
+                            )
+                        }
+                        adaptive.LibraryPane(libraryContent)
                     NavHost(
                         navController,
                         startDestination = Routes.HOME,
+                        modifier = adaptive.destinationModifier,
                         // Two different movements, because there are two
                         // different kinds of navigation here. Opening a page is
                         // a push: it comes in from the edge and the page under
@@ -1798,6 +1853,7 @@ fun SonarApp(
                                 viewModel.loadBrowse()
                             }
                             HomeScreen(
+                                followed = followedReleases, onLoadFollowed = viewModel::loadFollowedReleases,
                                 state = state,
                                 contentPadding = listPadding,
                                 onLogIn = viewModel::logIn,
@@ -1827,9 +1883,8 @@ fun SonarApp(
                                 youtubeHome = youtubeHome,
                                 shelves = homeShelves,
                                 shelvesLoading = homeShelvesLoading,
-                                podcastShelves = podcastShelves,
-                                podcastsLoading = podcastsLoading,
-                                onWantPodcasts = viewModel::loadPodcastShelves,
+                                spotifyHomeSession = viewModel.spotifyHomeSession.collectAsStateWithLifecycle().value,
+                                loadHomeFacet = viewModel::loadHomeFacet,
                                 onPlayEpisode = { entry, label ->
                                     onPlay(
                                         listOf(
@@ -2092,54 +2147,7 @@ fun SonarApp(
                         }
 
                         composable(Routes.LIBRARY) {
-                            LaunchedEffect(backend, state is MainViewModel.UiState.Ready) { viewModel.syncListeningHistory() }
-                            LibraryScreen(
-                                organizationStore = organizationStore,
-                                organization = organization,
-                                state = state,
-                                contentPadding = listPadding,
-                                onLogIn = viewModel::logIn,
-                                onRetry = { viewModel.retryFailed() },
-                                onGoOffline = viewModel::goOffline,
-                                onLogOut = viewModel::logOut,
-                                onOpenPlaylist = openList,
-                                listeningEvents = listeningEvents,
-                                listeningFromSpotify = backend == app.sonar.backend.BackendId.SPOTIFY,
-                                playlistOrder = playlistOrder,
-                                pinned = pinnedPlaylists,
-                                canEdit = viewModel.canEditPlaylists,
-                                onCreatePlaylist = { naming = NamingRequest(null) },
-                                onPlaylistMenu = {
-                                    // Whose it is, from the library's own index;
-                                    // unknown is still offered, as before.
-                                    playlistMenuMine = viewModel.canEditPlaylists && it.mine != false
-                                    playlistMenuSaved = true
-                                    playlistMenu = it
-                                },
-                                artists = followedArtists,
-                                albums = savedAlbums,
-                                podcasts = savedShows,
-                                onRetryOnline = viewModel::retryOnline,
-                                signInHint = backend == app.sonar.backend.BackendId.YOUTUBE_MUSIC &&
-                                    youtubeAccountName == null,
-                                onSignIn = { showYouTubeLogin = true },
-                                onUseYouTube = {
-                                    preferences.setBackend(app.sonar.backend.BackendId.YOUTUBE_MUSIC)
-                                },
-                                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
-                                onOpenRadio = { navController.navigate(app.sonar.radio.RADIO_ROUTE) },
-                                onOpenArtist = { artist ->
-                                    viewModel.openContext(
-                                        artist.uri,
-                                        artist.title,
-                                        artist.artworkUrl,
-                                    )
-                                    if (navController.currentDestination?.route != Routes.PLAYLIST) {
-                                        navController.navigate(Routes.PLAYLIST) { launchSingleTop = true }
-                                    }
-                                },
-                                backdrop = artBackdrop,
-                            )
+                            if (!adaptive.expandedLibrary) libraryContent()
                         }
 
                         composable(Routes.SETTINGS) {
@@ -2455,13 +2463,23 @@ fun SonarApp(
                 // until the process dies.
                 // Faded out *and* taken out: a transparent bar still swallows
                 // the taps meant for the page underneath it.
-                if (chrome > 0.01f) Box(
+                val railVisible by remember { derivedStateOf { expand.value < 0.33f } }
+                if (adaptive.showRail && railVisible) {
+                    adaptive.TabletRail(
+                        activeTab = activeTab,
+                        showSearchField = showSearchField,
+                        onSearchOpenChange = { searchOpen = it },
+                        modifier = Modifier.align(Alignment.CenterStart),
+                        onSelect = { destination ->
+                            viewModel.clearPageHistory()
+                            navController.switchTab(destination)
+                        },
+                    )
+                }
+                if (chrome > 0.01f && (!adaptive.sideNavigation || tabletControlsVisible)) Box(
                     Modifier
                         .align(Alignment.BottomCenter)
-                        // Sideways, no wider than a phone held upright: a bar
-                        // across the whole of a landscape screen is a strip
-                        // of glass with the controls lost at its ends.
-                        .then(if (landscape) Modifier.widthIn(max = 640.dp) else Modifier.fillMaxWidth())
+                        .then(adaptive.bottomControlsModifier(landscape))
                         // The bar is where you type now, so it has to be above
                         // the keyboard: the search field lived on the page until
                         // a moment ago, where the keyboard covering the bottom of
@@ -2475,7 +2493,7 @@ fun SonarApp(
                             alpha = (1f - expand.value * 3f).coerceIn(0f, 1f) * chrome
                         }
                         .onSizeChanged {
-                            if (!tabBarScroll.isInline) {
+                            if (!adaptive.sideNavigation && !tabBarScroll.isInline) {
                                 measuredBarHeight.value = with(density) { it.height.toDp() }
                             }
                         },
@@ -2573,11 +2591,8 @@ fun SonarApp(
                     val playerTravelPx = with(density) {
                         (LocalConfiguration.current.screenHeightDp.dp - MiniPlayerHeight).toPx()
                     }
-                    val accessory: (@Composable androidx.compose.animation.SharedTransitionScope.(
-                        Modifier,
-                        androidx.compose.animation.AnimatedVisibilityScope,
-                    ) -> Unit)? = if (playback.hasItem) {
-                        { accessoryModifier, _ ->
+                    val miniPlayer: (@Composable (Modifier) -> Unit)? = if (playback.hasItem) {
+                        { accessoryModifier ->
                             FloatingMiniPlayer(
                                 state = if (djSpeaking) playerState else playback,
                                 djSpeaking = djSpeaking,
@@ -2649,6 +2664,10 @@ fun SonarApp(
                     } else {
                         null
                     }
+                    val accessory: (@Composable androidx.compose.animation.SharedTransitionScope.(
+                        Modifier,
+                        androidx.compose.animation.AnimatedVisibilityScope,
+                    ) -> Unit)? = if (miniPlayer == null) null else { modifier, _ -> miniPlayer(modifier) }
 
                     // Before anything is drawn for real; see GlassWarmUp.
                     app.sonar.ui.glass.GlassWarmUp(pageBackdrop)
@@ -2785,7 +2804,14 @@ fun SonarApp(
                     // largest system font sizes their labels outgrew them and
                     // were cut through the middle (#193, #197). Pages scale
                     // with the setting; the bar stops a little past default.
-                    app.sonar.ui.theme.CappedFontScale {
+                    adaptive.BottomControls(
+                        showSearch = showSearchField,
+                        query = search.query,
+                        onQuery = viewModel::onSearchQuery,
+                        margin = barMargin,
+                        bottomInset = navBar,
+                        miniPlayer = miniPlayer,
+                    ) {
                     FloatingTabBar(
                         // The page's own tab. The bar keeps this tab when it
                         // folds and finds it by matching this key.

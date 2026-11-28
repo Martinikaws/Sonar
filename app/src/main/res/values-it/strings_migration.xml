@@ -1,0 +1,5 @@
+<resources>
+    <string name="migration_existing_logins">Sonar mantiene gli accessi esistenti.</string>
+    <string name="migration_local_audio">Per riprodurre le playlist locali importate, consenti a Sonar di accedere ai file audio prima di importarli.</string>
+    <string name="migration_history_account">Per importare la cronologia, accedi in Sonar con lo stesso account Spotify e ripeti l\'importazione.</string>
+</resources>
