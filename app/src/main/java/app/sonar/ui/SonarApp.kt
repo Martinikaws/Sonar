@@ -450,7 +450,10 @@ fun SonarApp(
      * the queue *is* that context in its own order, in which case playback is
      * handed to Spotify as the context itself.
      */
-    onPlay: (List<CatalogTrack>, Int, String?, Boolean, String, Long) -> Unit,
+    onPlay: (
+        tracks: List<CatalogTrack>, index: Int, contextUri: String?, asContext: Boolean,
+        contextLabel: String, positionMs: Long, explicitTrackSelection: Boolean,
+    ) -> Unit,
     /** Appends one track to the end of the queue; see the swipe gesture on rows. */
     onEnqueue: (CatalogTrack) -> Unit,
     /** Appends multiple tracks to the end of the queue; used by Autoplay. */
@@ -535,6 +538,7 @@ fun SonarApp(
                 "",
                 // Straight into the load: the track starts where it was left.
                 resume.positionMs,
+                false,
             )
         }
     }
@@ -1066,7 +1070,7 @@ fun SonarApp(
                 android.widget.Toast.makeText(context, djFailed, android.widget.Toast.LENGTH_LONG).show()
                 return@launch
             }
-            onPlay(tracks, 0, app.sonar.data.Catalog.DJ_URI, false, DJ_LABEL, 0L)
+            onPlay(tracks, 0, app.sonar.data.Catalog.DJ_URI, false, DJ_LABEL, 0L, false)
             // Straight into the player, where the DJ is about to talk.
             expand.animateTo(1f, expandSpec)
             djStarting = false
@@ -1877,10 +1881,10 @@ fun SonarApp(
                                 playlistOrder = playlistOrder,
                                 recent = recent,
                                 onPlayRecent = { tracks, index ->
-                                    onPlay(tracks, index, null, false, playAgainLabel, 0L)
+                                    onPlay(tracks, index, null, false, playAgainLabel, 0L, true)
                                 },
                                 onPlayFeed = { tracks, index, label ->
-                                    onPlay(tracks, index, null, false, label, 0L)
+                                    onPlay(tracks, index, null, false, label, 0L, true)
                                 },
                                 feed = feed,
                                 onOpenItem = { item ->
@@ -1909,7 +1913,7 @@ fun SonarApp(
                                                 artworkUrl = entry.artworkUrl,
                                             ),
                                         ),
-                                        0, null, false, label, 0L,
+                                        0, null, false, label, 0L, true,
                                     )
                                 },
                                 onPlayTrending = { tracks, index ->
@@ -1919,7 +1923,7 @@ fun SonarApp(
                                             seed.uri.startsWith(app.sonar.backend.youtube.YouTubeBackend.VIDEO_PREFIX)
                                         )
                                     if (seed == null || !youtube) {
-                                        onPlay(tracks, index, null, false, trendingLabel, 0L)
+                                        onPlay(tracks, index, null, false, trendingLabel, 0L, true)
                                     } else {
                                         // A song picked from YouTube's shelves plays
                                         // on into its radio, as YouTube Music does:
@@ -1932,11 +1936,11 @@ fun SonarApp(
                                                 viewModel.radioFor(seed.uri)
                                             }.orEmpty()
                                             if (radio.isEmpty()) {
-                                                onPlay(tracks, index, null, false, trendingLabel, 0L)
+                                                onPlay(tracks, index, null, false, trendingLabel, 0L, true)
                                                 return@launch
                                             }
                                             val queue = listOf(seed) + radio.filterNot { it.uri == seed.uri }
-                                            onPlay(queue, 0, viewModel.stationFor(seed.uri), true, radioOf(seed.name), 0L)
+                                            onPlay(queue, 0, viewModel.stationFor(seed.uri), true, radioOf(seed.name), 0L, true)
                                         }
                                     }
                                 },
@@ -1984,7 +1988,7 @@ fun SonarApp(
                                     loading = sourceNew.loading,
                                     contentPadding = listPadding,
                                     onPlay = { tracks, index ->
-                                        onPlay(tracks, index, null, false, newLabel, 0L)
+                                        onPlay(tracks, index, null, false, newLabel, 0L, true)
                                     },
                                     onOpen = openList,
                                 )
@@ -2003,14 +2007,14 @@ fun SonarApp(
                                 shelvesLoading = browseLoading,
                                 contentPadding = listPadding,
                                 onPlaySong = { tracks, index ->
-                                    onPlay(tracks, index, null, false, newLabel, 0L)
+                                    onPlay(tracks, index, null, false, newLabel, 0L, true)
                                 },
                                 onSongMenu = { track ->
                                     trackMenu = TrackMenuRequest(track = track, removable = false)
                                 },
                                 episodes = newEpisodes,
                                 onPlayEpisode = { tracks, index ->
-                                    onPlay(tracks, index, null, false, newLabel, 0L)
+                                    onPlay(tracks, index, null, false, newLabel, 0L, true)
                                 },
                                 onOpen = { item ->
                                     viewModel.openContext(
@@ -2035,7 +2039,7 @@ fun SonarApp(
                                     loading = sourceRadio.loading,
                                     contentPadding = listPadding,
                                     onPlay = { tracks, index ->
-                                        onPlay(tracks, index, null, false, radioLabel, 0L)
+                                        onPlay(tracks, index, null, false, radioLabel, 0L, true)
                                     },
                                     onOpen = openList,
                                 )
@@ -2081,7 +2085,7 @@ fun SonarApp(
                                         if (navController.currentDestination?.route != Routes.PLAYLIST) {
                                             navController.navigate(Routes.PLAYLIST) { launchSingleTop = true }
                                         }
-                                        onPlay(tracks, 0, station, true, name, 0L)
+                                        onPlay(tracks, 0, station, true, name, 0L, false)
                                         }.onFailure {
                                             android.util.Log.w(
                                                 "SonarRadio",
@@ -2117,7 +2121,7 @@ fun SonarApp(
                                         // comes next, as in Spotify, asked for
                                         // while the song starts and added only
                                         // if it is still the one playing.
-                                        onPlay(listOf(chosen), 0, null, false, searchLabel, 0L)
+                                        onPlay(listOf(chosen), 0, null, false, searchLabel, 0L, true)
                                         scope.launch {
                                             val similar = viewModel.radioFor(chosen.uri)
                                                 .filter { it.uri != chosen.uri }
@@ -2128,7 +2132,7 @@ fun SonarApp(
                                             }
                                         }
                                     } else {
-                                        onPlay(tracks, index, null, false, searchLabel, 0L)
+                                        onPlay(tracks, index, null, false, searchLabel, 0L, true)
                                     }
                                 },
                                 history = searchTrail,
@@ -2178,7 +2182,7 @@ fun SonarApp(
                                 onAstralImport = { navController.navigate(ASTRAL_IMPORT_ROUTE) },
                                 onPass = { navController.navigate(PASS_ROUTE) },
                                 onModules = { navController.navigate(Routes.MODULES) },
-                                onPlayFlac = { tracks, index -> onPlay(tracks, index, null, false, "", 0L) },
+                                onPlayFlac = { tracks, index -> onPlay(tracks, index, null, false, "", 0L, true) },
                                 language = language,
                                 onLanguage = setLanguage,
                                 onBack = { navController.popBackStack() },
@@ -2333,6 +2337,7 @@ fun SonarApp(
                                             asContext,
                                             source,
                                             0L,
+                                            true,
                                         )
                                     },
                                     onEnqueue = onEnqueue,
@@ -2343,7 +2348,7 @@ fun SonarApp(
                                     // and the rest in any order (#71).
                                     onPlayInOrder = { tracks, asContext ->
                                         player?.shuffleModeEnabled = false
-                                        onPlay(tracks, 0, page.uri, asContext, source, 0L)
+                                        onPlay(tracks, 0, page.uri, asContext, source, 0L, false)
                                     },
                                     onShuffle = { tracks ->
                                         // Order does not matter: the player
@@ -2360,6 +2365,7 @@ fun SonarApp(
                                             false,
                                             source,
                                             0L,
+                                            false,
                                         )
                                     },
                                     onAddToPlaylist = { track ->
@@ -3620,6 +3626,7 @@ fun SonarApp(
                                                         true,
                                                         name,
                                                         0L,
+                                                        false,
                                                     )
                                                 }.onFailure {
                                                     android.util.Log.e("SonarApp", "Failed to start radio: ${it.message}")
@@ -4014,7 +4021,7 @@ fun SonarApp(
                         }
                         TrackSheetAction(stringResource(R.string.play), Lucide.Play) {
                             trackMenu = null
-                            onPlay(listOf(menu.track), 0, null, false, "", 0L)
+                            onPlay(listOf(menu.track), 0, null, false, "", 0L, true)
                         }
                         if (!menu.track.isEpisode) {
                             TrackSheetAction(stringResource(R.string.hidden_hide_song), Lucide.X) {
@@ -4143,7 +4150,7 @@ fun SonarApp(
                                     if (navController.currentDestination?.route != Routes.PLAYLIST) {
                                         navController.navigate(Routes.PLAYLIST) { launchSingleTop = true }
                                     }
-                                    onPlay(tracks, 0, station, true, name, 0L)
+                                    onPlay(tracks, 0, station, true, name, 0L, false)
                                 }
                             }
                         }
@@ -4218,7 +4225,7 @@ fun SonarApp(
                     onPlay = {
                         val track = sharedTrack ?: return@SharedTrackCard
                         sharedTrack = null
-                        onPlay(listOf(track), 0, null, false, "", 0L)
+                        onPlay(listOf(track), 0, null, false, "", 0L, true)
                     },
                     onAddToPlaylist = {
                         val track = sharedTrack ?: return@SharedTrackCard

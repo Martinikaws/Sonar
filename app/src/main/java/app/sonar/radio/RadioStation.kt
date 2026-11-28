@@ -47,7 +47,7 @@ object RadioParsing {
     /** https only: the app allows no cleartext traffic, and a station is no reason to relax that. */
     fun playable(url: String): Boolean {
         val uri = runCatching { java.net.URI(url.trim()) }.getOrNull() ?: return false
-        return uri.scheme.equals("https", ignoreCase = true) && !uri.host.isNullOrBlank()
+        return uri.scheme.equals("https", ignoreCase = true) && !uri.host.isNullOrBlank() && uri.userInfo == null
     }
 
     private fun looksHls(url: String) =
@@ -73,7 +73,7 @@ object RadioParsing {
                 hls = d.hls == 1 || looksHls(url),
             )
         }
-        return RadioResults(kept.take(limit), unplayable = all.size - kept.size)
+        return RadioResults(kept.distinctBy { it.uuid }.take(limit), unplayable = all.size - kept.size)
     }
 
     fun tags(text: String): List<String> =

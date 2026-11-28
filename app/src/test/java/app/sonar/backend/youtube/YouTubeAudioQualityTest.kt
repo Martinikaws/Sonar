@@ -4,6 +4,14 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class YouTubeAudioQualityTest {
+    @Test fun playbackProbesRequireTheYouTubeCdn() {
+        assertEquals(true, isYouTubePlaybackUrl("https://rr1.googlevideo.com/videoplayback"))
+        assertEquals(false, isYouTubePlaybackUrl("http://rr1.googlevideo.com/videoplayback"))
+        assertEquals(false, isYouTubePlaybackUrl("https://notgooglevideo.com/videoplayback"))
+        assertEquals(false, isYouTubePlaybackUrl("https://googlevideo.com.example.org/videoplayback"))
+        assertEquals(false, isYouTubePlaybackUrl("https://user:pass@googlevideo.com/videoplayback"))
+    }
+
     private val opus = YouTubeAudioQuality(251, 160)
     private val premiumAac = YouTubeAudioQuality(141, 256)
     private val standardAac = YouTubeAudioQuality(140, 128)

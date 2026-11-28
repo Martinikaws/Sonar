@@ -21,7 +21,9 @@ object RadioDirectory {
         "https://at1.api.radio-browser.info",
     )
     @Volatile private var preferred = 0
-    private val http by lazy { OkHttpClient.Builder().callTimeout(12, TimeUnit.SECONDS).build() }
+    private val http by lazy {
+        OkHttpClient.Builder().callTimeout(12, TimeUnit.SECONDS).followRedirects(false).build()
+    }
 
     /** Most-voted first; broken streams left out. An empty [query] with a [tag] browses the tag. */
     suspend fun search(query: String = "", tag: String = "", limit: Int = 40): RadioResults {

@@ -31,18 +31,23 @@ class AppleMotionMatchTest {
             """
             {
                 "motionDetailSquare": {"video": "https://example.com/detail-square"},
-                "motionSquareVideo1x1": {"video": "https://example.com/square"},
-                "motionDetailTall": {"video": "https://example.com/tall"}
+                "motionSquareVideo1x1": {"video": "https://mvod.itunes.apple.com/square"},
+                "motionDetailTall": {"video": "https://a.mzstatic.com/tall"}
             }
             """.trimIndent(),
         ).jsonObject
-        assertEquals("https://example.com/detail-square", appleMotionUrl(videos))
+        val trusted = Json.parseToJsonElement("""{"video": "https://mvod.itunes.apple.com/detail-square"}""")
         assertEquals(
-            "https://example.com/square",
+            "https://mvod.itunes.apple.com/detail-square",
+            appleMotionUrl(JsonObject(videos + ("motionDetailSquare" to trusted))),
+        )
+        assertEquals("https://mvod.itunes.apple.com/square", appleMotionUrl(videos))
+        assertEquals(
+            "https://mvod.itunes.apple.com/square",
             appleMotionUrl(JsonObject(videos + ("motionDetailSquare" to JsonNull))),
         )
         assertEquals(
-            "https://example.com/tall",
+            "https://a.mzstatic.com/tall",
             appleMotionUrl(JsonObject(videos - setOf("motionDetailSquare", "motionSquareVideo1x1"))),
         )
     }

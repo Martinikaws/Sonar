@@ -38,7 +38,7 @@ use librespot_metadata::{audio::UniqueFields, track::Tracks};
 
 use symphonia::core::io::MediaSource;
 use symphonia::core::probe::Hint;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::{NUM_CHANNELS, SAMPLE_RATE, SAMPLES_PER_SECOND};
 
@@ -1137,6 +1137,7 @@ struct PlayerLoadedTrackData {
 enum PlayerPreload {
     None,
     Loading {
+        promote: watch::Sender<bool>,
         track_id: SpotifyUri,
         loader: Pin<Box<dyn FusedFuture<Output = Result<PlayerLoadedTrackData, ()>> + Send>>,
     },
@@ -1483,6 +1484,7 @@ impl PlayerTrackLoader {
         &self,
         track_uri: SpotifyUri,
         position_ms: u32,
+        promotion: Option<watch::Receiver<bool>>,
     ) -> Option<PlayerLoadedTrackData> {
         match track_uri {
             SpotifyUri::Track { .. } | SpotifyUri::Episode { .. } => {
@@ -1520,7 +1522,7 @@ impl PlayerTrackLoader {
                     warn!("<{track_uri}> is not downloaded and this player is offline");
                     return None;
                 }
-                self.load_remote_track(track_uri, position_ms).await
+                self.load_remote_track(track_uri, position_ms, promotion).await
             }
             SpotifyUri::Local { .. } => self.load_local_track(track_uri, position_ms).await,
             _ => {
@@ -1708,6 +1710,7 @@ impl PlayerTrackLoader {
         &self,
         track_uri: SpotifyUri,
         position_ms: u32,
+        mut promotion: Option<watch::Receiver<bool>>,
     ) -> Option<PlayerLoadedTrackData> {
         let track_id: SpotifyId = match (&track_uri).try_into() {
             Ok(id) => id,
@@ -1844,8 +1847,13 @@ impl PlayerTrackLoader {
             // alongside knows to keep out of the way. Audio keys are limited
             // per session, and a queue spending that allowance is a queue
             // stopping the music from starting; see `downloads.rs`.
-            librespot_core::audio_key::note_playback_request();
-            let key = match self.session.audio_key().request(track_id, file_id).await {
+            let keys = self.session.audio_key();
+            let requested = if let Some(promotion) = promotion.as_mut() {
+                keys.request_for_preload(track_id, file_id, promotion).await
+            } else {
+                keys.request_for_playback(track_id, file_id).await
+            };
+            let key = match requested {
                 Ok(key) => Some(key),
                 Err(e) => {
                     // A key that never came because the session went away
@@ -2262,7 +2270,7 @@ impl Future for PlayerInternal {
                                     play_request_id,
                                     position_ms,
                                 });
-                                let again = self.load_track(track_id.clone(), position_ms);
+                                let again = self.load_track(track_id.clone(), position_ms, None);
                                 let loader = Box::pin(
                                     async move {
                                         tokio::time::sleep(backoff).await;
@@ -2295,6 +2303,7 @@ impl Future for PlayerInternal {
             if let PlayerPreload::Loading {
                 ref mut loader,
                 ref track_id,
+                ..
             } = self.preload
             {
                 let track_id = track_id.clone();
@@ -3649,7 +3658,10 @@ impl PlayerInternal {
             if (track_id == *loaded_track_id) && (position_ms == 0) {
                 let mut preload = PlayerPreload::None;
                 std::mem::swap(&mut preload, &mut self.preload);
-                if let PlayerPreload::Loading { loader, .. } = preload {
+                if let PlayerPreload::Loading { loader, promote, .. } = preload {
+                    if promote.send(true).is_ok() {
+                        librespot_core::audio_key::note_playback_request();
+                    }
                     Some(loader)
                 } else {
                     None
@@ -3670,7 +3682,7 @@ impl PlayerInternal {
 
         // If we don't have a loader yet, create one from scratch.
         let loader =
-            loader.unwrap_or_else(|| Box::pin(self.load_track(track_id.clone(), position_ms)));
+            loader.unwrap_or_else(|| Box::pin(self.load_track(track_id.clone(), position_ms, None)));
 
         // LOCAL PATCH: the track being left goes into the fade here, not when
         // the new one starts.
@@ -3743,8 +3755,10 @@ impl PlayerInternal {
 
         // schedule the preload of the current track if desired.
         if preload_track {
-            let loader = self.load_track(track_id.clone(), 0);
+            let (promote, promotion) = watch::channel(false);
+            let loader = self.load_track(track_id.clone(), 0, Some(promotion));
             self.preload = PlayerPreload::Loading {
+                promote,
                 track_id,
                 loader: Box::pin(loader),
             }
@@ -4016,7 +4030,7 @@ impl PlayerInternal {
             position_ms,
         });
 
-        let loader = self.load_track(track_id.clone(), position_ms);
+        let loader = self.load_track(track_id.clone(), position_ms, None);
         let loader = Box::pin(
             async move {
                 loader.await
@@ -4035,6 +4049,7 @@ impl PlayerInternal {
         &mut self,
         spotify_uri: SpotifyUri,
         position_ms: u32,
+        promotion: Option<watch::Receiver<bool>>,
     ) -> impl FusedFuture<Output = Result<PlayerLoadedTrackData, ()>> + Send + 'static {
         // This method creates a future that returns the loaded stream and associated info.
         // Ideally all work should be done using asynchronous code. However, seek() on the
@@ -4054,7 +4069,7 @@ impl PlayerInternal {
         let handle = tokio::runtime::Handle::current();
 
         let load_handle = thread::spawn(move || {
-            let data = handle.block_on(loader.load_track(spotify_uri, position_ms));
+            let data = handle.block_on(loader.load_track(spotify_uri, position_ms, promotion));
             if let Some(data) = data {
                 let _ = result_tx.send(data);
             }

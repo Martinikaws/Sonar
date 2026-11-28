@@ -7,8 +7,7 @@ import androidx.media3.common.Player
 
 /**
  * A station plays as a one-item queue on the phone's own player: no duration, nothing before or
- * after it. The media id carries the station and the uri carries the stream, so a restored
- * session never mistakes it for a Spotify track.
+ * after it. The media ID identifies the station and the URI locates the stream.
  */
 object RadioPlayback {
     private const val PREFIX = "sonar-radio:"

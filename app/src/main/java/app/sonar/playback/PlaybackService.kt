@@ -317,7 +317,7 @@ class PlaybackService : MediaLibraryService() {
                 val more = app.sonar.backend.spotify.SpotifyDj.more(this@PlaybackService)
                 withContext(Dispatchers.Main) {
                     val queued = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId }.toSet()
-                    val fresh = more.filter { it.uri !in queued }
+                    val fresh = container.hiddenContent.state.value.filter(more).filter { it.uri !in queued }
                     app.sonar.backend.spotify.SpotifyDj.prepare(this@PlaybackService, fresh)
                     val items = fresh.map { track ->
                         androidx.media3.common.MediaItem.Builder()
@@ -393,7 +393,8 @@ class PlaybackService : MediaLibraryService() {
                     val currentUris = (0 until player.mediaItemCount)
                         .mapNotNull { player.getMediaItemAt(it).mediaId }
                         .toSet()
-                    val newTracks = catalogTracks.filter { it.uri !in currentUris }.take(toAdd)
+                    val newTracks = container.hiddenContent.state.value.filter(catalogTracks)
+                        .filter { it.uri !in currentUris }.take(toAdd)
                     if (newTracks.isNotEmpty()) {
                         val items = newTracks.map { track ->
                             androidx.media3.common.MediaItem.Builder()
@@ -2845,6 +2846,7 @@ class PlaybackService : MediaLibraryService() {
 
     private fun savePlayback() {
         if (releasing || player.currentMediaItem?.mediaId?.let { FlacSources.owns(it) } == true) return
+        if (player.currentMediaItem?.mediaId?.let(app.sonar.radio.RadioPlayback::owns) == true) return
         // A backend with no PlayQueue behind it — the YouTube one — is saved off
         // the Media3 timeline instead. That loses the pre-shuffle order, which
         // only librespot's queue knows, so a shuffled queue comes back in the
@@ -2891,6 +2893,7 @@ class PlaybackService : MediaLibraryService() {
      */
     private fun saveTimeline() {
         val count = player.mediaItemCount
+        if ((0 until count).any { app.sonar.radio.RadioPlayback.owns(player.getMediaItemAt(it).mediaId) }) return
         if (count == 0) {
             playbackStore.clear()
             return
@@ -2939,6 +2942,7 @@ class PlaybackService : MediaLibraryService() {
     private fun restoreTimeline(backendId: app.sonar.backend.BackendId) {
         if (player.mediaItemCount > 0) return
         val saved = playbackStore.load() ?: return
+        if (saved.tracks.any { app.sonar.radio.RadioPlayback.owns(it.uri) }) return
         // The phone's own files belong to no backend, so they are matched
         // against the player that is actually behind the session rather than
         // against a catalogue.

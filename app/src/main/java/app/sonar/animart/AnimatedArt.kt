@@ -15,11 +15,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
-import androidx.media3.datasource.DefaultHttpDataSource
-import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
+import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import app.sonar.SonarApplication
@@ -28,6 +27,7 @@ import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
 
 @OptIn(UnstableApi::class)
 internal data class AnimatedArt(val url: String, val mediaSourceFactory: MediaSource.Factory)
@@ -35,7 +35,7 @@ internal data class AnimatedArt(val url: String, val mediaSourceFactory: MediaSo
 @OptIn(UnstableApi::class)
 @Composable
 internal fun rememberAnimatedArt(catalogUrl: String?): AnimatedArt? {
-    // TODO(NEEDS HUMAN): Verify Apple's unofficial motion URLs and release matching on a device.
+    // TODO(NEEDS HUMAN): Verify Apple motion hosts, HLS redirects and release matching on a device.
     val url = animatedArtUrl(catalogUrl) ?: return null
     if (rememberLookReducedMotion()) return null
 
@@ -50,17 +50,30 @@ internal fun rememberAnimatedArt(catalogUrl: String?): AnimatedArt? {
     val factory by produceState<MediaSource.Factory?>(null, application, connectivity) {
         value = withContext(Dispatchers.IO) {
             try {
-                val upstream = ResolvingDataSource.Factory(DefaultHttpDataSource.Factory()) { request ->
-                    if (!canFetchAnimatedArt(connectivity.hasArtworkWifi(), power.value) ||
-                        animatedArtUrl(request.uri.toString()) == null
-                    ) throw IOException("Animated artwork requires Wi-Fi and HTTPS")
-                    request
-                }
+                val client = OkHttpClient.Builder()
+                    .followRedirects(false)
+                    .addInterceptor { chain ->
+                        var request = chain.request()
+                        // Check each hop before opening a connection to its host.
+                        repeat(6) {
+                            if (!canFetchAnimatedArt(connectivity.hasArtworkWifi(), power.value) ||
+                                animatedArtUrl(request.url.toString()) == null
+                            ) throw IOException("Animated artwork requires Wi-Fi and an Apple CDN URL")
+                            val response = chain.proceed(request)
+                            if (!response.isRedirect) return@addInterceptor response
+                            val target = response.use { redirect ->
+                                redirect.header("Location")?.let(request.url::resolve)
+                            } ?: throw IOException("Invalid animated artwork redirect")
+                            request = request.newBuilder().url(target).build()
+                        }
+                        throw IOException("Too many animated artwork redirects")
+                    }
+                    .build()
                 val cached = CacheDataSource.Factory()
                     .setCache(AnimatedArtDiskCache.get(application))
                     .setCacheKeyFactory { animatedArtCacheKey(it.uri.toString()) }
                     .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-                    .setUpstreamDataSourceFactory(upstream)
+                    .setUpstreamDataSourceFactory(OkHttpDataSource.Factory(client))
                 DefaultMediaSourceFactory(cached)
             } catch (_: IOException) {
                 null

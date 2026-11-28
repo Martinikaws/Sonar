@@ -466,7 +466,7 @@ class MediaBrowseTree(
         scope.launch {
             val account = refreshBrowseAccount()
             val tracks = try {
-                radioTracks(uri)
+                container.hiddenContent.state.value.filter(radioTracks(uri))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -769,16 +769,18 @@ class MediaBrowseTree(
         }
         val folder = folders.firstOrNull { it.title.equals(title, ignoreCase = true) } ?: folders.firstOrNull()
         if (folder != null) {
-            val tracks = tracksOf(folder.uri)
+            val tracks = container.hiddenContent.state.value.filter(tracksOf(folder.uri))
             if (tracks.isNotEmpty()) {
                 nodeLabels[folder.uri] = folder.title
                 return MediaSession.MediaItemsWithStartPosition(tracks.map { queueItem(it, folder.uri) }, 0, 0L)
             }
         }
-        check(results.tracks.isNotEmpty()) { "No tracks found for voice search" }
+        val requested = results.tracks.getOrNull(trackIndex)?.uri
+        val tracks = container.hiddenContent.state.value.filter(results.tracks, keep = requested)
+        check(tracks.isNotEmpty()) { "No tracks found for voice search" }
         return MediaSession.MediaItemsWithStartPosition(
-            results.tracks.map { queueItem(it, node) },
-            trackIndex.coerceAtLeast(0),
+            tracks.map { queueItem(it, node) },
+            tracks.indexOfFirst { it.uri == requested }.coerceAtLeast(0),
             0L,
         )
     }
@@ -826,7 +828,7 @@ class MediaBrowseTree(
 
         val (parentId, trackUri) = parts
         check(trustedController(mediaSession, controller)) { "Untrusted browse controller" }
-        val tracks = tracksOf(parentId, offline)
+        val tracks = container.hiddenContent.state.value.filter(tracksOf(parentId, offline), keep = trackUri)
         val index = tracks.indexOfFirst { it.uri == trackUri }
         if (index < 0) {
             check(!offline) { "Browse track is unavailable offline" }

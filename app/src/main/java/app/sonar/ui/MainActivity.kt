@@ -373,13 +373,18 @@ class MainActivity : ComponentActivity() {
          * track begins, then jumps.
          */
         positionMs: Long = 0L,
+        explicitTrackSelection: Boolean,
     ) {
         val player = controller ?: return
 
         // Hidden songs and banned artists are skipped, except the track that was tapped.
         val tappedUri = tracks.getOrNull(index)?.uri
+        val filteredTracks = (application as app.sonar.SonarApplication).hiddenContent.state.value.filter(
+            tracks, tappedUri.takeIf { explicitTrackSelection },
+        )
+        val contextOrdered = asContext && filteredTracks.size == tracks.size
         @Suppress("NAME_SHADOWING")
-        val tracks = (application as app.sonar.SonarApplication).hiddenContent.state.value.filter(tracks, tappedUri)
+        val tracks = filteredTracks
         @Suppress("NAME_SHADOWING")
         val index = tracks.indexOfFirst { it.uri == tappedUri }.coerceAtLeast(0)
 
@@ -444,7 +449,7 @@ class MainActivity : ComponentActivity() {
             // Spotify and play its tracks instead.
             playable.map {
                 val spotifyContext = tappedLocal && contextUri?.startsWith("spotify:") == true
-                toMediaItem(it, contextUri.takeUnless { spotifyContext }, asContext && !spotifyContext, contextLabel)
+                toMediaItem(it, contextUri.takeUnless { spotifyContext }, contextOrdered && !spotifyContext, contextLabel)
             },
             start,
             positionMs,

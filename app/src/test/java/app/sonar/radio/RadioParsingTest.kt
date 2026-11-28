@@ -35,6 +35,13 @@ class RadioParsingTest {
         assertEquals(listOf("1", "2"), RadioParsing.stations(text, limit = 2).stations.map { it.uuid })
     }
 
+    @Test fun duplicatePlayableStationIdsDoNotConsumeTheLimit() {
+        val text = listOf("a", "a", "b").joinToString(",", "[", "]") {
+            """{"stationuuid":"$it","url":"https://x.example.com/$it"}"""
+        }
+        assertEquals(listOf("a", "b"), RadioParsing.stations(text, limit = 2).stations.map { it.uuid })
+    }
+
     @Test fun nullsAndBlankNamesDoNotBreakAStation() {
         val r = RadioParsing.stations("""[{"stationuuid":"a","name":null,"url":"https://a.example.com/s","bitrate":null}]""")
         assertEquals("?", r.stations.single().name)
@@ -56,6 +63,7 @@ class RadioParsingTest {
         assertFalse(RadioParsing.playable("http://x.example.com/s"))
         assertFalse(RadioParsing.playable("rtsp://x.example.com/s"))
         assertFalse(RadioParsing.playable("https:///nohost"))
+        assertFalse(RadioParsing.playable("https://user:password@x.example.com/live"))
         assertFalse(RadioParsing.playable(""))
     }
 

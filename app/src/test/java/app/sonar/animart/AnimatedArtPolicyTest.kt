@@ -19,10 +19,18 @@ class AnimatedArtPolicyTest {
     @Test
     fun missingOrUnsafeUrlsFallBackToStillArtwork() {
         assertNull(animatedArtUrl(null))
-        assertNull(animatedArtUrl("http://example.com/cover.mp4"))
-        assertNull(animatedArtUrl("https://user@example.com/cover.mp4"))
+        assertNull(animatedArtUrl("http://a.mzstatic.com/cover.mp4"))
+        assertNull(animatedArtUrl("https://user@a.mzstatic.com/cover.mp4"))
         assertNull(animatedArtUrl("https://"))
-        assertEquals("https://example.com/cover.m3u8", animatedArtUrl("https://example.com/cover.m3u8"))
+        assertNull(animatedArtUrl("https://example.com/cover.m3u8"))
+        assertNull(animatedArtUrl("https://a.mzstatic.com.example.com/cover.m3u8"))
+        assertNull(animatedArtUrl("https://fakemzstatic.com/cover.m3u8"))
+        assertNull(animatedArtUrl("https://a.mzstatic.com:8443/cover.m3u8"))
+        assertNull(animatedArtUrl("https://other.itunes.apple.com/cover.m3u8"))
+        val master = "https://Mvod.iTunes.Apple.com/cover.m3u8"
+        val segment = "https://a.mzstatic.com:443/segment.mp4"
+        assertEquals(master, animatedArtUrl(master))
+        assertEquals(segment, animatedArtUrl(segment))
     }
 
     @Test

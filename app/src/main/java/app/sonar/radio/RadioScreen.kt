@@ -105,8 +105,10 @@ fun RadioScreen(player: Player?, contentPadding: PaddingValues, onBack: () -> Un
     val play: (RadioStation) -> Unit = { station ->
         if (player != null) {
             RadioPlayback.play(player, station)
-            RadioStore.played(station)
-            scope.launch { RadioDirectory.reportClick(station.uuid) }
+            scope.launch {
+                RadioStore.played(station)
+                RadioDirectory.reportClick(station.uuid)
+            }
         }
     }
     val browsing = query.isBlank() && tag.isBlank()
@@ -217,6 +219,7 @@ private fun Message(text: String, action: @Composable () -> Unit = {}) {
 
 @Composable
 private fun StationRow(station: RadioStation, current: String?, onPlay: (RadioStation) -> Unit) {
+    val scope = rememberCoroutineScope()
     val playing = current == RadioPlayback.mediaId(station)
     val favorite = RadioStore.isFavorite(station.uuid)
     val subtitle = listOfNotNull(
@@ -253,7 +256,7 @@ private fun StationRow(station: RadioStation, current: String?, onPlay: (RadioSt
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        IconButton(onClick = { RadioStore.toggle(station) }, modifier = Modifier.size(48.dp)) {
+        IconButton(onClick = { scope.launch { RadioStore.toggle(station) } }, modifier = Modifier.size(48.dp)) {
             Icon(
                 Lucide.Heart,
                 contentDescription = stringResource(if (favorite) R.string.radio_unfavorite else R.string.radio_favorite),

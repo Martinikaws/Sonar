@@ -11,7 +11,7 @@ use std::{
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use bytes::Bytes;
 use thiserror::Error;
-use tokio::sync::oneshot;
+use tokio::sync::{oneshot, watch};
 
 use crate::{Error, FileId, SpotifyId, packet::PacketType, util::SeqGenerator};
 
@@ -139,13 +139,6 @@ enum Refusal {
     Account = 2,
 }
 
-/// How recent a playback request has to be for a refusal to be its.
-///
-/// Longer than one load's own retries take: three refusals with the hold
-/// doubling between them, plus the player trying the load again, run past a
-/// minute, and at sixty seconds the last refusals of a load stopped counting.
-const PLAYBACK_WAITING: Duration = Duration::from_secs(90);
-
 /// How long refusals with no key in between make it the account's.
 ///
 /// A burst of requests is refused for about a minute. At two minutes, the
@@ -177,9 +170,6 @@ fn report_refusal(refused: bool) {
         }
         return;
     }
-    if !since_playback_request().is_some_and(|ago| ago < PLAYBACK_WAITING) {
-        return;
-    }
     let refused_for = FIRST_REFUSED
         .lock()
         .map(|mut first| first.get_or_insert_with(Instant::now).elapsed())
@@ -197,17 +187,6 @@ fn report_refusal(refused: bool) {
         PLAYBACK_REFUSED.store(true, Ordering::SeqCst);
         report(Refusal::Refused);
     }
-}
-
-/// How recent the player's ask has to be for a key request to be a listener
-/// waiting for a song rather than a download.
-const PLAYBACK_ASKING: Duration = Duration::from_secs(5);
-
-/// A listener waiting on a key is better served by an answer now than by the
-/// hold-off running out: the app plays the song from another source instead
-/// and tries Spotify again on the next one. Downloads still wait.
-fn playback_is_asking() -> bool {
-    since_playback_request().is_some_and(|ago| ago < PLAYBACK_ASKING)
 }
 
 const FIRST_COOL_OFF: Duration = Duration::from_secs(3);
@@ -274,6 +253,30 @@ impl AudioKeyManager {
     /// a broken channel or an unexpected packet is structural and repeating it
     /// would just add latency to an error that is not going to change.
     pub async fn request(&self, track: SpotifyId, file: FileId) -> Result<AudioKey, Error> {
+        self.request_key(track, file, false, None).await
+    }
+
+    pub async fn request_for_playback(&self, track: SpotifyId, file: FileId) -> Result<AudioKey, Error> {
+        note_playback_request();
+        self.request_key(track, file, true, None).await
+    }
+
+    pub async fn request_for_preload(
+        &self,
+        track: SpotifyId,
+        file: FileId,
+        promotion: &mut watch::Receiver<bool>,
+    ) -> Result<AudioKey, Error> {
+        self.request_key(track, file, false, Some(promotion)).await
+    }
+
+    async fn request_key(
+        &self,
+        track: SpotifyId,
+        file: FileId,
+        foreground: bool,
+        mut promotion: Option<&mut watch::Receiver<bool>>,
+    ) -> Result<AudioKey, Error> {
         // LOCAL PATCH: asked for before, and the answer does not change.
         if let Some(key) = self.lock(|inner| {
             inner
@@ -297,14 +300,24 @@ impl AudioKeyManager {
                     .cool_off_until
                     .and_then(|until| until.checked_duration_since(Instant::now()))
             }) {
-                // LOCAL PATCH: playback fails fast instead of waiting it out.
-                if playback_is_asking() {
+                // A preload adopted during cooldown must wake without sending another key request.
+                let promoted = if foreground {
+                    true
+                } else if let Some(priority) = promotion.as_deref_mut() {
+                    tokio::select! {
+                        biased;
+                        Ok(_) = priority.wait_for(|playback| *playback) => true,
+                        _ = tokio::time::sleep(wait) => false,
+                    }
+                } else {
+                    tokio::time::sleep(wait).await;
+                    false
+                };
+                if promoted {
                     debug!("audio key on hold for {wait:?}, not waiting for playback");
                     report_refusal(true);
                     return Err(AudioKeyError::AesKey.into());
                 }
-                debug!("waiting {wait:?} before asking for another audio key");
-                tokio::time::sleep(wait).await;
             }
 
             match self.request_once(track, file).await {
@@ -324,6 +337,8 @@ impl AudioKeyManager {
                     return Ok(key);
                 }
                 Err(e) => {
+                    let playback =
+                        foreground || promotion.as_ref().is_some_and(|priority| *priority.borrow());
                     // Through the boxed cause, not the wrapper. This `Error` is
                     // librespot's own: a `kind` plus the error it was built
                     // from, and only the latter says which failure this was.
@@ -341,9 +356,11 @@ impl AudioKeyManager {
                             inner.cool_off = (wait * 2).min(MAX_COOL_OFF);
                             warn!("audio key refused, holding off for {wait:?}");
                         });
-                        report_refusal(true);
+                        if playback {
+                            report_refusal(true);
+                        }
                     }
-                    if !transient || attempt + 1 == ATTEMPTS || playback_is_asking() {
+                    if !transient || attempt + 1 == ATTEMPTS || playback {
                         return Err(e);
                     }
                     debug!("audio key attempt {} failed, retrying", attempt + 1);

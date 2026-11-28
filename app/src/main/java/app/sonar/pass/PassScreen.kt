@@ -140,16 +140,29 @@ private fun PassScreen(invite: String?, onBack: () -> Unit, onAccepted: () -> Un
                 received != null -> {
                     Text(stringResource(R.string.pass_confirm))
                     if (received.name.isNotBlank()) Text(received.name)
-                    PassButton(R.string.pass_accept) {
-                        status = when {
-                            account.isSignedIn -> R.string.pass_existing_session
-                            runCatching { account.acceptPass(received) }.getOrDefault(false) -> R.string.pass_received
-                            else -> R.string.pass_error
+                    PassButton(R.string.pass_accept, enabled = !busy) {
+                        receiving = true
+                        scope.launch {
+                            try {
+                                status = withContext(Dispatchers.IO) {
+                                    when {
+                                        account.isSignedIn -> R.string.pass_existing_session
+                                        account.acceptPass(received) -> R.string.pass_received
+                                        else -> R.string.pass_error
+                                    }
+                                }
+                            } catch (cancelled: CancellationException) {
+                                throw cancelled
+                            } catch (_: Exception) {
+                                status = R.string.pass_error
+                            } finally {
+                                receiving = false
+                            }
+                            pending = null
+                            if (status == R.string.pass_received) onAccepted()
                         }
-                        pending = null
-                        if (status == R.string.pass_received) onAccepted()
                     }
-                    PassButton(R.string.pass_cancel) { pending = null }
+                    PassButton(R.string.pass_cancel, enabled = !busy) { pending = null }
                 }
                 incoming != null && accountName == null -> {
                     OutlinedTextField(

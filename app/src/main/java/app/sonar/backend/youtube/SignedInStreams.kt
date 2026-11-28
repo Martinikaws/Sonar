@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
@@ -203,7 +204,7 @@ object SignedInStreams {
     private fun player(videoId: String, timestamp: Int): PlayerResponse {
         val refusals = mutableListOf<String>()
         val tv = runCatching { tvPlayer(videoId, timestamp) }
-            .onFailure { refusals += "TV: ${it.message}" }
+            .onFailure { refusals += "TV: ${it.javaClass.simpleName}" }
             .getOrNull()
         val tvStatus = tv?.playabilityStatus
         if (tv != null && tvStatus?.status == "OK" && tv.streamingData != null) {
@@ -238,6 +239,7 @@ object SignedInStreams {
         runCatching { probe(url) in 200..299 }.getOrDefault(false)
 
     private fun probe(url: String): Int {
+        require(isYouTubePlaybackUrl(url)) { "Unexpected YouTube media address" }
         val request = Request.Builder().url(url).header("Range", "bytes=0-1").build()
         return http.newCall(request).execute().use { it.code }
     }
@@ -339,6 +341,7 @@ object SignedInStreams {
     private val http = okhttp3.OkHttpClient.Builder()
         .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
         .readTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+        .followRedirects(false)
         .build()
 
     private val json = Json {
@@ -389,6 +392,7 @@ object SignedInStreams {
             signature = params["s"]
             params["sp"]?.let { signatureParameter = it }
         }
+        require(isYouTubePlaybackUrl(url)) { "Unexpected YouTube media address" }
         val throttle = android.net.Uri.parse(url).getQueryParameter("n")
         val (nAnswers, sigAnswers) = PlayerChallenges.solve(
             context,
@@ -418,4 +422,10 @@ object SignedInStreams {
     private const val READY_POLL_MS = 500L
 
     private const val TAG = "SonarYTSignedIn"
+}
+
+internal fun isYouTubePlaybackUrl(url: String): Boolean {
+    val parsed = url.toHttpUrlOrNull() ?: return false
+    return parsed.isHttps && parsed.port == 443 && parsed.username.isEmpty() && parsed.password.isEmpty() &&
+        (parsed.host == "googlevideo.com" || parsed.host.endsWith(".googlevideo.com"))
 }
