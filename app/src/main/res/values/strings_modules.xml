@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="modules_title">Modules</string>
+    <string name="modules_summary">Playback artwork and visualizer</string>
+    <string name="modules_artwork">BackMusic artwork</string>
+    <string name="modules_ncs">NCS</string>
+    <string name="modules_spectrum">Spectrum</string>
+    <string name="modules_waveform">Waveform</string>
+    <string name="modules_back">Back</string>
+    <string name="modules_motion_disabled">Animation is off in system settings.</string>
+    <string name="modules_idle">Play a track to see the visualizer.</string>
+    <string name="modules_no_audio">Audio visualization is unavailable for this playback.</string>
+    <string name="modules_no_artwork">No artwork for this track.</string>
+    <string name="modules_install_url">Install or update from URL</string>
+    <string name="modules_package_url">HTTPS package URL</string>
+    <string name="modules_install_confirm">Install package</string>
+    <string name="modules_show_tab">Show Modules tab</string>
+    <string name="modules_artwork_loading">Loading artwork…</string>
+    <string name="modules_artwork_error">Could not load artwork.</string>
+</resources>

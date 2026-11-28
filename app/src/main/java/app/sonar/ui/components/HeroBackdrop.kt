@@ -67,6 +67,7 @@ import coil.request.ImageRequest
  * and this sits under everything.
  */
 @Composable
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 fun HeroBackdrop(
     artworkUrl: String?,
     /** Named for the description a reader hears; the picture is decorative. */
@@ -137,6 +138,8 @@ fun HeroBackdrop(
      * same one.
      */
     zoom: Float = 1f,
+    motionSourceFactory: androidx.media3.exoplayer.source.MediaSource.Factory? = null,
+    onMotionError: () -> Unit = {},
 ) {
     // Black over a dark page and white over a light one; see scrimColor.
     val scrim = app.sonar.ui.theme.scrimColor()
@@ -282,6 +285,8 @@ fun HeroBackdrop(
                     },
                 onFrame = motion::take,
                 playing = motionPlaying,
+                mediaSourceFactory = motionSourceFactory,
+                onError = onMotionError,
             )
         }
 

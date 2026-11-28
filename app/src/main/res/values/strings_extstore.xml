@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="extstore_installed">Installed</string>
+    <string name="extstore_browse">Browse</string>
+    <string name="extstore_loading">Loading extensions…</string>
+    <string name="extstore_empty">No extensions found.</string>
+    <string name="extstore_error">Couldn’t load the extension catalog.</string>
+    <string name="extstore_incomplete">Some catalog sources couldn’t be loaded.</string>
+    <string name="extstore_check_updates">Refresh and check for updates</string>
+    <string name="extstore_rating">%1$s / 5 (%2$d votes)</string>
+    <string name="extstore_unavailable">No verified package available.</string>
+    <string name="extstore_update">Update %1$s</string>
+    <string name="extstore_install">Install %1$s</string>
+    <string name="extstore_confirm">Version %1$s\nSource: %2$s</string>
+    <string name="extstore_installing">Checking and saving the package…</string>
+    <string name="extstore_install_error">Couldn’t save the package. Refresh the catalog and try again.</string>
+</resources>

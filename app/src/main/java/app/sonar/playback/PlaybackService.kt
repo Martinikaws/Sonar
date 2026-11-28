@@ -74,10 +74,7 @@ class PlaybackService : MediaLibraryService() {
         live.connectedControllers.forEach { controller ->
             live.setMediaButtonPreferences(
                 controller,
-                browseTree.layoutFor(
-                    player,
-                    shadeAndCar = live.isMediaNotificationController(controller),
-                ),
+                browseTree.layoutFor(live, controller),
             )
         }
     }
@@ -570,6 +567,7 @@ class PlaybackService : MediaLibraryService() {
         // librespot plays what is downloaded, so the queue goes to it.
         scope.launch {
             app.sonar.playback.OfflineMode.active.collect { offline ->
+                redrawButtons()
                 if (offline && playerKind == PlayerKind.SOLOIST) {
                     val offlinePlayer = if (AudioSource.SPOTIFY in sourceOrder) PlayerKind.SPOTIFY
                         else PlayerKind.SPOTIFY_UNAVAILABLE

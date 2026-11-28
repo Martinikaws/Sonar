@@ -13,6 +13,7 @@ import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.sonar.SonarApplication
+import app.sonar.animart.canRequestAppleMotion
 import app.sonar.auth.SpotifyOAuth
 import app.sonar.backend.BackendAuthState
 import app.sonar.backend.BackendId
@@ -6067,7 +6068,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Called when the track changes; cached and cheap on a repeat. */
-    fun loadNowPlayingArt(uri: String?, title: String, album: String, artist: String) {
+    fun loadNowPlayingArt(uri: String?, title: String, album: String, artist: String, durationMs: Long) {
+        suspend fun addMotion(record: String) {
+            val track = app.sonar.data.AppleMotionTrack(title, artist, record, durationMs)
+            val motion = app.sonar.data.AppleCatalog.nowPlayingMotion(track) {
+                container.canRequestAppleMotion()
+            } ?: return
+            _nowPlayingArt.value = (_nowPlayingArt.value ?: app.sonar.data.AppleCatalog.Album(
+                heroUrl = null,
+                coverUrl = null,
+            )).copy(motionUrl = motion)
+        }
         nowPlayingArtJob?.cancel()
         _nowPlayingArt.value = null
         if (artist.isBlank()) {
@@ -6095,6 +6106,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             keptArt(uri)?.let {
                 _nowPlayingArt.value = it.album
                 _nowPlayingArtPending.value = false
+                addMotion(album)
                 return@launch
             }
 
@@ -6159,6 +6171,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             _nowPlayingArtPending.value = false
+            addMotion(record)
         }
     }
 

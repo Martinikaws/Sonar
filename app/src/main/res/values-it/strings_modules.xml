@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="modules_title">Moduli</string>
+    <string name="modules_summary">Copertina e visualizzatore durante la riproduzione</string>
+    <string name="modules_artwork">Copertina BackMusic</string>
+    <string name="modules_ncs">NCS</string>
+    <string name="modules_spectrum">Spettro</string>
+    <string name="modules_waveform">Forma del segnale</string>
+    <string name="modules_back">Indietro</string>
+    <string name="modules_motion_disabled">Le animazioni sono disattivate nelle impostazioni di sistema.</string>
+    <string name="modules_idle">Riproduci un brano per attivare il visualizzatore.</string>
+    <string name="modules_no_audio">Visualizzazione audio non disponibile per questa riproduzione.</string>
+    <string name="modules_no_artwork">Nessuna copertina per questo brano.</string>
+    <string name="modules_install_url">Installa o aggiorna da URL</string>
+    <string name="modules_package_url">URL HTTPS del pacchetto</string>
+    <string name="modules_install_confirm">Installa pacchetto</string>
+    <string name="modules_show_tab">Mostra scheda Moduli</string>
+    <string name="modules_artwork_loading">Caricamento copertina…</string>
+    <string name="modules_artwork_error">Impossibile caricare la copertina.</string>
+</resources>

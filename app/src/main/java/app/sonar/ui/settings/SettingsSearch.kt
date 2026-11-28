@@ -141,7 +141,7 @@ internal val SETTINGS_INDEX: List<SettingsEntry> = listOf(
     SettingsEntry("lyrics-folder", R.string.lyrics_folder_title, null, listOf(R.string.lyrics_folder_choose), SettingsGroup.LYRICS),
     SettingsEntry("spicy-lyrics", R.string.spicy_lyrics_title, null, listOf(R.string.spicy_lyrics_key), SettingsGroup.LYRICS),
 
-    SettingsEntry("canvas", R.string.canvas, null, listOf(R.string.canvas_show, R.string.animated_cover_source), SettingsGroup.COVERS),
+    SettingsEntry("canvas", R.string.canvas, null, listOf(R.string.canvas_show, R.string.animated_cover_source, R.string.animart_source), SettingsGroup.COVERS),
 
     SettingsEntry(
         "storage-chart", R.string.download_storage, null,
@@ -190,7 +190,8 @@ internal val SETTINGS_INDEX: List<SettingsEntry> = listOf(
         "system", R.string.page_app_system, null,
         listOf(R.string.app_system_settings, R.string.app_battery_settings), SettingsGroup.SYSTEM,
     ),
-    SettingsEntry("extensions", R.string.ext_title, null, listOf(R.string.ext_install), SettingsGroup.SYSTEM, SettingsAction.Open(SettingsPage.Extensions)),
+    SettingsEntry("modules", R.string.modules_title, R.string.modules_summary, listOf(R.string.modules_show_tab, R.string.modules_artwork, R.string.modules_spectrum, R.string.modules_waveform, R.string.modules_ncs), SettingsGroup.SYSTEM, SettingsAction.Inline),
+    SettingsEntry("extensions", R.string.ext_title, null, listOf(R.string.ext_install, R.string.modules_install_url), SettingsGroup.SYSTEM, SettingsAction.Open(SettingsPage.Extensions)),
     SettingsEntry("links", R.string.spotify_links, null, listOf(R.string.open_by_default), SettingsGroup.SYSTEM),
 
     SettingsEntry("author", R.string.fix2_upstream_credit, null, emptyList(), SettingsGroup.ABOUT),

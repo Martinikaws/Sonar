@@ -527,7 +527,9 @@ class AudioOutput {
         if (discarding) return
         if (!floatIn) {
             takenUs.addAndGet(sizeInBytes * 1_000_000L / (sampleRate.toLong() * channels * 2).coerceAtLeast(1))
-            AudioLevel.ofShorts(data.duplicate().order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer(), sizeInBytes / 2)
+            val samples = data.duplicate().order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer()
+            AudioLevel.ofShorts(samples, sizeInBytes / 2)
+            app.sonar.parity.modules.AudioFrames.offer(sizeInBytes / 2, channels) { samples.get(it) / 32768f }
         }
         // 16-bit through the effects: not what a DAC opened bit-perfect is for.
         HiFi.release()
@@ -607,6 +609,7 @@ class AudioOutput {
         // A view of its own: the caller's buffer keeps the byte order it had.
         val floats = data.duplicate().order(java.nio.ByteOrder.LITTLE_ENDIAN).asFloatBuffer()
         AudioLevel.ofFloats(floats, samples)
+        app.sonar.parity.modules.AudioFrames.offer(samples, channels, floats::get)
 
         val neutral = effectsNeutral()
         if (neutral != wasNeutral) {

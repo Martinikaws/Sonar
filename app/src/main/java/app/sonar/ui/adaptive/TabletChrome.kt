@@ -51,12 +51,14 @@ private val destinations = listOf(
     Triple(Routes.NEW, R.string.tab_new, Lucide.Grid2x2),
     Triple(Routes.RADIO, R.string.tab_radio, Lucide.Radio),
     Triple(Routes.LIBRARY, R.string.library, Lucide.Music2),
+    Triple(Routes.MODULES, R.string.modules_title, Lucide.Radio),
     Triple(Routes.SEARCH, R.string.search, Lucide.Search),
 )
 
 @Composable
 internal fun AdaptiveLayout.TabletRail(
     activeTab: String,
+    showModulesTab: Boolean,
     showSearchField: Boolean,
     onSearchOpenChange: (Boolean) -> Unit,
     onSelect: (String) -> Unit,
@@ -70,6 +72,7 @@ internal fun AdaptiveLayout.TabletRail(
     ) {
         Column(Modifier.verticalScroll(rememberScrollState())) {
             for ((route, title, icon) in destinations) {
+                if (route == Routes.MODULES && !showModulesTab) continue
                 NavigationRailItem(
                     selected = route == activeTab,
                     onClick = {

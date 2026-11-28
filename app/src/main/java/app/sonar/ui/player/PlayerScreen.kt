@@ -572,7 +572,11 @@ fun PlayerScreen(
     val showingClip = canvas != null && canvasReady && (!canvas.isVideo || glassEnabled)
     val showCover = !showingVideo && !showingClip
     val playerSettled = LocalPlayerSettled.current
-    val motionUrl = coverMotionUrl.takeIf { !sideways && showCover && playerSettled }
+    val animatedArt = app.sonar.animart.rememberAnimatedArt(
+        coverMotionUrl.takeIf { !sideways && showCover && playerSettled },
+    )
+    var motionFailed by remember(animatedArt) { mutableStateOf(false) }
+    val motionUrl = animatedArt?.url.takeUnless { motionFailed }
     val spinCoverUrl = spinningUrl.takeIf { showCover && motionUrl == null }
 
     // The panes below the clip only refract it when they are actually over it.
@@ -852,7 +856,9 @@ fun PlayerScreen(
                     motionUrl = motionUrl,
                     // And still behind a panel, as a Canvas is, where it stands
                     // rather than taken away; see MotionCover's playing.
-                    motionPlaying = !panelOpen,
+                    motionPlaying = state.isPlaying && !panelOpen,
+                    motionSourceFactory = animatedArt?.mediaSourceFactory,
+                    onMotionError = { motionFailed = true },
                     title = state.title,
                     pageColor = coverTone,
                     pending = coverPending || (spinCoverUrl != null && panel == PlayerPanel.NONE),

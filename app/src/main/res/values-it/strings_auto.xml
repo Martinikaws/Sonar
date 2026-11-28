@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auto_library">Libreria</string>
+    <string name="auto_downloads">Download</string>
+    <string name="auto_like">Aggiungi ai preferiti</string>
+</resources>

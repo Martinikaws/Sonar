@@ -55,6 +55,14 @@ class PreferencesStore(context: Context) {
         _looks.value = current.copy(accent = value, enabled = current.enabled - LooksOption.CoverColors)
     }
 
+    private val _modulesTab = MutableStateFlow(prefs.getBoolean("modules_tab", false))
+    val modulesTab = _modulesTab.asStateFlow()
+
+    fun setModulesTab(visible: Boolean) {
+        prefs.edit().putBoolean("modules_tab", visible).apply()
+        _modulesTab.value = visible
+    }
+
     data class TrackOrder(val sort: String? = null, val descending: Boolean = false)
 
     private val _trackOrders = MutableStateFlow(

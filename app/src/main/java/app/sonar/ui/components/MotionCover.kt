@@ -55,19 +55,23 @@ fun MotionCover(
      * appearing at once over the still, with nothing in between.
      */
     playing: Boolean = true,
+    mediaSourceFactory: androidx.media3.exoplayer.source.MediaSource.Factory? = null,
+    onError: () -> Unit = {},
 ) {
     val context = LocalContext.current
     // The surface the frames are read from, once the view exists.
     val surface = remember { arrayOfNulls<android.view.TextureView>(1) }
 
-    val player = remember(url) {
-        ExoPlayer.Builder(context).build().apply {
+    val player = remember(url, mediaSourceFactory) {
+        ExoPlayer.Builder(context).apply {
+            mediaSourceFactory?.let(::setMediaSourceFactory)
+        }.build().apply {
             // Explicitly not asking for focus: what is playing keeps playing.
             setAudioAttributes(AudioAttributes.DEFAULT, false)
             volume = 0f
             repeatMode = Player.REPEAT_MODE_ALL
             setMediaItem(MediaItem.fromUri(url))
-            playWhenReady = true
+            playWhenReady = playing
             prepare()
         }
     }
@@ -80,11 +84,17 @@ fun MotionCover(
     // Faded in on its first frame rather than appearing in one: until then the
     // still underneath is what shows, and the change from one to the other is
     // the cover beginning to move, not a second picture arriving on top.
-    var firstFrame by remember(url) { mutableStateOf(false) }
+    var firstFrame by remember(player) { mutableStateOf(false) }
+    val reportError = rememberUpdatedState(onError)
     DisposableEffect(player) {
         val listener = object : Player.Listener {
             override fun onRenderedFirstFrame() {
                 firstFrame = true
+            }
+
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                firstFrame = false
+                reportError.value()
             }
         }
         player.addListener(listener)

@@ -229,6 +229,9 @@ class DownloadStore(context: Context) {
 
     fun isDownloaded(trackUri: String): Boolean = _files.value.containsKey(trackUri)
 
+    internal fun hasDownloadedAudio(trackUri: String): Boolean =
+        _files.value[trackUri]?.let { hasAudio(trackUri, it) } == true
+
     /**
      * Whether a song in a kept page is one this app can fetch at all.
      *

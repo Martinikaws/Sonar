@@ -2,6 +2,7 @@
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -95,6 +96,56 @@ class ExtensionPackageTest {
         store.uninstall(unreadable.id)
         assertFalse(damaged.exists())
         assertEquals(listOf(readable), store.installed())
+    }
+
+    @Test
+    fun catalogInstallPersistsOriginAndRejectsUnexpectedPackageAndUpdate() {
+        val store = ExtensionStore(temp.root)
+        val first = zipOf("manifest.json" to manifest, "main.js" to "")
+        val preview = CatalogExtension.from(ExtensionManifest.parse(manifest))
+        val entry = preview.copy(sha256 = digest(first))
+        assertThrows(IllegalArgumentException::class.java) {
+            store.installFromCatalog(first, entry.copy(sha256 = "0".repeat(64)), "origin", update = false)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            store.installFromCatalog(first, entry.copy(versionCode = 2), "origin", update = false)
+        }
+        store.installFromCatalog(first, entry, "origin", update = false)
+        val reopened = ExtensionStore(temp.root)
+        assertEquals("origin", reopened.installed().single().origin)
+        assertEquals(1, reopened.load(entry.id).manifest.versionCode)
+        val nextManifest = manifest.dropLast(1) + ""","versionCode":2}"""
+        val next = zipOf("manifest.json" to nextManifest, "main.js" to "")
+        val update = entry.copy(versionCode = 2, sha256 = digest(next))
+        assertThrows(IllegalArgumentException::class.java) {
+            reopened.installFromCatalog(next, update, "other", update = true)
+        }
+        assertEquals(1, reopened.load(entry.id).manifest.versionCode)
+        reopened.installFromCatalog(next, update, "origin", update = true)
+        assertEquals(2, reopened.load(entry.id).manifest.versionCode)
+        reopened.uninstall(entry.id)
+        assertThrows(IllegalArgumentException::class.java) {
+            reopened.installFromCatalog(next, update, "origin", update = true)
+        }
+    }
+
+    @Test
+    fun disabledExtensionStaysDisabledAcrossUpdateAndSkipsStatusHook() {
+        val script = "myspoti.provide('status', function () { return { live: true }; });"
+        val store = ExtensionStore(temp.root)
+        val first = zipOf("manifest.json" to manifest, "main.js" to script)
+        val id = store.install(first, digest(first)).id
+        assertEquals("""{"live":true}""", store.status(id, Locale.ENGLISH))
+        store.setEnabled(id, false)
+
+        val reopened = ExtensionStore(temp.root)
+        val nextManifest = manifest.dropLast(1) + ""","versionCode":2}"""
+        val next = zipOf("manifest.json" to nextManifest, "main.js" to script)
+        reopened.install(next, digest(next))
+        assertFalse(reopened.installed().single().enabled)
+        assertNull(reopened.status(id, Locale.ENGLISH))
+        reopened.setEnabled(id, true)
+        assertEquals("""{"live":true}""", reopened.status(id, Locale.ENGLISH))
     }
 
     private fun zipOf(vararg entries: Pair<String, String>): ByteArray {

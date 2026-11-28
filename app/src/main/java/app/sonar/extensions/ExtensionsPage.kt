@@ -3,6 +3,7 @@ package app.sonar.extensions
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
@@ -27,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.sonar.R
+import app.sonar.parity.modules.extensionPackageUrl
 import app.sonar.ui.settings.ActionRow
 import app.sonar.ui.settings.Section
 import com.composables.icons.lucide.FolderOpen
@@ -53,8 +55,11 @@ internal fun ExtensionsPage(contentPadding: PaddingValues, header: @Composable (
     var error by remember { mutableStateOf<Int?>(null) }
     var importing by rememberSaveable { mutableStateOf(false) }
     var digest by rememberSaveable { mutableStateOf("") }
+    var importingUrl by rememberSaveable { mutableStateOf(false) }
+    var packageUrl by rememberSaveable { mutableStateOf("") }
     var pendingDigest by rememberSaveable { mutableStateOf<String?>(null) }
     var removing by rememberSaveable { mutableStateOf<String?>(null) }
+    var browsing by rememberSaveable { mutableStateOf(false) }
     var checking by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<Pair<Int, String?>?>(null) }
 
@@ -63,7 +68,7 @@ internal fun ExtensionsPage(contentPadding: PaddingValues, header: @Composable (
         checking = true
         try {
             val report = withContext(Dispatchers.IO) {
-                val response = ExtensionRuntime(store.load(id)).status(Locale.getDefault())
+                val response = store.status(id, Locale.getDefault())
                 response?.let { Json.parseToJsonElement(it).jsonObject }
             }
             status = when {
@@ -101,7 +106,9 @@ internal fun ExtensionsPage(contentPadding: PaddingValues, header: @Composable (
         }
     }
 
-    LaunchedEffect(store) { refresh(R.string.ext_load_error) {} }
+    LaunchedEffect(store, browsing) {
+        if (!browsing) refresh(R.string.ext_load_error) {}
+    }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         val expected = pendingDigest
         pendingDigest = null
@@ -117,13 +124,28 @@ internal fun ExtensionsPage(contentPadding: PaddingValues, header: @Composable (
         }
     }
 
+    if (browsing) {
+        ExtensionBrowsePage(store, contentPadding, header) { browsing = false }
+        return
+    }
+
     LazyColumn(Modifier.fillMaxSize(), contentPadding = contentPadding) {
         item("top") { header() }
+        item("tabs") {
+            ExtensionTabs(browsing = false, enabled = !busy && pendingDigest == null) { browsing = true }
+        }
         item("actions") {
             Section(null) {
                 if (!busy && pendingDigest == null) {
                     ActionRow(stringResource(R.string.ext_install), destructive = false, icon = Lucide.FolderOpen) {
                         digest = ""
+                        importingUrl = false
+                        importing = true
+                    }
+                    ActionRow(stringResource(R.string.modules_install_url), destructive = false) {
+                        digest = ""
+                        packageUrl = ""
+                        importingUrl = true
                         importing = true
                     }
                 }
@@ -156,6 +178,22 @@ internal fun ExtensionsPage(contentPadding: PaddingValues, header: @Composable (
                 )
                 if (!busy && pendingDigest == null) {
                     if (manifest != null) {
+                        ActionRow(
+                            stringResource(
+                                if (entry.enabled) R.string.modulereview_disable_extension
+                                else R.string.modulereview_enable_extension,
+                                name,
+                            ),
+                            destructive = false,
+                        ) {
+                            scope.launch {
+                                refresh(R.string.modulereview_extension_state_error) {
+                                    store.setEnabled(entry.id, !entry.enabled)
+                                }
+                            }
+                        }
+                    }
+                    if (entry.enabled) {
                         ActionRow(stringResource(R.string.ext_review_check_status), destructive = false) {
                             scope.launch { checkStatus(entry.id) }
                         }
@@ -171,33 +209,55 @@ internal fun ExtensionsPage(contentPadding: PaddingValues, header: @Composable (
     }
 
     if (importing) {
+        val url = ExtensionDiscovery.allowedUrl(extensionPackageUrl(packageUrl)).takeIf { importingUrl }
         AlertDialog(
             onDismissRequest = { importing = false },
-            title = { Text(stringResource(R.string.ext_install)) },
+            title = { Text(stringResource(if (importingUrl) R.string.modules_install_url else R.string.ext_install)) },
             text = {
-                OutlinedTextField(
-                    value = digest,
-                    onValueChange = { digest = it.trim().take(128) },
-                    label = { Text(stringResource(R.string.ext_sha256)) },
-                    supportingText = { Text(stringResource(R.string.ext_sha256_help)) },
-                    singleLine = true,
-                )
+                Column {
+                    if (importingUrl) {
+                        OutlinedTextField(
+                            value = packageUrl,
+                            onValueChange = { packageUrl = it.take(2048) },
+                            label = { Text(stringResource(R.string.modules_package_url)) },
+                            singleLine = true,
+                        )
+                    }
+                    OutlinedTextField(
+                        value = digest,
+                        onValueChange = { digest = it.trim().take(128) },
+                        label = { Text(stringResource(R.string.ext_sha256)) },
+                        supportingText = { Text(stringResource(R.string.ext_sha256_help)) },
+                        singleLine = true,
+                    )
+                }
             },
             confirmButton = {
                 TextButton(
                     modifier = Modifier.heightIn(min = 44.dp),
-                    enabled = ExtensionPackage.validDigest(digest),
+                    enabled = ExtensionPackage.validDigest(digest) && (!importingUrl || url != null),
                     onClick = {
                         importing = false
-                        pendingDigest = digest
-                        try {
-                            picker.launch(arrayOf("*/*"))
-                        } catch (_: android.content.ActivityNotFoundException) {
-                            pendingDigest = null
-                            error = R.string.ext_picker_error
+                        val expected = digest
+                        if (url != null) {
+                            scope.launch {
+                                refresh(R.string.ext_install_error) {
+                                    ExtensionDiscovery().installUrl(store, url, expected)
+                                }
+                            }
+                        } else {
+                            pendingDigest = expected
+                            try {
+                                picker.launch(arrayOf("*/*"))
+                            } catch (_: android.content.ActivityNotFoundException) {
+                                pendingDigest = null
+                                error = R.string.ext_picker_error
+                            }
                         }
                     },
-                ) { Text(stringResource(R.string.ext_choose_package)) }
+                ) {
+                    Text(stringResource(if (importingUrl) R.string.modules_install_confirm else R.string.ext_choose_package))
+                }
             },
             dismissButton = {
                 TextButton(onClick = { importing = false }, modifier = Modifier.heightIn(min = 44.dp)) { Text(stringResource(R.string.cancel)) }

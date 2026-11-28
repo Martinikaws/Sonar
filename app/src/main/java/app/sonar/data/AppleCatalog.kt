@@ -65,6 +65,7 @@ object AppleCatalog {
      * answer would be the same every time.
      */
     private val cache = mutableMapOf<String, Any?>()
+    private val motionCache = mutableMapOf<Pair<String, AppleMotionTrack>, String?>()
 
     /**
      * And the same answers on disk, so the second visit costs nothing.
@@ -312,9 +313,7 @@ object AppleCatalog {
         storefront: String = storefront(),
     ): Album? {
         if (name.isBlank()) return null
-        // "album2": answers filed before a moving cover counted as a picture
-        // chose the edition without one and kept it for a month.
-        val key = "album2 $storefront/${artist.lowercase()}/${name.lowercase()}"
+        val key = "album3 $storefront/${artist.lowercase()}/${name.lowercase()}"
         synchronized(cache) { if (cache.containsKey(key)) return cache[key] as Album? }
 
         remembered(key)?.let { row ->
@@ -335,16 +334,74 @@ object AppleCatalog {
 
         if (!mayAsk()) return null
 
-        val (found, failed) = withMotionFrom(
-            storefront,
-            lookUp = { front -> ask(name) { lookUpAlbum(name, artist, front) } },
-            motion = { it.motionUrl },
-            merge = { here, there -> here.copy(motionUrl = there.motionUrl) },
-        )
+        val before = failures.get()
+        val found = ask(name) { lookUpAlbum(name, artist, storefront) }
 
         found?.let { runCatching { remember(key, json.encodeToString(it)) } }
-        if (!failed) synchronized(cache) { cache[key] = found }
+        if (found != null || failures.get() == before) synchronized(cache) { cache[key] = found }
         return found
+    }
+
+    internal suspend fun nowPlayingMotion(
+        track: AppleMotionTrack,
+        eligible: () -> Boolean,
+    ): String? {
+        if (track.matchDistance(track) == null || !eligible()) return null
+        val front = storefront()
+        val key = front to track
+        synchronized(motionCache) { if (motionCache.containsKey(key)) return motionCache[key] }
+        val local = lookUpMotion(track, front, eligible)
+        val result = if (front == FALLBACK_STOREFRONT) local else {
+            appleMotionFallback(local) { lookUpMotion(track, FALLBACK_STOREFRONT, eligible) }
+        }
+        result.onSuccess { synchronized(motionCache) { motionCache[key] = it } }
+        return result.getOrNull()
+    }
+
+    private suspend fun lookUpMotion(
+        track: AppleMotionTrack,
+        storefront: String,
+        eligible: () -> Boolean,
+    ): Result<String?> = try {
+        Result.success(findMotion(track, storefront, eligible))
+    } catch (failure: kotlinx.coroutines.CancellationException) {
+        throw failure
+    } catch (failure: Exception) {
+        Result.failure(failure)
+    }
+
+    private suspend fun findMotion(
+        track: AppleMotionTrack,
+        storefront: String,
+        eligible: () -> Boolean,
+    ): String? {
+        if (!eligible()) throw java.io.IOException("Motion lookup disabled")
+        val bearer = token() ?: throw java.io.IOException("Apple Music token unavailable")
+        val term = java.net.URLEncoder.encode("${lead(track.artist)} ${track.title}", "UTF-8")
+        val songs = get("$API/$storefront/search?term=$term&types=songs&limit=25", bearer, eligible)
+            ?.let { json.parseToJsonElement(it).jsonObject.getValue("results").jsonObject }
+            ?.get("songs")?.jsonObject?.getValue("data")?.jsonArray.orEmpty()
+        val songId = songs.mapNotNull { entry ->
+            val row = entry.jsonObject
+            val id = row["id"]?.jsonPrimitive?.content ?: return@mapNotNull null
+            val attributes = row["attributes"]?.jsonObject ?: return@mapNotNull null
+            val candidate = AppleMotionTrack(
+                title = attributes["name"]?.jsonPrimitive?.content.orEmpty(),
+                artist = attributes["artistName"]?.jsonPrimitive?.content.orEmpty(),
+                album = attributes["albumName"]?.jsonPrimitive?.content.orEmpty(),
+                durationMs = attributes["durationInMillis"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0,
+            )
+            track.matchDistance(candidate)?.let { id to it }
+        }.minByOrNull { it.second }?.first ?: return null
+        val albums = get("$API/$storefront/songs/$songId/albums?extend=editorialVideo", bearer, eligible)
+            ?.let { json.parseToJsonElement(it).jsonObject.getValue("data").jsonArray }
+            ?: return null
+        val album = albums.firstOrNull { entry ->
+            entry.jsonObject["attributes"]?.jsonObject?.get("name")?.jsonPrimitive?.content
+                ?.trim()?.equals(track.album.trim(), ignoreCase = true) == true
+        } ?: return null
+        val videos = album.jsonObject.getValue("attributes").jsonObject["editorialVideo"]?.jsonObject
+        return videos?.let(::appleMotionUrl)
     }
 
     /**
@@ -669,11 +726,8 @@ object AppleCatalog {
                 .trim()
                 .equals(name.substringBefore(" - ").trim(), ignoreCase = true)
 
-        // A moving cover counts as a picture: some records have a portrait
-        // only as a video, and ranking by the still one alone chose an
-        // edition without either, so the player showed the square sleeve.
         val match = candidates.maxByOrNull { row ->
-            (if (row.tall() != null || row.motion() != null) 4 else 0) +
+            (if (row.tall() != null) 4 else 0) +
                 (if (exact(row)) 2 else 0) +
                 (if (single(row)) 0 else 1)
         }
@@ -681,12 +735,6 @@ object AppleCatalog {
         val tall = attributes.tall()
         val cover = attributes["artwork"]?.jsonObject?.template()
 
-        val motion = attributes.motion()
-        val motionUrl = motion?.get("video")?.jsonPrimitive?.content
-        // A record with a moving cover has a still frame from it filed beside
-        // the video. It is the right picture to hold while the video loads —
-        // and the right one to keep on a page that never plays it.
-        val motionStill = motion?.get("previewFrame")?.jsonObject?.template()
         val notes = attributes["editorialNotes"]?.jsonObject
             ?.let { it["standard"] ?: it["short"] }
             ?.jsonPrimitive?.content
@@ -698,8 +746,7 @@ object AppleCatalog {
 
         if (tall == null && cover == null) return null
         return Album(
-            heroUrl = (tall ?: motionStill)?.let { size(it, DETAIL_W, DETAIL_H) },
-            motionUrl = motionUrl,
+            heroUrl = tall?.let { size(it, DETAIL_W, DETAIL_H) },
             bgColor = pageArt?.get("bgColor")?.jsonPrimitive?.content,
             textHex = pageArt?.get("textColor1")?.jsonPrimitive?.content,
             inkPalette = inkPaletteOf(pageArt),
@@ -719,15 +766,6 @@ object AppleCatalog {
     private fun inkPaletteOf(art: JsonObject?): List<String> =
         listOf("textColor1", "textColor2", "textColor3", "textColor4")
             .mapNotNull { art?.get(it)?.jsonPrimitive?.content }
-
-    /**
-     * A record's moving cover, the tall one first and the square one after it,
-     * which is the same order the still pictures are chosen in: the header is
-     * a portrait.
-     */
-    private fun kotlinx.serialization.json.JsonObject.motion(): kotlinx.serialization.json.JsonObject? =
-        listOf("motionDetailTall", "motionTallVideo3x4", "motionDetailSquare", "motionSquareVideo1x1")
-            .firstNotNullOfOrNull { get("editorialVideo")?.jsonObject?.get(it)?.jsonObject }
 
     /**
      * The full-height picture a record's page opens with, where it has one.
@@ -762,7 +800,7 @@ object AppleCatalog {
             // Enough rows to see past a title's singles, remixes and live
             // takes to the record itself; ten was not always.
             "&types=$types&limit=25" +
-            "&extend=editorialArtwork,editorialVideo,editorialNotes,artistBio,bornOrFormed"
+            "&extend=editorialArtwork,editorialNotes,artistBio,bornOrFormed"
 
         val body = get(url, bearer) ?: return null
         return json.parseToJsonElement(body)
@@ -867,7 +905,12 @@ object AppleCatalog {
             .apply()
     }
 
-    private suspend fun get(url: String, bearer: String?): String? = withContext(Dispatchers.IO) {
+    private suspend fun get(
+        url: String,
+        bearer: String?,
+        motionEligible: (() -> Boolean)? = null,
+    ): String? = withContext(Dispatchers.IO) {
+        if (motionEligible?.invoke() == false) throw java.io.IOException("Motion lookup disabled")
         val request = Request.Builder()
             .url(url)
             .apply {
@@ -900,15 +943,21 @@ object AppleCatalog {
                 // being refused again.
                 token = null
                 store?.edit()?.remove(KEY_TOKEN)?.remove(KEY_TOKEN_UNTIL)?.apply()
+                if (motionEligible != null) throw java.io.IOException("Apple Music authorization refused")
                 return@withContext null
             }
             if (!response.isSuccessful) {
                 // A refusal or a fault on their side is not an answer: see
                 // failures. A 404 is one.
                 if (response.code != 404) failures.incrementAndGet()
+                if (motionEligible != null && response.code != 404) {
+                    throw java.io.IOException("Apple Music returned HTTP ${response.code}")
+                }
                 return@withContext null
             }
-            response.body?.string()
+            response.body?.string().also {
+                if (it == null && motionEligible != null) throw java.io.IOException("Empty Apple Music response")
+            }
         }
     }
 

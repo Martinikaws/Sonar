@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="extstore_installed">Installate</string>
+    <string name="extstore_browse">Esplora</string>
+    <string name="extstore_loading">Caricamento delle estensioni…</string>
+    <string name="extstore_empty">Nessuna estensione trovata.</string>
+    <string name="extstore_error">Impossibile caricare il catalogo delle estensioni.</string>
+    <string name="extstore_incomplete">Impossibile caricare alcune fonti del catalogo.</string>
+    <string name="extstore_check_updates">Ricarica e cerca aggiornamenti</string>
+    <string name="extstore_rating">%1$s / 5 (%2$d voti)</string>
+    <string name="extstore_unavailable">Nessun pacchetto verificato disponibile.</string>
+    <string name="extstore_update">Aggiorna %1$s</string>
+    <string name="extstore_install">Installa %1$s</string>
+    <string name="extstore_confirm">Versione %1$s\nFonte: %2$s</string>
+    <string name="extstore_installing">Verifica e salvataggio del pacchetto…</string>
+    <string name="extstore_install_error">Impossibile salvare il pacchetto. Ricarica il catalogo e riprova.</string>
+</resources>

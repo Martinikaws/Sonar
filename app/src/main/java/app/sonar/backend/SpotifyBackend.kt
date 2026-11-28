@@ -12,6 +12,7 @@ import app.sonar.data.SearchResults
 import app.sonar.data.toCatalogTrack
 import app.sonar.data.toResults
 import app.sonar.nativecore.NativeBridge
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import app.sonar.playback.AudioOutput
@@ -253,11 +254,36 @@ class SpotifyBackend(private val container: SonarApplication) : MusicBackend {
         }
     }
 
-    internal suspend fun webApiPlaylistTracks(id: String, requireComplete: Boolean = false): Pair<List<CatalogTrack>, Int> {
+    internal suspend fun browsePlaylistTracks(uri: String, limit: Int): List<CatalogTrack> {
+        if (!webOnly && NativeBridge.isConnected) {
+            val nativeTracks = try {
+                Catalog.tracks(Catalog.contextTrackUris(uri).take(limit))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                emptyList()
+            }
+            if (nativeTracks.isNotEmpty()) return nativeTracks
+        }
+        return container.gateway.playlistTracks(uri, offset = 0)?.tracks?.take(limit)
+            ?: if (container.webApi.isReady) {
+                webApiPlaylistTracks(uri.substringAfterLast(':'), maxItems = limit).first
+            } else {
+                emptyList()
+            }
+    }
+
+    internal suspend fun webApiPlaylistTracks(
+        id: String,
+        requireComplete: Boolean = false,
+        maxItems: Int = Int.MAX_VALUE,
+    ): Pair<List<CatalogTrack>, Int> {
         val loaded = mutableListOf<CatalogTrack>()
         var offset = 0
         while (true) {
-            val page = container.api.playlistTracks(id, limit = WEB_API_PAGE, offset = offset, market = container.userCountry)
+            val page = container.api.playlistTracks(
+                id, limit = minOf(WEB_API_PAGE, maxItems - offset), offset = offset, market = container.userCountry,
+            )
             // Episodes and delisted tracks arrive as a null track, and an
             // unplayable one is something the engine could only skip.
             loaded += page.items.mapNotNull { item ->
@@ -268,7 +294,7 @@ class SpotifyBackend(private val container: SonarApplication) : MusicBackend {
             offset += page.items.size
             val done = if (requireComplete) page.next == null && offset >= page.total
             else page.items.isEmpty() || offset >= page.total
-            if (done) return loaded to (offset - loaded.size)
+            if (done || offset >= maxItems) return loaded to (offset - loaded.size)
             check(page.items.isNotEmpty())
         }
     }

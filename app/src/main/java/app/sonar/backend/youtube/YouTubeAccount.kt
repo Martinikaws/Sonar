@@ -49,6 +49,10 @@ class YouTubeAccount(context: Context) {
     private val _expired = MutableStateFlow(false)
     val expired: StateFlow<Boolean> = _expired.asStateFlow()
 
+    @Volatile
+    internal var browseAccountRevision = Any()
+        private set
+
     init {
         // Before anything asks the module for a page: the cookie is what turns
         // its calls from "the anonymous catalogue" into "this account's".
@@ -84,6 +88,7 @@ class YouTubeAccount(context: Context) {
         // account's own shelves (what it played lately, the mixes and albums
         // made for it) that YouTube Music shows the same account.
         YouTube.useLoginForBrowse = YouTube.cookie != null
+        browseAccountRevision = Any()
     }
 
     /**

@@ -217,6 +217,7 @@ private data class TrackMenuRequest(
 )
 
 object Routes {
+    const val MODULES = app.sonar.parity.modules.MODULES_ROUTE
     const val HOME = "home"
     const val NEW = "new"
     const val RADIO = "radio"
@@ -359,10 +360,10 @@ private val BarHeight = 61.dp
 
 /** The pages that are somewhere you are, rather than somewhere you went. */
 private val TAB_ROUTES =
-    setOf(Routes.HOME, Routes.NEW, Routes.RADIO, Routes.LIBRARY, Routes.SEARCH)
+    setOf(Routes.HOME, Routes.NEW, Routes.RADIO, Routes.LIBRARY, Routes.MODULES, Routes.SEARCH)
 
 /** The tabs in the order the bar shows them. */
-private val TAB_ORDER = listOf(Routes.HOME, Routes.NEW, Routes.RADIO, Routes.LIBRARY, Routes.SEARCH)
+private val TAB_ORDER = listOf(Routes.HOME, Routes.NEW, Routes.RADIO, Routes.LIBRARY, Routes.MODULES, Routes.SEARCH)
 
 /**
  * +1 when moving to a tab to the right of the one left, -1 to the left; null
@@ -681,12 +682,15 @@ fun SonarApp(
 
     val conservePower by (context.applicationContext as app.sonar.SonarApplication)
         .powerMode.conserving.collectAsStateWithLifecycle()
-    LaunchedEffect(playback.mediaId, playback.title, playback.album, playback.artist) {
+    val appleMotionEligible = app.sonar.animart.rememberAppleMotionEligible(conservePower)
+    val motionDuration = playback.durationMs.takeIf { appleMotionEligible } ?: 0L
+    LaunchedEffect(playback.mediaId, playback.title, playback.album, playback.artist, motionDuration) {
         viewModel.loadNowPlayingArt(
             uri = playback.mediaId,
             title = playback.title,
             album = playback.album,
             artist = playback.artist,
+            durationMs = motionDuration,
         )
     }
 
@@ -983,6 +987,7 @@ fun SonarApp(
     }
 
     /** False only until the source has been picked once; see BackendChoiceScreen. */
+    val showModulesTab by preferences.modulesTab.collectAsStateWithLifecycle()
     val backendChosen by preferences.backendChosen.collectAsStateWithLifecycle()
     val backend by preferences.backend.collectAsStateWithLifecycle()
     val freeNoticePending by preferences.freeAccountNoticePending.collectAsStateWithLifecycle()
@@ -1559,7 +1564,7 @@ fun SonarApp(
                 var searchOpen by rememberSaveable { mutableStateOf(false) }
 
                 LaunchedEffect(route) {
-                    if (route in TAB_ROUTES) activeTab = route.orEmpty()
+                    if (route in TAB_ROUTES && (route != Routes.MODULES || showModulesTab)) activeTab = route.orEmpty()
                     if (route != Routes.SEARCH) searchOpen = false
                 }
 
@@ -2172,6 +2177,7 @@ fun SonarApp(
                                 onShowTutorial = { showTutorial = true },
                                 onAstralImport = { navController.navigate(ASTRAL_IMPORT_ROUTE) },
                                 onPass = { navController.navigate(PASS_ROUTE) },
+                                onModules = { navController.navigate(Routes.MODULES) },
                                 onPlayFlac = { tracks, index -> onPlay(tracks, index, null, false, "", 0L) },
                                 language = language,
                                 onLanguage = setLanguage,
@@ -2186,6 +2192,8 @@ fun SonarApp(
                                 },
                             )
                         }
+
+                        composable(Routes.MODULES) { app.sonar.parity.modules.ModulesPage(playback.artworkUrl, playback.title, playback.isPlaying, listPadding) { navController.popBackStack() } }
 
                         composable(app.sonar.radio.RADIO_ROUTE) {
                             app.sonar.radio.RadioScreen(
@@ -2478,6 +2486,7 @@ fun SonarApp(
                 if (adaptive.showRail && railVisible) {
                     adaptive.TabletRail(
                         activeTab = activeTab,
+                        showModulesTab = showModulesTab,
                         showSearchField = showSearchField,
                         onSearchOpenChange = { searchOpen = it },
                         modifier = Modifier.align(Alignment.CenterStart),
@@ -2900,15 +2909,7 @@ fun SonarApp(
                             // listener who turns the glass off there gets a flat
                             // bar, exactly as they do for the mini player and the
                             // player's own panes.
-                            val tabRoutes = remember {
-                                listOf(
-                                    Routes.HOME,
-                                    Routes.NEW,
-                                    Routes.RADIO,
-                                    Routes.LIBRARY,
-                                    Routes.SEARCH,
-                                )
-                            }
+                            val tabRoutes = remember(showModulesTab) { TAB_ORDER.filter { showModulesTab || it != Routes.MODULES } }
                             val here = tabRoutes.indexOf(activeTab).coerceAtLeast(0)
                             // Stable, or the component throws away the state it
                             // keys on this and the indicator stops animating.
@@ -2989,6 +2990,10 @@ fun SonarApp(
                                     viewModel.clearPageHistory()
                                     navController.switchTab(Routes.LIBRARY)
                                 }
+                                if (showModulesTab) BarTab(R.string.modules_title, Lucide.Radio, activeTab == Routes.MODULES, tabAccent, barInk) {
+                                    viewModel.clearPageHistory()
+                                    navController.switchTab(Routes.MODULES)
+                                }
                                 BarTab(
                                     R.string.search,
                                     // Heavy rather than solid: a filled
@@ -3023,7 +3028,7 @@ fun SonarApp(
                         // accent of whatever was playing at startup while the
                         // open bar followed the song, and why the search icon
                         // drifted from the rest.
-                        contentKey = listOf(activeTab, searching, searchOpen, tabAccent, barInk),
+                        contentKey = listOf(activeTab, searching, searchOpen, tabAccent, barInk, showModulesTab),
                         expandedTabsHeight = BarHeight,
                         // Search is one of the places now, so the circle beside
                         // the pill would be the same control twice. It stays for
@@ -3185,6 +3190,15 @@ fun SonarApp(
                         // one: this is the tab the folded bar shows when it is
                         // where you are, and the key the search field grows out
                         // of.
+                        if (showModulesTab) tab(
+                            key = Routes.MODULES,
+                            title = { Text(stringResource(R.string.modules_title), fontSize = 9.sp, color = if (activeTab == Routes.MODULES) tabAccent else barInk) },
+                            icon = { Icon(Lucide.Radio, stringResource(R.string.modules_title), Modifier.size(TabIcon), tint = if (activeTab == Routes.MODULES) tabAccent else barInk) },
+                            onClick = {
+                                viewModel.clearPageHistory()
+                                navController.switchTab(Routes.MODULES)
+                            },
+                        )
                         tab(
                             key = Routes.SEARCH,
                             title = {

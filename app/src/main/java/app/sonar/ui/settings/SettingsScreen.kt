@@ -181,6 +181,7 @@ fun SettingsScreen(
     onYouTubeChannelChange: () -> Unit = {},
     onAstralImport: () -> Unit,
     onPass: () -> Unit,
+    onModules: () -> Unit,
     onPlayFlac: (List<app.sonar.data.CatalogTrack>, Int) -> Unit = { _, _ -> },
 ) {
     val ready = state as? MainViewModel.UiState.Ready
@@ -849,6 +850,15 @@ fun SettingsScreen(
         }
 
         // The settings that are Android's rather than the app's.
+        "modules" -> Section(null) {
+            PageRow(stringResource(R.string.modules_title), stringResource(R.string.modules_summary), onModules)
+            DownloadSwitch(
+                label = stringResource(R.string.modules_show_tab),
+                checked = sonarApp.preferences.modulesTab.collectAsStateWithLifecycle().value,
+                backdrop = backdrop,
+                onChange = sonarApp.preferences::setModulesTab,
+            )
+        }
         "extensions" -> Section(null) { PageRow(stringResource(R.string.ext_title), stringResource(R.string.ext_summary)) { goTo(SettingsPage.Extensions) } }
         "system" -> {
             Section(stringResource(R.string.page_app_system)) {
@@ -1656,7 +1666,7 @@ private fun CanvasSection(backdrop: Backdrop) {
                     label = stringResource(
                         when (choice) {
                             app.sonar.data.PreferencesStore.CoverSource.SPOTIFY -> R.string.animated_cover_spotify
-                            app.sonar.data.PreferencesStore.CoverSource.APPLE_MUSIC -> R.string.animated_cover_apple
+                            app.sonar.data.PreferencesStore.CoverSource.APPLE_MUSIC -> R.string.animart_source
                         },
                     ),
                     selected = choice == source,

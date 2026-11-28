@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="modulereview_waiting_audio">In attesa dell’audio…</string>
+    <string name="modulereview_enable_extension">Attiva %1$s</string>
+    <string name="modulereview_disable_extension">Disattiva %1$s</string>
+    <string name="modulereview_extension_state_error">Impossibile modificare lo stato dell’estensione.</string>
+</resources>

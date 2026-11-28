@@ -219,6 +219,9 @@ class EqualizerAudioProcessor : BaseAudioProcessor() {
         out.put(inputBuffer)
         out.position(start)
         filter.apply(out, size, inputAudioFormat.channelCount, inputAudioFormat.sampleRate)
+        app.sonar.parity.modules.AudioFrames.offer(size / Short.SIZE_BYTES, inputAudioFormat.channelCount) { index ->
+            out.getShort(start + index * Short.SIZE_BYTES) / 32768f
+        }
         out.position(start)
         out.limit(start + size)
     }

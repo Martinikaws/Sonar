@@ -70,6 +70,10 @@ class TokenStore(
     val isLoggedIn: Boolean
         get() = prefs.contains(KEY_REFRESH) || currentIfFresh() != null
 
+    @Volatile
+    internal var browseAccountRevision = Any()
+        private set
+
     /**
      * Written synchronously, and that is the point.
      *
@@ -81,6 +85,11 @@ class TokenStore(
      * told the session was revoked, and asked the user to sign in again.
      */
     fun save(tokens: SpotifyOAuth.Tokens) {
+        persist(tokens)
+        browseAccountRevision = Any()
+    }
+
+    private fun persist(tokens: SpotifyOAuth.Tokens) {
         prefs.edit()
             .putString(KEY_ACCESS, tokens.accessToken)
             .apply {
@@ -90,7 +99,9 @@ class TokenStore(
             .commit()
     }
 
-    fun clear() = prefs.edit().clear().commit()
+    fun clear(): Boolean = prefs.edit().clear().commit().also {
+        browseAccountRevision = Any()
+    }
 
     /**
      * Returns an access token valid for at least [SKEW_MILLIS], refreshing it
@@ -120,7 +131,7 @@ class TokenStore(
                 if (current != null && current != refreshToken) {
                     return@withLock currentIfFresh()
                         ?: SpotifyOAuth.refresh(current, clientId())
-                            .also(::save)
+                            .also(::persist)
                             .accessToken
                 }
                 // Drop the dead session here rather than leaving callers to
@@ -130,7 +141,7 @@ class TokenStore(
                 _sessionLost.tryEmit(Unit)
                 throw e
             }
-            save(tokens)
+            persist(tokens)
             tokens.accessToken
         }
     }
@@ -143,7 +154,7 @@ class TokenStore(
         val refreshToken = prefs.getString(KEY_REFRESH, null)
             ?: error("not logged in")
         val tokens = SpotifyOAuth.refresh(refreshToken, clientId())
-        save(tokens)
+        persist(tokens)
         tokens.accessToken
     }
 
