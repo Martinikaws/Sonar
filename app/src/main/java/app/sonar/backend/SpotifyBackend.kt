@@ -196,7 +196,7 @@ class SpotifyBackend(private val container: SonarApplication) : MusicBackend {
         uri.startsWith("spotify:playlist:") ->
             container.gateway.readAll { offset -> container.gateway.playlistTracks(uri, offset) }
                 ?: if (container.webApi.isReady) {
-                    webApiPlaylistTracks(uri.substringAfterLast(':'))
+                    webApiPlaylistTracks(uri.substringAfterLast(':')).first
                 } else if (webOnly) {
                     emptyList()
                 } else {
@@ -253,7 +253,7 @@ class SpotifyBackend(private val container: SonarApplication) : MusicBackend {
         }
     }
 
-    private suspend fun webApiPlaylistTracks(id: String): List<CatalogTrack> {
+    internal suspend fun webApiPlaylistTracks(id: String, requireComplete: Boolean = false): Pair<List<CatalogTrack>, Int> {
         val loaded = mutableListOf<CatalogTrack>()
         var offset = 0
         while (true) {
@@ -266,7 +266,10 @@ class SpotifyBackend(private val container: SonarApplication) : MusicBackend {
                     ?.toCatalogTrack(item.addedAt)
             }
             offset += page.items.size
-            if (page.items.isEmpty() || offset >= page.total) return loaded
+            val done = if (requireComplete) page.next == null && offset >= page.total
+            else page.items.isEmpty() || offset >= page.total
+            if (done) return loaded to (offset - loaded.size)
+            check(page.items.isNotEmpty())
         }
     }
 

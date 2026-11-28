@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="power_settings">Headset and savers</string>
+    <string name="power_headset_seek">Headset skips 15 seconds in podcasts</string>
+    <string name="power_battery_saver">Save power when battery is low</string>
+    <string name="power_data_saver">Save data on mobile networks</string>
+    <string name="power_restart_player">Restart player</string>
+</resources>

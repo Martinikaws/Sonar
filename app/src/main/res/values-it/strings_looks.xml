@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="looks_title">Aspetto</string>
+    <string name="looks_summary">Colore, copertina e comandi del lettore</string>
+    <string name="looks_cover_colors">Usa i colori della copertina</string>
+    <string name="looks_accent">Colore di accento</string>
+    <string name="looks_spin_cover">Fai ruotare la copertina</string>
+    <string name="looks_shuffle">Mostra riproduzione casuale</string>
+    <string name="looks_repeat">Mostra ripetizione</string>
+    <string name="looks_lyrics">Mostra il testo</string>
+    <string name="looks_source">Mostra la fonte di riproduzione</string>
+    <string name="looks_hex">Colore esadecimale</string>
+    <string name="looks_hex_help">Inserisci sei cifre, come #7C5CE6. Lascia vuoto per usare il colore predefinito.</string>
+    <string name="looks_hex_invalid">Inserisci un colore esadecimale valido di sei cifre.</string>
+    <string name="looks_apply">Applica</string>
+    <string name="looks_cancel">Annulla</string>
+</resources>

@@ -487,6 +487,13 @@ class PlaybackService : MediaLibraryService() {
         startWidgetUpdates()
         browseTree = MediaBrowseTree(this, scope, resumption = ::resumption)
         val callback = object : MediaLibrarySession.Callback by browseTree {
+            override fun onMediaButtonEvent(
+                session: MediaSession,
+                controllerInfo: MediaSession.ControllerInfo,
+                intent: Intent,
+            ): Boolean = app.sonar.power.seekFromMediaButton(
+                intent, session.player, container.preferences.episodeHeadsetSeek.value,
+            ) || browseTree.onMediaButtonEvent(session, controllerInfo, intent)
             override fun onSetMediaItems(
                 mediaSession: MediaSession,
                 controller: MediaSession.ControllerInfo,
@@ -541,6 +548,7 @@ class PlaybackService : MediaLibraryService() {
         // The notification and car buttons carry their own state (shuffle, repeat,
         // and heart/like), so they are redrawn whenever the mode or track changes.
         player.addListener(buttonsListener)
+        scope.launch { container.powerMode.restartRequests.collect { restartCurrentPlayer() } }
 
         scope.launch {
             container.likedStore.likedTracks.collect {
@@ -2402,6 +2410,17 @@ class PlaybackService : MediaLibraryService() {
      * the first one.
      */
     private var rebuilding = false
+
+    private fun restartCurrentPlayer() {
+        if (handingOver || rebuilding) return
+        when (playerKind) {
+            PlayerKind.SPOTIFY -> {
+                if (engineStarted) reconfigureEngine("settings") else connectEngine()
+            }
+            PlayerKind.SOLOIST -> SoloistEngine.reconfigure(this)
+            else -> app.sonar.power.restartPlayback(player)
+        }
+    }
 
 
     /**

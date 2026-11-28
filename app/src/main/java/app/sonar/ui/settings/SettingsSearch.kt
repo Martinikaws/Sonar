@@ -33,6 +33,7 @@ internal enum class SettingsGroup(@StringRes val title: Int, @StringRes val summ
 internal enum class SettingsPage(@StringRes val title: Int) {
     Equalizer(R.string.equalizer),
     Glass(R.string.glass),
+    Looks(R.string.looks_title),
     WebApi(R.string.web_api),
     Flac(R.string.flac_settings),
     Hidden(R.string.hidden_settings_title),
@@ -94,10 +95,10 @@ internal val SETTINGS_INDEX: List<SettingsEntry> = listOf(
         SettingsGroup.SOUND,
         SettingsAction.Open(SettingsPage.Equalizer),
     ),
-    SettingsEntry("quality", R.string.quality, null, emptyList(), SettingsGroup.SOUND),
+    SettingsEntry("quality", R.string.quality, null, listOf(R.string.stream_quality_normal, R.string.stream_quality_high, R.string.stream_quality_very_high), SettingsGroup.SOUND),
     SettingsEntry(
         "youtube-quality", R.string.quality, null,
-        listOf(R.string.youtube_quality_auto, R.string.youtube_quality_high, R.string.youtube_quality_low), SettingsGroup.SOUND,
+        listOf(R.string.quality_youtube_auto, R.string.quality_youtube_best, R.string.quality_youtube_saver), SettingsGroup.SOUND,
     ),
     SettingsEntry("effect-quality", R.string.effect_quality, null, emptyList(), SettingsGroup.SOUND),
 
@@ -120,12 +121,20 @@ internal val SETTINGS_INDEX: List<SettingsEntry> = listOf(
         "keep-playing", R.string.keep_playing_on_close, null,
         listOf(R.string.pause_for_other_apps, R.string.sponsor_block), SettingsGroup.LISTENING,
     ),
+    SettingsEntry(
+        "power", R.string.power_settings, null,
+        listOf(R.string.power_headset_seek, R.string.power_battery_saver, R.string.power_data_saver, R.string.power_restart_player),
+        SettingsGroup.LISTENING,
+    ),
     SettingsEntry("crossfade", R.string.crossfade, null, listOf(R.string.trim_silence, R.string.skip_fade), SettingsGroup.LISTENING),
     SettingsEntry("autoplay", R.string.autoplay, null, listOf(R.string.autoplay_infinite_title), SettingsGroup.LISTENING),
     SettingsEntry("spotify-dj", R.string.spotify_dj, null, listOf(R.string.spotify_dj_title), SettingsGroup.LISTENING),
     SettingsEntry("connected-device-label", R.string.connected_device_label, null, emptyList(), SettingsGroup.LISTENING),
 
+    SettingsEntry("player-haptics", R.string.haptics_player_controls, null, emptyList(), SettingsGroup.LISTENING),
+
     SettingsEntry("lyrics-source", R.string.lyrics_preferred_title, null, emptyList(), SettingsGroup.LYRICS),
+    SettingsEntry("lyrics-keep-awake", R.string.haptics_lyrics_keep_awake, null, emptyList(), SettingsGroup.LYRICS),
     SettingsEntry("lyrics-look", R.string.look_title, null, emptyList(), SettingsGroup.LYRICS),
     SettingsEntry("lyrics-folder", R.string.lyrics_folder_title, null, listOf(R.string.lyrics_folder_choose), SettingsGroup.LYRICS),
     SettingsEntry("spicy-lyrics", R.string.spicy_lyrics_title, null, listOf(R.string.spicy_lyrics_key), SettingsGroup.LYRICS),
@@ -171,6 +180,7 @@ internal val SETTINGS_INDEX: List<SettingsEntry> = listOf(
         "glass", R.string.glass, R.string.page_glass_summary, emptyList(), SettingsGroup.APPEARANCE,
         SettingsAction.Open(SettingsPage.Glass),
     ),
+    SettingsEntry("looks", R.string.looks_title, R.string.looks_summary, listOf(R.string.looks_spin_cover, R.string.looks_cover_colors, R.string.looks_accent, R.string.looks_shuffle, R.string.looks_repeat, R.string.looks_lyrics, R.string.looks_source), SettingsGroup.APPEARANCE, SettingsAction.Open(SettingsPage.Looks)),
     SettingsEntry("bar", R.string.page_app_bar, null, listOf(R.string.bar_folds), SettingsGroup.APPEARANCE),
     SettingsEntry("font", R.string.font_title, null, listOf(R.string.font_system, R.string.font_serif_artists), SettingsGroup.APPEARANCE),
 

@@ -71,7 +71,7 @@ fun SonarTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    val base = seed ?: DefaultAccent
+    val base = app.sonar.ui.looks.looksThemeSeed(seed) ?: DefaultAccent
     val accent = if (darkTheme) base.liftFor(DarkBase) else base.deepenFor(LightBase)
 
     // Animated so a track change slides the accent across instead of snapping,
@@ -207,7 +207,7 @@ val InkDim: Color
  * anything near it makes the app read as a clone no matter how the rest is laid
  * out.
  */
-private val DefaultAccent = Color(0xFF7C5CE6)
+internal val DefaultAccent = Color(0xFF7C5CE6)
 
 /** Brighten until the colour reads against a near-black background. */
 private fun Color.liftFor(background: Color): Color {

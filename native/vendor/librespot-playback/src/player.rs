@@ -10,7 +10,7 @@ use std::{
     sync::Mutex,
     sync::{
         Arc,
-        atomic::{AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicUsize, Ordering},
     },
     task::{Context, Poll},
     thread,
@@ -150,6 +150,16 @@ const NARRATION_START_WINDOW_MS: u32 = 1500;
 /// is gone does not hold the queue for a minute.
 const MAX_LOAD_ATTEMPTS: u8 = 3;
 const LOAD_RETRY_BACKOFF: Duration = Duration::from_millis(900);
+
+static AUDIO_PRELOADING: AtomicBool = AtomicBool::new(true);
+
+pub fn set_audio_preloading(enabled: bool) {
+    AUDIO_PRELOADING.store(enabled, Ordering::Relaxed);
+}
+
+pub fn audio_preloading() -> bool {
+    AUDIO_PRELOADING.load(Ordering::Relaxed)
+}
 
 const PRELOAD_NEXT_TRACK_BEFORE_END_DURATION_MS: u32 = 30000;
 
@@ -2518,7 +2528,8 @@ impl Future for PlayerInternal {
             {
                 let track_id = track_id.clone();
 
-                if (!*suggested_to_preload_next_track)
+                if audio_preloading()
+                    && (!*suggested_to_preload_next_track)
                     && ((duration_ms as i64 - stream_position_ms as i64)
                         < PRELOAD_NEXT_TRACK_BEFORE_END_DURATION_MS as i64)
                     && stream_loader_controller.range_to_end_available()
@@ -3665,6 +3676,9 @@ impl PlayerInternal {
     }
 
     fn handle_command_preload(&mut self, track_id: SpotifyUri) {
+        if !audio_preloading() {
+            return;
+        }
         debug!("Preloading track");
         let mut preload_track = true;
         // check whether the track is already loaded somewhere or being loaded.

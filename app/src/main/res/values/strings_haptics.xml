@@ -1,0 +1,4 @@
+<resources>
+    <string name="haptics_player_controls">Player haptics</string>
+    <string name="haptics_lyrics_keep_awake">Keep screen on during lyrics</string>
+</resources>

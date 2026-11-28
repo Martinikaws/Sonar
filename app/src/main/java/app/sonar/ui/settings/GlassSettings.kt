@@ -697,7 +697,7 @@ private fun TintRow(
 
 /** One colour to tap, lit while it is the one in use. */
 @Composable
-private fun Swatch(label: String, colour: Color, selected: Boolean, onClick: () -> Unit) {
+internal fun Swatch(label: String, colour: Color, selected: Boolean, onClick: () -> Unit) {
     Box(
         Modifier.size(44.dp)
             .selectable(selected, role = Role.RadioButton, onClick = onClick)
@@ -730,7 +730,7 @@ private const val TINT_WRITE_MS = 250L
 private const val HUE_STOPS = 13
 
 /** Red, orange, yellow, green, cyan, blue, violet, magenta. */
-private val PRESET_HUES = listOf(
+internal val PRESET_HUES = listOf(
     0f to R.string.fix2_swatch_red,
     32f to R.string.fix2_swatch_orange,
     52f to R.string.fix2_swatch_yellow,

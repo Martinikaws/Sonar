@@ -19,6 +19,42 @@ class PreferencesStore(context: Context) {
     private val prefs = context.applicationContext
         .getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE)
 
+    enum class LooksOption(val key: String, val default: Boolean = true) {
+        CoverColors("looks_cover_colors"),
+        SpinCover("looks_spin_cover", false),
+        Shuffle("looks_show_shuffle"),
+        Repeat("looks_show_repeat"),
+        Lyrics("looks_show_lyrics"),
+        Source("looks_show_source"),
+    }
+
+    data class Looks(val enabled: Set<LooksOption>, val accent: String = "") {
+        operator fun contains(option: LooksOption): Boolean = option in enabled
+    }
+
+    private val _looks = MutableStateFlow(
+        Looks(
+            LooksOption.entries.filterTo(mutableSetOf()) { prefs.getBoolean(it.key, it.default) },
+            prefs.getString("looks_accent", "").orEmpty(),
+        ),
+    )
+    val looks = _looks.asStateFlow()
+
+    fun setLooksOption(option: LooksOption, enabled: Boolean) {
+        prefs.edit().putBoolean(option.key, enabled).apply()
+        val current = _looks.value
+        _looks.value = current.copy(
+            enabled = if (enabled) current.enabled + option else current.enabled - option,
+        )
+    }
+
+    fun setLooksAccent(value: String) {
+        prefs.edit().putString("looks_accent", value)
+            .putBoolean(LooksOption.CoverColors.key, false).apply()
+        val current = _looks.value
+        _looks.value = current.copy(accent = value, enabled = current.enabled - LooksOption.CoverColors)
+    }
+
     data class TrackOrder(val sort: String? = null, val descending: Boolean = false)
 
     private val _trackOrders = MutableStateFlow(
@@ -50,8 +86,48 @@ class PreferencesStore(context: Context) {
             .putBoolean("track_direction:$uri", value).apply()
     }
 
+    private val _batterySaver = MutableStateFlow(prefs.getBoolean("power_battery_saver", false))
+    val batterySaver = _batterySaver.asStateFlow()
+
+    fun setBatterySaver(value: Boolean) {
+        _batterySaver.value = value
+        prefs.edit().putBoolean("power_battery_saver", value).apply()
+    }
+
+    private val _dataSaver = MutableStateFlow(prefs.getBoolean("power_data_saver", false))
+    val dataSaver = _dataSaver.asStateFlow()
+
+    fun setDataSaver(value: Boolean) {
+        _dataSaver.value = value
+        prefs.edit().putBoolean("power_data_saver", value).apply()
+    }
+
+    private val _episodeHeadsetSeek = MutableStateFlow(prefs.getBoolean("power_episode_headset_seek", true))
+    val episodeHeadsetSeek = _episodeHeadsetSeek.asStateFlow()
+
+    fun setEpisodeHeadsetSeek(value: Boolean) {
+        _episodeHeadsetSeek.value = value
+        prefs.edit().putBoolean("power_episode_headset_seek", value).apply()
+    }
+
     private val _showConnectedDevice = MutableStateFlow(prefs.getBoolean("show_connected_device", true))
     val showConnectedDevice = _showConnectedDevice.asStateFlow()
+
+    private val _playerHaptics = MutableStateFlow(prefs.getBoolean("player_haptics", true))
+    val playerHaptics = _playerHaptics.asStateFlow()
+
+    fun setPlayerHaptics(value: Boolean) {
+        _playerHaptics.value = value
+        prefs.edit().putBoolean("player_haptics", value).apply()
+    }
+
+    private val _lyricsKeepAwake = MutableStateFlow(prefs.getBoolean("lyrics_keep_awake", true))
+    val lyricsKeepAwake = _lyricsKeepAwake.asStateFlow()
+
+    fun setLyricsKeepAwake(value: Boolean) {
+        _lyricsKeepAwake.value = value
+        prefs.edit().putBoolean("lyrics_keep_awake", value).apply()
+    }
 
     fun setShowConnectedDevice(value: Boolean) {
         _showConnectedDevice.value = value

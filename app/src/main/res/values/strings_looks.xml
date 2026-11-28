@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="looks_title">Looks</string>
+    <string name="looks_summary">Accent, cover art and player controls</string>
+    <string name="looks_cover_colors">Use colors from cover art</string>
+    <string name="looks_accent">Accent color</string>
+    <string name="looks_spin_cover">Spin the album cover</string>
+    <string name="looks_shuffle">Show shuffle</string>
+    <string name="looks_repeat">Show repeat</string>
+    <string name="looks_lyrics">Show lyrics</string>
+    <string name="looks_source">Show playback source</string>
+    <string name="looks_hex">Hex color</string>
+    <string name="looks_hex_help">Enter six digits, like #7C5CE6. Leave blank for the default accent.</string>
+    <string name="looks_hex_invalid">Enter a valid six-digit hex color.</string>
+    <string name="looks_apply">Apply</string>
+    <string name="looks_cancel">Cancel</string>
+</resources>

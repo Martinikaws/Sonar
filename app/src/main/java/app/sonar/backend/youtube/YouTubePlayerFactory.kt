@@ -28,6 +28,10 @@ import org.schabi.newpipe.extractor.stream.StreamInfo
  */
 @UnstableApi
 object YouTubePlayerFactory {
+    internal data class PlayingAudio(val mediaId: String, val codec: String, val kbps: Int)
+
+    private val _playingAudio = kotlinx.coroutines.flow.MutableStateFlow<PlayingAudio?>(null)
+    internal val playingAudio: kotlinx.coroutines.flow.StateFlow<PlayingAudio?> = _playingAudio
 
     /**
      * The sound of a Spotify track from its YouTube Music match: the item keeps
@@ -92,6 +96,7 @@ object YouTubePlayerFactory {
         val mainSlot = MixerSlot()
         val tailSlot = MixerSlot(follows = mainSlot, initialFade = 0f).apply { held = true }
 
+        val resolver = YouTubeStreamResolver(host.context.applicationContext, spotifyMatcher)
         val dataSources = ResolvingDataSource.Factory(
             // Files as well as the network: a kept song resolves to one on the
             // phone, which an HTTP source cannot open.
@@ -101,7 +106,7 @@ object YouTubePlayerFactory {
                     DefaultHttpDataSource.Factory(),
                 ),
             ),
-            YouTubeStreamResolver(host.context.applicationContext, spotifyMatcher),
+            resolver,
         )
 
         fun buildPlayer(handleFocus: Boolean, slot: MixerSlot) =
@@ -175,6 +180,18 @@ object YouTubePlayerFactory {
                 })
                 // Video for a video, sound for a song, as the queue moves.
                 exo.addListener(object : Player.Listener {
+                    override fun onEvents(player: Player, events: Player.Events) {
+                        if (!events.containsAny(
+                                Player.EVENT_TRACKS_CHANGED,
+                                Player.EVENT_MEDIA_ITEM_TRANSITION,
+                                Player.EVENT_PLAYBACK_STATE_CHANGED,
+                                Player.EVENT_PLAYER_ERROR,
+                            )
+                        ) return
+                        if (spotifyMatcher != null || spotifyFallback || spotifyUnavailable) return
+                        _playingAudio.value = resolver.playingAudio(player)
+                    }
+
                     override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
                         YouTubeVideoMode.onItem(mediaItem?.mediaId)
                         // A video whose song is already known says so at once.
@@ -184,7 +201,9 @@ object YouTubePlayerFactory {
                             ?.let { video -> SongCounterparts.known(video)?.let { retitle(exo, video, it) } }
                         // The next one asked for now, while this one plays.
                         val next = exo.nextMediaItemIndex
-                        if (next >= 0) {
+                        if (next >= 0 && (host.context.applicationContext as? app.sonar.SonarApplication)
+                                ?.powerMode?.conserving?.value != true
+                        ) {
                             exo.getMediaItemAt(next).mediaId
                                 .takeIf { it.startsWith(YouTubeBackend.URI_SCHEME) }
                                 ?.let(YouTubeStreams::prefetch)
@@ -436,6 +455,38 @@ private class YouTubeStreamResolver(
     private val context: android.content.Context,
     private val spotifyMatcher: YtAudioForSpotify?,
 ) : ResolvingDataSource.Resolver {
+    private val audioRates = android.util.LruCache<String, Int>(64)
+
+    fun playingAudio(player: Player): YouTubePlayerFactory.PlayingAudio? {
+        if (player.playerError != null || player.playbackState == Player.STATE_IDLE) return null
+        val item = player.currentMediaItem ?: return null
+        if (!item.mediaId.startsWith(YouTubeBackend.URI_SCHEME)) return null
+        for (group in player.currentTracks.groups) {
+            if (group.type != androidx.media3.common.C.TRACK_TYPE_AUDIO) continue
+            for (index in 0 until group.length) {
+                if (!group.isTrackSelected(index)) continue
+                val format = group.getTrackFormat(index)
+                val codec = when (format.sampleMimeType) {
+                    "audio/opus" -> "Opus"
+                    "audio/mp4a-latm" -> "AAC"
+                    "audio/vorbis" -> "Vorbis"
+                    else -> return null
+                }
+                val uri = item.localConfiguration?.uri?.toString()?.substringBefore('#')
+                val kbps = format.averageBitrate.takeIf { it >= 1000 }?.div(1000)
+                    ?: uri?.let(audioRates::get) ?: return null
+                return YouTubePlayerFactory.PlayingAudio(item.mediaId, codec, kbps)
+            }
+        }
+        return null
+    }
+
+    private fun DataSpec.withAudio(stream: SignedInStreams.Stream): DataSpec {
+        val key = uri.toString().substringBefore('#')
+        val kbps = stream.kbps
+        if (kbps != null) audioRates.put(key, kbps) else audioRates.remove(key)
+        return withUri(android.net.Uri.parse(stream.url))
+    }
 
     /**
      * Asked without an account, and again as the account where YouTube will
@@ -479,15 +530,20 @@ private class YouTubeStreamResolver(
             else -> if (base.startsWith(YouTubePlayerFactory.SPOTIFY_AUDIO_PREFIX)) SignedInStreams.Kind.AUDIO else if (YouTubeVideoMode.wantsVideo(base)) SignedInStreams.Kind.MUXED else SignedInStreams.Kind.AUDIO
         }
         val id = YouTubeBackend.videoIdOfUri(base)
-        val url = try {
-            SignedInStreams.url(context, id, kind, wantsLowRate())
+        val stream = try {
+            val chosen = quality
+            SignedInStreams.stream(
+                context, id, kind, wantsLowRate(chosen),
+                bestAvailable = chosen == app.sonar.data.PreferencesStore.YouTubeQuality.HIGH,
+            )
         } catch (refused: SignedInStreams.SignInRequired) {
             throw refused
         } catch (refused: Exception) {
             android.util.Log.w("SonarYTSignedIn", "$id refused: ${refused.message}")
             throw SignedInStreams.Refused(id, refused)
         }
-        dataSpec.withUri(android.net.Uri.parse(url))
+        if (kind == SignedInStreams.Kind.VIDEO) dataSpec.withUri(android.net.Uri.parse(stream.url))
+        else dataSpec.withAudio(stream)
     }
 
     private fun resolveAnonymously(dataSpec: DataSpec): DataSpec {
@@ -497,7 +553,7 @@ private class YouTubeStreamResolver(
             app.sonar.download.YouTubeDownloads.fileFor(context, "${YouTubeBackend.TRACK_PREFIX}$id")
                 ?.let { return dataSpec.withUri(android.net.Uri.fromFile(it)) }
             YouTubeStreams.ensureNewPipe()
-            return dataSpec.withUri(android.net.Uri.parse(bestAudio(YouTubeStreams.info(id), id)))
+            return dataSpec.withAudio(bestAudio(YouTubeStreams.info(id), id))
         }
         if (!uri.startsWith(YouTubeBackend.TRACK_PREFIX) && !uri.startsWith(YouTubeBackend.VIDEO_PREFIX)) {
             return dataSpec
@@ -517,6 +573,7 @@ private class YouTubeStreamResolver(
         if (kept != null && part == null &&
             (!video || app.sonar.playback.OfflineMode.active.value)
         ) {
+            audioRates.remove(base)
             return dataSpec.withUri(android.net.Uri.fromFile(kept))
         }
 
@@ -572,35 +629,41 @@ private class YouTubeStreamResolver(
         } else {
             null
         }
-        // Audio-only otherwise, best bitrate: a muxed stream would carry a video
-        // track nobody is going to look at, over a connection that is often the
-        // scarce resource. Also the fallback when a track has no muxed stream.
-            // AAC before Opus, even at a lower rate: the app decodes AAC itself
-            // (FFmpeg, see renderers), while Opus goes to the platform decoder,
-            // whose release aborts the app on this hardware.
-            //
-            // At the rate the listener asked for: the highest, the lowest, or
-            // the highest on Wi-Fi and the lowest on a metered connection.
-            ?: bestAudio(info, videoId)
-
+        if (url == null) return dataSpec.withAudio(bestAudio(info, videoId))
+        audioRates.remove(base)
         return dataSpec.withUri(android.net.Uri.parse(url))
     }
 
-    private fun bestAudio(info: StreamInfo, videoId: String): String = info.audioStreams
-        .filter { !it.content.isNullOrEmpty() }
-        .sortedWith(
-            compareByDescending<org.schabi.newpipe.extractor.stream.AudioStream> {
-                it.format == org.schabi.newpipe.extractor.MediaFormat.M4A
-            }.thenBy { if (wantsLowRate()) it.averageBitrate else -it.averageBitrate },
-        )
-        .firstOrNull()
-        ?.content
-        ?: error("nessuna traccia audio per $videoId")
+    private val quality
+        get() = (context.applicationContext as? app.sonar.SonarApplication)?.preferences?.youtubeQuality?.value
+
+    private fun bestAudio(info: StreamInfo, videoId: String): SignedInStreams.Stream {
+        val chosen = quality
+        fun rank(stream: org.schabi.newpipe.extractor.stream.AudioStream) =
+            YouTubeAudioQuality(stream.itag, stream.averageBitrate)
+        val order = YouTubeAudioQuality.order(wantsLowRate(chosen))
+        val bestAvailable = chosen == app.sonar.data.PreferencesStore.YouTubeQuality.HIGH
+        return YouTubeAudioQuality.firstPlayable(
+            info.audioStreams.filter { it.isUrl && !it.content.isNullOrEmpty() },
+            isOriginal = {
+                it.audioTrackType == null ||
+                    it.audioTrackType == org.schabi.newpipe.extractor.stream.AudioTrackType.ORIGINAL
+            },
+            order = compareBy(order, ::rank),
+        ) { candidate ->
+            val rank = rank(candidate)
+            val url = candidate.content
+            val upgrade = if (bestAvailable) SignedInStreams.tryUpgradeAudio(context, videoId, rank) else null
+            upgrade ?: if (SignedInStreams.isAudioUrlPlayable(url)) {
+                SignedInStreams.Stream(url, rank.kbps.takeIf { it > 0 })
+            } else {
+                null
+            }
+        } ?: error("nessuna traccia audio per $videoId")
+    }
 
     /** Whether the lower rate is wanted now; see PreferencesStore.youtubeQuality. */
-    private fun wantsLowRate(): Boolean {
-        val chosen = (context.applicationContext as? app.sonar.SonarApplication)
-            ?.preferences?.youtubeQuality?.value
+    private fun wantsLowRate(chosen: app.sonar.data.PreferencesStore.YouTubeQuality?): Boolean {
         return when (chosen) {
             app.sonar.data.PreferencesStore.YouTubeQuality.LOW -> true
             app.sonar.data.PreferencesStore.YouTubeQuality.HIGH -> false

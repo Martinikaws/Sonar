@@ -532,6 +532,8 @@ fun SettingsScreen(
             EffectQualitySection()
         }
 
+        "power" -> app.sonar.power.PowerSettings(backdrop)
+
         "keep-playing" -> {
             val prefs = remember(context) {
                 (context.applicationContext as app.sonar.SonarApplication).preferences
@@ -624,6 +626,24 @@ fun SettingsScreen(
                     backdrop = backdrop,
                 )
             }
+        }
+
+        "player-haptics" -> Section(null) {
+            DownloadSwitch(
+                label = stringResource(R.string.haptics_player_controls),
+                checked = sonarApp.preferences.playerHaptics.collectAsStateWithLifecycle().value,
+                backdrop = backdrop,
+                onChange = sonarApp.preferences::setPlayerHaptics,
+            )
+        }
+
+        "lyrics-keep-awake" -> Section(null) {
+            DownloadSwitch(
+                label = stringResource(R.string.haptics_lyrics_keep_awake),
+                checked = sonarApp.preferences.lyricsKeepAwake.collectAsStateWithLifecycle().value,
+                backdrop = backdrop,
+                onChange = sonarApp.preferences::setLyricsKeepAwake,
+            )
         }
 
         "lyrics-source" -> {
@@ -771,6 +791,8 @@ fun SettingsScreen(
                 }
             }
         }
+
+        "looks" -> Section(null) { PageRow(stringResource(R.string.looks_title), stringResource(R.string.looks_summary)) { goTo(SettingsPage.Looks) } }
 
         "glass" -> Section(null) {
             PageRow(
@@ -1039,6 +1061,7 @@ fun SettingsScreen(
         label = "settingsPage",
     ) { shown ->
     when (shown) {
+        SettingsPage.Looks -> app.sonar.ui.looks.LooksPage(sonarApp.preferences, listPadding) { heading(shown) }
         SettingsPage.Equalizer -> EqualizerPage(
             contentPadding = contentPadding,
             header = { heading(shown) },
@@ -1749,7 +1772,14 @@ private fun QualitySection() {
         Quality.entries.forEachIndexed { index, quality ->
             if (index > 0) RowDivider()
             ChoiceRow(
-                label = stringResource(quality.label),
+                label = stringResource(
+                    when (quality) {
+                        Quality.Auto -> quality.label
+                        Quality.High -> R.string.stream_quality_very_high
+                        Quality.Medium -> R.string.stream_quality_high
+                        Quality.Low -> R.string.stream_quality_normal
+                    },
+                ),
                 selected = quality == chosen,
             ) { store.set(quality) }
         }
@@ -1959,9 +1989,9 @@ private fun YouTubeQualitySection() {
             ChoiceRow(
                 label = stringResource(
                     when (quality) {
-                        app.sonar.data.PreferencesStore.YouTubeQuality.AUTO -> R.string.youtube_quality_auto
-                        app.sonar.data.PreferencesStore.YouTubeQuality.HIGH -> R.string.youtube_quality_high
-                        app.sonar.data.PreferencesStore.YouTubeQuality.LOW -> R.string.youtube_quality_low
+                        app.sonar.data.PreferencesStore.YouTubeQuality.AUTO -> R.string.quality_youtube_auto
+                        app.sonar.data.PreferencesStore.YouTubeQuality.HIGH -> R.string.quality_youtube_best
+                        app.sonar.data.PreferencesStore.YouTubeQuality.LOW -> R.string.quality_youtube_saver
                     },
                 ),
                 selected = quality == chosen,
@@ -1969,7 +1999,7 @@ private fun YouTubeQualitySection() {
         }
         RowDivider()
         Text(
-            stringResource(R.string.youtube_quality_note),
+            stringResource(R.string.quality_youtube_note),
             style = MaterialTheme.typography.bodySmall,
             color = InkDim,
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
@@ -2276,7 +2306,7 @@ private fun DownloadsSection(
 }
 
 @Composable
-private fun DownloadSwitch(
+internal fun DownloadSwitch(
     label: String,
     checked: Boolean,
     backdrop: Backdrop,
@@ -2300,7 +2330,7 @@ private fun DownloadSwitch(
 }
 
 @Composable
-private fun Section(title: String?, content: @Composable () -> Unit) {
+internal fun Section(title: String?, content: @Composable () -> Unit) {
     // Under a group of the same name, said once, by the group.
     val group = LocalGroupTitle.current
     Column(Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
@@ -2507,7 +2537,7 @@ private fun ReportRows(name: String?, onSave: (java.io.File) -> Unit) {
 }
 
 @Composable
-private fun ActionRow(
+internal fun ActionRow(
     label: String,
     destructive: Boolean,
     icon: ImageVector? = null,
@@ -2583,7 +2613,7 @@ private fun ChoiceRow(
 }
 
 @Composable
-private fun RowDivider() {
+internal fun RowDivider() {
     Box(
         Modifier
             .fillMaxWidth()

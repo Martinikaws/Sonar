@@ -5896,7 +5896,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val nowPlayingArtPending: StateFlow<Boolean> = _nowPlayingArtPending.asStateFlow()
 
     private var nowPlayingArtJob: Job? = null
-    private var prefetchArtJob: Job? = null
 
     /**
      * Looks up, and downloads, the artwork of the song that comes next.
@@ -5915,20 +5914,23 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * [prefetchArt] for a song queued on another device, whose record's name
      * did not come with it.
      */
-    fun prefetchRemoteArt(uri: String, title: String, artist: String) {
+    suspend fun prefetchRemoteArt(uri: String, title: String, artist: String) {
         if (artist.isBlank() || app.sonar.playback.OfflineMode.active.value) return
-        viewModelScope.launch {
-            val record = withContext(Dispatchers.IO) {
-                runCatching { container.activeBackend.tracksOf(uri).firstOrNull()?.album }.getOrNull()
-            }.orEmpty()
-            prefetchArt(title, record, artist)
-        }
+        val record = withContext(Dispatchers.IO) {
+            try {
+                container.activeBackend.tracksOf(uri).firstOrNull()?.album
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                null
+            }
+        }.orEmpty()
+        prefetchArt(title, record, artist)
     }
 
-    fun prefetchArt(title: String, album: String, artist: String) {
+    suspend fun prefetchArt(title: String, album: String, artist: String) {
         if (artist.isBlank() || app.sonar.playback.OfflineMode.active.value) return
-        prefetchArtJob?.cancel()
-        prefetchArtJob = viewModelScope.launch {
+        kotlinx.coroutines.coroutineScope {
             val found = app.sonar.data.AppleCatalog.album(album, artist)
                 .takeIf { album.isNotBlank() }
             val cover = found?.coverUrl
@@ -5944,8 +5946,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val width = context.resources.displayMetrics.widthPixels
             val height = width * DETAIL_TALL / DETAIL_WIDE
             listOfNotNull(found?.heroUrl, cover).forEach { url ->
-                runCatching {
-                    context.imageLoader.enqueue(
+                launch {
+                    context.imageLoader.execute(
                         coil.request.ImageRequest.Builder(context)
                             .data(url)
                             .size(width, height)
@@ -5959,9 +5961,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             // frame and the page followed it a moment later. See
             // warmArtworkColor.
             (found?.heroUrl ?: cover)?.let { url ->
-                runCatching {
-                    app.sonar.ui.theme.warmArtworkColor(context, url)
-                }
+                app.sonar.ui.theme.warmArtworkColor(context, url)
             }
         }
     }

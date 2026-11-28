@@ -705,6 +705,9 @@ object NativeBridge {
     private external fun nativeCanvas(trackUri: String): String
     private external fun nativeIsOffline(): Boolean
     private external fun nativeSetOfflineOnly(only: Boolean)
+    fun setAudioPreloading(enabled: Boolean) = nativeSetAudioPreloading(enabled)
+
+    private external fun nativeSetAudioPreloading(enabled: Boolean)
     private external fun nativeSetNetworkGone(gone: Boolean)
     private external fun nativeSetDownloadRoot(path: String)
     private external fun nativeDownloadTrack(trackUri: String, bitrateKbps: Int): String

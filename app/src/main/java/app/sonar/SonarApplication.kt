@@ -229,6 +229,7 @@ class SonarApplication : Application(), ImageLoaderFactory {
         app.sonar.data.LibraryViewStore(this)
     }
     val preferences: PreferencesStore by lazy { PreferencesStore(this) }
+    internal val powerMode by lazy { app.sonar.power.PowerMode(this, preferences) }
     /** One instance, so the settings and the playback service share its flow. */
     internal val flacSources by lazy { app.sonar.flac.FlacSources(this) }
 
@@ -297,6 +298,7 @@ class SonarApplication : Application(), ImageLoaderFactory {
         val memoryCachePercent = if (isLowRam) 0.12 else 0.20
 
         return ImageLoader.Builder(this)
+            .components { add(powerMode.artworkSize) }
             .okHttpClient { sharedHttpClient }
             .memoryCache {
                 MemoryCache.Builder(this)

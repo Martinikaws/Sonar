@@ -13,8 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * to this device, which is the honest behaviour for something the service does
  * not know about.
  *
- * Ordered, oldest pin first, so the shelf at the top does not rearrange itself
- * every time another playlist is pinned.
+ * New pins are appended to the listener's shelf order.
  */
 class PinnedPlaylistStore(context: Context) {
 
@@ -23,11 +22,12 @@ class PinnedPlaylistStore(context: Context) {
 
     private val _pinned = MutableStateFlow(load())
 
-    /** URIs in the order they were pinned. */
+    /** URIs in shelf order. */
     val pinned: StateFlow<List<String>> = _pinned.asStateFlow()
 
     fun isPinned(uri: String): Boolean = uri in _pinned.value
 
+    @Synchronized
     fun toggle(uri: String) {
         val current = _pinned.value
         val updated = if (uri in current) {
@@ -35,8 +35,19 @@ class PinnedPlaylistStore(context: Context) {
         } else {
             (current + uri).takeLast(LIMIT)
         }
+        save(updated)
+    }
+
+    @Synchronized
+    fun move(visibleUris: Set<String>, from: String, to: String) {
+        val current = _pinned.value
+        val updated = current.movePinnedPlaylist(visibleUris, from, to)
+        if (updated != current) save(updated)
+    }
+
+    private fun save(updated: List<String>) {
         _pinned.value = updated
-        prefs.edit().putString(KEY_PINNED, updated.joinToString(SEPARATOR)).commit()
+        prefs.edit().putString(KEY_PINNED, updated.joinToString(SEPARATOR)).apply()
     }
 
     private fun load(): List<String> =
@@ -55,6 +66,17 @@ class PinnedPlaylistStore(context: Context) {
         /** Enough that nobody meets it; a guard against a runaway list. */
         const val LIMIT = 50
     }
+}
+
+internal fun List<String>.movePinnedPlaylist(visibleUris: Set<String>, from: String, to: String): List<String> {
+    val visible = filter { it in visibleUris }.toMutableList()
+    val source = visible.indexOf(from)
+    val target = visible.indexOf(to)
+    if (source < 0 || target < 0 || source == target) return this
+    visible.add(target, visible.removeAt(source))
+    val reordered = visible.iterator()
+    // Keep pins from other library snapshots in their original slots.
+    return map { if (it in visibleUris) reordered.next() else it }
 }
 
 /**

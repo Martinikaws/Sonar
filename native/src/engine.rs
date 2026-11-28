@@ -1055,7 +1055,10 @@ fn spawn_event_forwarder(
             } = &event
             {
                 let uri = uri_string(track_id);
-                if *position_ms > PRELOAD_AFTER_MS && preloaded.as_deref() != Some(&uri) {
+                if librespot_playback::player::audio_preloading()
+                    && *position_ms > PRELOAD_AFTER_MS
+                    && preloaded.as_deref() != Some(&uri)
+                {
                     preload_after(&player, &uri);
                     preloaded = Some(uri);
                 }

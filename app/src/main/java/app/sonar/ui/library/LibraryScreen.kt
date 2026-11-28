@@ -8,11 +8,13 @@ import androidx.annotation.StringRes
 import app.sonar.library.LibraryOrganization
 import app.sonar.library.LibraryOrganizationControls
 import app.sonar.library.LibraryOrganizationStore
+import app.sonar.library.PlaylistReorderDialog
 import app.sonar.library.LibrarySort
 import app.sonar.library.atLibraryLevel
 import app.sonar.library.canOrganize
 import app.sonar.library.inCreatorOrder
 import app.sonar.library.inCustomLibraryOrder
+import app.sonar.library.importlink.PlaylistImportDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.togetherWith
@@ -21,6 +23,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -48,6 +51,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -96,7 +100,7 @@ import app.sonar.ui.glass.backdrop.backdrops.rememberCombinedBackdrop
 import app.sonar.ui.glass.backdrop.backdrops.rememberLayerBackdrop
 import app.sonar.ui.glass.backdrop.backdrops.rememberBackdropFreeze
 import com.composables.icons.lucide.Lucide
-import com.composables.icons.lucide.ArrowDownUp
+import com.composables.icons.lucide.Ellipsis
 import com.composables.icons.lucide.ChartNoAxesColumn
 import com.composables.icons.lucide.Grid2x2
 import com.composables.icons.lucide.List
@@ -226,9 +230,13 @@ fun LibraryScreen(
             // Both are the listener's own decision about their library rather
             // than a mode of this screen, so they are read from where they were
             // left and written as they change; see LibraryViewStore.
-            val appContext = LocalContext.current.applicationContext
-            val view = remember(appContext) {
-                (appContext as app.sonar.SonarApplication).libraryView
+            val container = LocalContext.current.applicationContext as app.sonar.SonarApplication
+            val view = remember(container) { container.libraryView }
+            var importOpen by rememberSaveable { mutableStateOf(false) }
+            var reorderPinsOpen by rememberSaveable { mutableStateOf(false) }
+            val pinnedRows = remember(state.playlists, pinned) {
+                val byUri = state.playlists.associateBy { it.uri }
+                pinned.mapNotNull(byUri::get)
             }
             var layout by remember { mutableStateOf(if (view.grid) Layout.GRID else Layout.LIST) }
             var order by remember {
@@ -389,14 +397,14 @@ fun LibraryScreen(
                 // the sort menu grows out of. The order chosen is ticked in it.
                 val sortButton: @Composable (Modifier) -> Unit = { buttonModifier ->
                     app.sonar.ui.components.GlassPullDownButton(
-                        icon = Lucide.ArrowDownUp,
-                        semanticLabel = stringResource(R.string.sort) + ": " + stringResource(order.label),
+                        icon = Lucide.Ellipsis,
+                        semanticLabel = stringResource(R.string.import_library_options),
                         onOpen = { sortOpen = true },
                         onAnchor = { sortAnchor = it },
                         backdrop = backdrop,
                         trigger = sortTrigger,
                         ink = Ink,
-                        buttonSize = 42.dp,
+                        buttonSize = 44.dp,
                         modifier = buttonModifier,
                     )
                 }
@@ -594,27 +602,57 @@ fun LibraryScreen(
                 // "Aperte di recente" and its tick do not fit in 200.
                 width = 240.dp,
             ) {
-                Order.entries.forEach { entry ->
+                val menuHeight = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp / 2).dp
+                Column(Modifier.heightIn(max = menuHeight).verticalScroll(rememberScrollState())) {
                     app.sonar.ui.components.GlassMenuItem(
-                        stringResource(entry.label),
-                        selected = entry == order,
+                        stringResource(R.string.import_title),
                         onClick = {
                             sortOpen = false
-                            onOrderChosen(entry)
+                            importOpen = true
                         },
                     )
-                }
-                if (order != Order.CUSTOM) {
+                    if (pinnedRows.size > 1) {
+                        app.sonar.ui.components.GlassMenuItem(
+                            stringResource(R.string.pinreorder_title),
+                            onClick = {
+                                sortOpen = false
+                                reorderPinsOpen = true
+                            },
+                        )
+                    }
                     app.sonar.ui.components.GlassMenuDivider()
-                    app.sonar.ui.components.GlassMenuItem(
-                        stringResource(R.string.sort_descending),
-                        checked = descending,
-                        onClick = {
-                            descending = !descending
-                            view.descending = descending
-                        },
-                    )
+                    Order.entries.forEach { entry ->
+                        app.sonar.ui.components.GlassMenuItem(
+                            stringResource(entry.label),
+                            selected = entry == order,
+                            onClick = {
+                                sortOpen = false
+                                onOrderChosen(entry)
+                            },
+                        )
+                    }
+                    if (order != Order.CUSTOM) {
+                        app.sonar.ui.components.GlassMenuDivider()
+                        app.sonar.ui.components.GlassMenuItem(
+                            stringResource(R.string.sort_descending),
+                            checked = descending,
+                            onClick = {
+                                descending = !descending
+                                view.descending = descending
+                            },
+                        )
+                    }
                 }
+            }
+            if (importOpen) PlaylistImportDialog(container) { importOpen = false }
+            if (reorderPinsOpen && pinnedRows.size > 1) {
+                val visibleUris = pinnedRows.mapTo(mutableSetOf()) { it.uri }
+                PlaylistReorderDialog(
+                    playlists = pinnedRows,
+                    onMove = { from, to -> container.pinnedPlaylists.move(visibleUris, from, to) },
+                    onDismiss = { reorderPinsOpen = false },
+                    title = R.string.pinreorder_title,
+                )
             }
             }
             }

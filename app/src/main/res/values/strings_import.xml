@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="import_library_options">Library options</string>
+    <string name="import_title">Import playlist</string>
+    <string name="import_link">Playlist link</string>
+    <string name="import_action">Import</string>
+    <string name="import_invalid">Paste a Spotify or YouTube Music playlist link.</string>
+    <string name="import_unsupported">This service isn’t supported. Use Spotify or YouTube Music.</string>
+    <string name="import_loading">Reading playlist…</string>
+    <string name="import_error">Couldn’t read the playlist. Check the link, access and connection, then try again.</string>
+    <string name="import_spotify_error">Couldn’t read the playlist. Check the link or connect the Spotify Web API in Settings.</string>
+    <string name="import_spotify_playlist">Spotify playlist</string>
+    <string name="import_result">%1$d imported, %2$d not found. Saved in On-device playlists.</string>
+    <string name="import_playback_source">Select %1$s as the music source to play these tracks.</string>
+</resources>

@@ -674,6 +674,8 @@ fun SonarApp(
     val newPage by viewModel.newPage.collectAsStateWithLifecycle()
     val followedReleases by viewModel.followedReleases.collectAsStateWithLifecycle()
 
+    val conservePower by (context.applicationContext as app.sonar.SonarApplication)
+        .powerMode.conserving.collectAsStateWithLifecycle()
     LaunchedEffect(playback.mediaId, playback.title, playback.album, playback.artist) {
         viewModel.loadNowPlayingArt(
             uri = playback.mediaId,
@@ -681,7 +683,10 @@ fun SonarApp(
             album = playback.album,
             artist = playback.artist,
         )
+    }
 
+    LaunchedEffect(playback.mediaId, conservePower) {
+        if (conservePower) return@LaunchedEffect
         // And the one after it, while there is time to spare. Read off the
         // player's own timeline rather than the queue list: the media item
         // carries the record's name, which is what the other catalogue is
@@ -705,8 +710,8 @@ fun SonarApp(
     // asked for as the player asks for it. On its own key, since that queue
     // can arrive after the song does.
     val remoteNext = remote?.next?.firstOrNull()
-    LaunchedEffect(remoteNext?.uri) {
-        remoteNext?.let { viewModel.prefetchRemoteArt(it.uri, it.title, it.artist) }
+    LaunchedEffect(remoteNext?.uri, conservePower) {
+        if (!conservePower) remoteNext?.let { viewModel.prefetchRemoteArt(it.uri, it.title, it.artist) }
     }
 
     // Everything the account has actually touched, one station per artist.
@@ -899,7 +904,9 @@ fun SonarApp(
     val ambientAccent by rememberArtworkColor(
         ambientArt.takeIf { nowPlayingArt?.bgColor == null },
     )
+    val coverColors = app.sonar.data.PreferencesStore.LooksOption.CoverColors in app.sonar.ui.looks.currentLooks()
     val playerTone = when {
+        !coverColors -> pageColorFor(null)
         nowPlayingArt?.bgColor != null ->
             pageColorForHex(nowPlayingArt?.bgColor, lift = false)
         ambientFoot != null -> footToneFor(ambientFoot, lift = false)
@@ -919,7 +926,7 @@ fun SonarApp(
     // the video, not the sleeve, and glass tinted after a record nobody is
     // looking at clashes with it. The plain glass instead, until the video
     // is put away.
-    val glassAccent = accent.takeUnless { videoOn || spotifyVideoOn }
+    val glassAccent = accent.takeUnless { !coverColors || videoOn || spotifyVideoOn }
 
     // And the film on its glass: still dark, and now the record's own dark.
     // The song's colour at the depth the grey film sat at, see playerFilmTint,
@@ -1152,7 +1159,8 @@ fun SonarApp(
     // there is nobody to ask.
     // Turned off, no clip is ever asked for — which is the point of the switch:
     // it saves the video as well as hiding it.
-    val canvasEnabled by preferences.canvasEnabled.collectAsStateWithLifecycle()
+    val movingCovers by preferences.canvasEnabled.collectAsStateWithLifecycle()
+    val canvasEnabled = movingCovers && !conservePower
     val coverSource by preferences.animatedCoverSource.collectAsStateWithLifecycle()
 
     LaunchedEffect(playback.mediaId, backend, canvasEnabled, coverSource, offlineNow) {
@@ -3488,7 +3496,7 @@ fun SonarApp(
                                 },
                                 onDeletePreset = viewModel::deleteEffectPreset,
                                 backdrop = playerBackdrop,
-                                canvas = canvas,
+                                canvas = canvas.takeIf { canvasEnabled },
                                 // The record's own artwork from the other
                                 // catalogue, where it has any: the tall picture
                                 // and the moving cover a song inherits from its

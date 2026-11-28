@@ -1,0 +1,4 @@
+<resources>
+    <string name="haptics_player_controls">Feedback aptico del player</string>
+    <string name="haptics_lyrics_keep_awake">Tieni acceso lo schermo durante i testi</string>
+</resources>

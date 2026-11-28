@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="quality_youtube_auto">Auto</string>
+    <string name="quality_youtube_best">Best available</string>
+    <string name="quality_youtube_saver">Data saver</string>
+    <string name="quality_youtube_note">Applies to newly loaded streams. Auto saves data on metered networks. Some higher-quality streams require a YouTube Music Premium sign-in.</string>
+    <string name="quality_playing_audio">%1$s %2$d kb/s</string>
+</resources>

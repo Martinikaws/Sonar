@@ -486,7 +486,7 @@ class YouTubeBackend(private val account: YouTubeAccount) : MusicBackend {
         page.sections.orEmpty().map { section -> section.title to section.songs.map(::toCatalogTrack) }
     }
 
-    private fun toCatalogTrack(item: SongItem): CatalogTrack {
+    internal fun toCatalogTrack(item: SongItem): CatalogTrack {
         // Every name its own way in, and the record too: what makes the lines
         // under the title in the player lead somewhere, as they do for Spotify.
         // A video's byline arrives as runs, and the joining words between the

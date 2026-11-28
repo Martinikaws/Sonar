@@ -15,8 +15,8 @@ data class LocalPlaylist(val id: String, val name: String, val tracks: List<Cata
 /** Playlists that live on this device only; they may mix catalogue and phone tracks. */
 @Serializable
 data class LocalPlaylists(val lists: List<LocalPlaylist> = emptyList()) {
-    fun create(id: String, name: String): LocalPlaylists =
-        if (name.isBlank()) this else copy(lists = lists + LocalPlaylist(id, name.trim()))
+    fun create(id: String, name: String, tracks: List<CatalogTrack> = emptyList()): LocalPlaylists =
+        if (name.isBlank()) this else copy(lists = lists + LocalPlaylist(id, name.trim(), tracks.distinctBy { it.uri }))
 
     fun rename(id: String, name: String): LocalPlaylists =
         if (name.isBlank()) this else edit(id) { it.copy(name = name.trim()) }
@@ -40,7 +40,8 @@ class LocalPlaylistStore(context: Context) {
     private val mutable = MutableStateFlow(load())
     val state: StateFlow<LocalPlaylists> = mutable.asStateFlow()
 
-    fun create(name: String) = update { it.create(UUID.randomUUID().toString(), name) }
+    fun create(name: String, tracks: List<CatalogTrack> = emptyList()) =
+        update { it.create(UUID.randomUUID().toString(), name, tracks) }
     fun rename(id: String, name: String) = update { it.rename(id, name) }
     fun delete(id: String) = update { it.delete(id) }
     fun add(id: String, track: CatalogTrack) = update { it.add(id, track) }

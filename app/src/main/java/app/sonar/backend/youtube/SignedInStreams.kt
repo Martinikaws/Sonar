@@ -18,7 +18,7 @@ import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
 /**
  * Streams for the songs YouTube will only play to someone signed in.
  *
- * Every stream is asked for without an account, which is what keeps the
+ * Streams are normally asked for without an account, which keeps the
  * listener's account out of the playback requests; and for nearly every song
  * that is all it takes. A few, explicit records above all, answer "please sign
  * in" to any client that has no account, and played nothing: the player sat at
@@ -46,7 +46,10 @@ object SignedInStreams {
     class Refused(videoId: String, cause: Throwable) :
         java.io.IOException("$videoId could not be played signed in: ${cause.message}", cause)
 
-    private val urls = ConcurrentHashMap<String, Pair<Long, String>>()
+    internal data class Stream(val url: String, val kbps: Int?)
+
+    private val urls = ConcurrentHashMap<String, Pair<Long, Stream>>()
+    private val bestAudio = ConcurrentHashMap<String, Pair<Long, Stream?>>()
 
     /**
      * Whether [error], from asking without an account, is YouTube asking for
@@ -66,58 +69,127 @@ object SignedInStreams {
                 (it is ContentNotAvailableException && it.message.orEmpty().contains("LOGIN_REQUIRED"))
         }
 
-    val available: Boolean get() = YouTube.cookie != null
-
     /**
      * Forgets the addresses kept, after one failed to play: kept, it would be
      * handed out again for the hour, and the song could not be tried afresh.
      */
-    fun forget() = urls.clear()
+    fun forget() {
+        urls.clear()
+        bestAudio.clear()
+    }
 
     /** The URL of [kind] for [videoId], as the signed-in account; blocking. */
-    fun url(context: android.content.Context, videoId: String, kind: Kind, lowRate: Boolean): String {
-        if (!available) throw SignInRequired(videoId)
-        val key = "$videoId|$kind|$lowRate"
+    fun url(context: android.content.Context, videoId: String, kind: Kind, lowRate: Boolean): String =
+        stream(context, videoId, kind, lowRate, preferAac = true).url
+
+    internal fun stream(
+        context: android.content.Context,
+        videoId: String,
+        kind: Kind,
+        lowRate: Boolean,
+        preferAac: Boolean = false,
+        bestAvailable: Boolean = false,
+    ): Stream {
+        val account = YouTube.cookie ?: throw SignInRequired(videoId)
+        val key = "$videoId|$kind|$lowRate|$preferAac|$bestAvailable|${account.hashCode()}|${YouTube.pageId}"
         val now = android.os.SystemClock.elapsedRealtime()
         urls[key]?.takeIf { now - it.first < URL_TTL_MS }?.let { return it.second }
         val script = PlayerChallenges.script(context)
         val response = player(videoId, script.signatureTimestamp)
         val issuedAt = android.os.SystemClock.elapsedRealtime()
         val formats = response.streamingData
-        val chosen = when (kind) {
-            Kind.AUDIO -> formats?.adaptiveFormats.orEmpty()
-                .filter { it.isAudio && it.isOriginal }
-                // AAC before Opus, as for every other stream; see the resolver.
-                .sortedWith(
-                    compareByDescending<PlayerResponse.StreamingData.Format> { it.mimeType.startsWith("audio/mp4") }
-                        .thenBy { if (lowRate) it.bitrate else -it.bitrate },
-                )
-                .firstOrNull()
-            Kind.VIDEO -> formats?.adaptiveFormats.orEmpty()
-                .filter { !it.isAudio && (it.height ?: 0) in 1..MAX_VIDEO_HEIGHT }
-                .sortedWith(
-                    compareByDescending<PlayerResponse.StreamingData.Format> { it.height ?: 0 }
-                        .thenByDescending { it.mimeType.startsWith("video/mp4") },
-                )
-                .firstOrNull()
-            Kind.MUXED -> formats?.formats.orEmpty().maxByOrNull { it.height ?: 0 }
-        } ?: error("no ${kind.name.lowercase()} stream for $videoId signed in")
-        val url = try {
-            urlOf(context, script, chosen)
-        } catch (failure: Exception) {
-            // A fresh engine next time: one that failed may be in any state.
-            PlayerChallenges.reset()
-            throw failure
+        val audioOrder = compareByDescending<PlayerResponse.StreamingData.Format> {
+            preferAac && it.mimeType.startsWith("audio/mp4")
+        }.then(compareBy(YouTubeAudioQuality.order(lowRate)) { it.quality() })
+        fun resolve(format: PlayerResponse.StreamingData.Format): Stream {
+            val url = try {
+                urlOf(context, script, format)
+            } catch (failure: Exception) {
+                // A failed challenge may leave the engine in an unusable state.
+                PlayerChallenges.reset()
+                throw failure
+            }
+            awaitReady(videoId, url, issuedAt, requireSuccess = kind == Kind.AUDIO)
+            return Stream(url, format.quality().kbps.takeIf { kind == Kind.AUDIO && it > 0 })
         }
-        awaitReady(videoId, url, issuedAt)
-        urls[key] = now to url
+        val noStream = "no ${kind.name.lowercase()} stream for $videoId signed in"
+        val (chosen, stream) = if (kind == Kind.AUDIO) {
+            var lastFailure: Exception? = null
+            YouTubeAudioQuality.firstPlayable(
+                formats?.adaptiveFormats.orEmpty().filter { it.isAudio && it.isOriginal },
+                isOriginal = { it.isOriginal },
+                order = audioOrder,
+            ) { format ->
+                val upgrade = if (bestAvailable) tryUpgradeAudio(context, videoId, format.quality()) else null
+                try {
+                    format to (upgrade ?: resolve(format))
+                } catch (failure: Exception) {
+                    if (failure is InterruptedException || failure is kotlinx.coroutines.CancellationException) throw failure
+                    lastFailure = failure
+                    null
+                }
+            } ?: throw java.io.IOException(noStream, lastFailure)
+        } else {
+            val format = when (kind) {
+                Kind.VIDEO -> formats?.adaptiveFormats.orEmpty()
+                    .filter { !it.isAudio && (it.height ?: 0) in 1..MAX_VIDEO_HEIGHT }
+                    .sortedWith(
+                        compareByDescending<PlayerResponse.StreamingData.Format> { it.height ?: 0 }
+                            .thenByDescending { it.mimeType.startsWith("video/mp4") },
+                    )
+                    .firstOrNull()
+                Kind.MUXED -> formats?.formats.orEmpty().maxByOrNull { it.height ?: 0 }
+                Kind.AUDIO -> error(noStream)
+            } ?: error(noStream)
+            format to resolve(format)
+        }
+        urls[key] = now to stream
         if (urls.size > 64) urls.entries.minByOrNull { it.value.first }?.let { urls.remove(it.key) }
         android.util.Log.i(
             TAG,
-            "$videoId played signed in through $workingName (${kind.name.lowercase()}, itag ${chosen.itag})",
+            "$videoId resolved signed-in ${kind.name.lowercase()} (base client $workingName, base itag ${chosen.itag})",
         )
-        return url
+        return stream
     }
+
+    internal fun tryUpgradeAudio(
+        context: android.content.Context,
+        videoId: String,
+        current: YouTubeAudioQuality,
+    ): Stream? = runCatching { upgradeAudio(context, videoId, current) }.getOrNull()
+
+    private fun upgradeAudio(
+        context: android.content.Context,
+        videoId: String,
+        current: YouTubeAudioQuality,
+    ): Stream? {
+        val account = YouTube.cookie ?: return null
+        if (current.itag == 251) return null
+        val key = "$videoId|$current|${account.hashCode()}|${YouTube.pageId}"
+        val now = android.os.SystemClock.elapsedRealtime()
+        bestAudio[key]?.takeIf { now - it.first < URL_TTL_MS }?.let { return it.second }
+        val order = YouTubeAudioQuality.order(lowRate = false)
+        val script = PlayerChallenges.script(context)
+        val response = runBlocking {
+            YouTube.player(videoId, client = YouTubeClient.WEB_REMIX, signatureTimestamp = script.signatureTimestamp)
+        }.getOrThrow()
+        val stream = response.streamingData?.adaptiveFormats.orEmpty()
+            .filter { it.isAudio && it.isOriginal && order.compare(it.quality(), current) < 0 }
+            .sortedWith(compareBy(order) { it.quality() })
+            .firstNotNullOfOrNull { format ->
+                runCatching {
+                    val url = urlOf(context, script, format)
+                    if (probe(url) in 200..299) Stream(url, format.quality().kbps.takeIf { it > 0 })
+                    else null
+                }.getOrNull()
+            }
+        bestAudio[key] = now to stream
+        if (bestAudio.size > 64) bestAudio.entries.minByOrNull { it.value.first }?.let { bestAudio.remove(it.key) }
+        return stream
+    }
+
+    private fun PlayerResponse.StreamingData.Format.quality() =
+        YouTubeAudioQuality(itag, (averageBitrate?.takeIf { it > 0 } ?: bitrate) / 1000)
 
     /**
      * The first signed-in client that will play it. The TV app's comes first,
@@ -162,12 +234,21 @@ object SignedInStreams {
      * until it answers otherwise, for as long as [READY_WAIT_MS] after it was
      * issued; one that still refuses then is refused for good.
      */
-    private fun awaitReady(videoId: String, url: String, issuedAt: Long) {
+    internal fun isAudioUrlPlayable(url: String): Boolean =
+        runCatching { probe(url) in 200..299 }.getOrDefault(false)
+
+    private fun probe(url: String): Int {
+        val request = Request.Builder().url(url).header("Range", "bytes=0-1").build()
+        return http.newCall(request).execute().use { it.code }
+    }
+
+    private fun awaitReady(videoId: String, url: String, issuedAt: Long, requireSuccess: Boolean) {
         while (true) {
-            val code = runCatching {
-                val request = Request.Builder().url(url).header("Range", "bytes=0-1").build()
-                http.newCall(request).execute().use { it.code }
-            }.getOrElse { return }
+            val code = runCatching { probe(url) }.getOrElse {
+                if (requireSuccess) throw it
+                return
+            }
+            if (requireSuccess && code != 403 && code !in 200..299) error("$videoId stream returned HTTP $code")
             if (code != 403) return
             val waited = android.os.SystemClock.elapsedRealtime() - issuedAt
             if (waited > READY_WAIT_MS) error("$videoId still refused after $waited ms")

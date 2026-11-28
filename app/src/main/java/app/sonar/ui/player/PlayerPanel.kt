@@ -107,6 +107,7 @@ fun PlayerPanelSection(
     modifier: Modifier = Modifier,
     /** False on a phone held sideways, where the cover is beside the views already. */
     showCover: Boolean = true,
+    showLyrics: Boolean = true,
 ) {
     Column(
         modifier.fillMaxWidth(),
@@ -135,10 +136,10 @@ fun PlayerPanelSection(
             .collectAsStateWithLifecycle()
         val karaokeOn = karaoke > 0f && !sdkPlayback
 
-        val views = remember(sdkPlayback, showCover) {
+        val views = remember(sdkPlayback, showCover, showLyrics) {
             listOfNotNull(
                 PlayerPanel.NONE.takeIf { showCover },
-                PlayerPanel.LYRICS,
+                PlayerPanel.LYRICS.takeIf { showLyrics },
                 PlayerPanel.QUEUE,
                 PlayerPanel.EFFECTS.takeUnless { sdkPlayback },
                 PlayerPanel.INFO,
@@ -177,7 +178,7 @@ fun PlayerPanelSection(
                 label = stringResource(R.string.cover),
                 selected = selected == views.indexOf(PlayerPanel.NONE),
             ) { onSelect(PlayerPanel.NONE) }
-            PanelTab(
+            if (showLyrics) PanelTab(
                 icon = Lucide.CaseSensitive,
                 label = stringResource(R.string.lyrics),
                 selected = selected == views.indexOf(PlayerPanel.LYRICS),

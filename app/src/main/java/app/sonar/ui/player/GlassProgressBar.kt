@@ -81,6 +81,11 @@ fun GlassProgressBar(
     var scrubbing by remember { mutableStateOf<Float?>(null) }
     var width by remember { mutableStateOf(1f) }
     val latestOnScrub by rememberUpdatedState(onScrub)
+    val haptic = rememberPlayerHaptic()
+    fun updateScrub(previous: Float?, current: Float) {
+        if (durationMs > 0 && crossesScrubTick(previous, current)) haptic(scrubHaptic)
+        scrubbing = current
+    }
     LaunchedEffect(scrubbing, durationMs) {
         latestOnScrub(scrubbing?.let { (it * durationMs).toLong() })
     }
@@ -104,8 +109,8 @@ fun GlassProgressBar(
         LiquidSlider(
             value = { scrubbing ?: progressOf(positionMs.value, durationMs) },
             onValueChange = {
+                updateScrub(if (settling == null) scrubbing else null, it)
                 settling = null
-                scrubbing = it
             },
             onValueChangeFinished = {
                 val target = scrubbing
@@ -155,6 +160,7 @@ fun GlassProgressBar(
                 width = size.width.toFloat()
                 detectTapGestures { offset ->
                     if (durationMs > 0) {
+                        haptic(scrubHaptic)
                         onSeek(((offset.x / size.width).coerceIn(0f, 1f) * durationMs).toLong())
                     }
                 }
@@ -163,7 +169,7 @@ fun GlassProgressBar(
                 width = size.width.toFloat()
                 detectHorizontalDragGestures(
                     onDragStart = { offset ->
-                        scrubbing = (offset.x / size.width).coerceIn(0f, 1f)
+                        updateScrub(null, (offset.x / size.width).coerceIn(0f, 1f))
                     },
                     onDragEnd = {
                         scrubbing?.let { onSeek((it * durationMs).toLong()) }
@@ -172,7 +178,7 @@ fun GlassProgressBar(
                     onDragCancel = { scrubbing = null },
                 ) { change, _ ->
                     change.consume()
-                    scrubbing = (change.position.x / size.width).coerceIn(0f, 1f)
+                    updateScrub(scrubbing, (change.position.x / size.width).coerceIn(0f, 1f))
                 }
             },
     ) {

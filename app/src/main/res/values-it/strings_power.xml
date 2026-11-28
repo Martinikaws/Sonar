@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="power_settings">Cuffie e risparmio</string>
+    <string name="power_headset_seek">Salta di 15 secondi nei podcast con le cuffie</string>
+    <string name="power_battery_saver">Risparmia energia con batteria scarica</string>
+    <string name="power_data_saver">Risparmia dati su rete mobile</string>
+    <string name="power_restart_player">Riavvia lettore</string>
+</resources>

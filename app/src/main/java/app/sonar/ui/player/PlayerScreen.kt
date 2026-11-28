@@ -1,5 +1,6 @@
 package app.sonar.ui.player
 
+import android.view.HapticFeedbackConstants.CONTEXT_CLICK
 import app.sonar.ui.theme.emphasizedCaseSensitive
 import app.sonar.ui.components.GlassChoiceMenu
 import app.sonar.ui.components.copyFrame
@@ -125,6 +126,9 @@ import app.sonar.ui.glass.backdrop.backdrops.rememberCombinedBackdrop
 import app.sonar.ui.glass.backdrop.backdrops.rememberLayerBackdrop
 import app.sonar.R
 import app.sonar.ui.MainViewModel
+import app.sonar.data.PreferencesStore.LooksOption
+import app.sonar.ui.looks.SpinningCover
+import app.sonar.ui.looks.currentLooks
 import app.sonar.ui.components.Artwork
 import app.sonar.ui.glass.GlassBlendGroup
 import app.sonar.ui.glass.LiquidButton
@@ -493,6 +497,11 @@ fun PlayerScreen(
     /** Whether the sound is coming out of another of the account's devices. */
     onAnotherDevice: Boolean = false,
 ) {
+    val looks = currentLooks()
+    val showLyrics = LooksOption.Lyrics in looks
+    val showSource = LooksOption.Source in looks
+    val spinningUrl = (coverSquareUrl ?: state.artworkUrl)
+        ?.takeIf { it.isNotBlank() && LooksOption.SpinCover in looks }
     var panel by remember { mutableStateOf(PlayerPanel.NONE) }
     // The official SDK mixes its own audio: no effects or karaoke reach it.
     val sdkPlayback by app.sonar.playback.websdk.WebSdkRecovery.inUse.collectAsStateWithLifecycle()
@@ -556,6 +565,16 @@ fun PlayerScreen(
     val groundBackdrop = rememberCombinedBackdrop(backdrop, lightBackdrop)
     val glassBackdrop = rememberCombinedBackdrop(backdrop, lightBackdrop, canvasBackdrop)
 
+    val sideways = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
+        android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val glassEnabled = LocalGlassEnabled.current
+    val showingVideo = !sideways && videoOn && videoPlayer != null && glassEnabled
+    val showingClip = canvas != null && canvasReady && (!canvas.isVideo || glassEnabled)
+    val showCover = !showingVideo && !showingClip
+    val playerSettled = LocalPlayerSettled.current
+    val motionUrl = coverMotionUrl.takeIf { !sideways && showCover && playerSettled }
+    val spinCoverUrl = spinningUrl.takeIf { showCover && motionUrl == null }
+
     // The panes below the clip only refract it when they are actually over it.
     //
     // The clip's layer covers the whole screen and is redrawn with every frame
@@ -570,7 +589,6 @@ fun PlayerScreen(
     // holds the cover and its extension down to the foot of the screen, which
     // is what the panes sit on. Reading the ground alone there, the title
     // refracted the sleeve's red from under a grey screen.
-    val showingClip = canvas != null && canvasReady
     val lowerBackdropAlone = if (showingClip && lowerTop >= clipBottom) groundBackdrop else glassBackdrop
 
     // The panes over a moving Apple cover read the page's own blurred ground
@@ -578,7 +596,7 @@ fun PlayerScreen(
     // frame of it had that whole layer recorded again and every pane over it
     // blurred again; behind this much glass the motion is only a shimmer, and
     // it was costing the player half its frames.
-    val coverMoving = coverMotionUrl != null && canvas == null
+    val coverMoving = motionUrl != null
     var qualityOpen by remember { mutableStateOf(false) }
     var qualityAnchor by remember { mutableStateOf(androidx.compose.ui.unit.IntRect.Zero) }
     val qualityTrigger = app.sonar.ui.components.rememberGlassMenuTrigger()
@@ -621,15 +639,15 @@ fun PlayerScreen(
     // lyric over one.
     val panelOpen = panel != PlayerPanel.NONE
 
-    // On its side: the stage and the controls side by side; see stageBlock.
-    val sideways = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
-        android.content.res.Configuration.ORIENTATION_LANDSCAPE
     // On its side the player is two halves: the song on a card to the left,
     // the views — lyrics, queue, effects, credits — to the right; see SongCard.
     val readingSideways = sideways
     // The cover is the card's on its side, so the views start at the lyrics.
-    LaunchedEffect(sideways, panel) {
-        if (sideways && panel == PlayerPanel.NONE) panel = PlayerPanel.LYRICS
+    LaunchedEffect(sideways, panel, showLyrics) {
+        if (!showLyrics && panel == PlayerPanel.LYRICS) panel = PlayerPanel.NONE
+        if (sideways && panel == PlayerPanel.NONE) {
+            panel = if (showLyrics) PlayerPanel.LYRICS else PlayerPanel.QUEUE
+        }
     }
 
     // The words on their own, as Apple Music does it: while a song plays over
@@ -642,7 +660,7 @@ fun PlayerScreen(
     // Set by the stage as a press arrives, read by the column after it.
     var pressOnLyrics by remember { mutableStateOf(false) }
     var lyricsAlone by remember { mutableStateOf(false) }
-    val lyricsReading = (panel == PlayerPanel.LYRICS || (sideways && panel == PlayerPanel.NONE)) &&
+    val lyricsReading = showLyrics && (panel == PlayerPanel.LYRICS || (sideways && panel == PlayerPanel.NONE)) &&
         lyrics != null && !lyricsLoading
     // On wantsPlay, not isPlaying: a tap on a line seeks, the player stops for
     // the moment it takes to load the new place, and on isPlaying that moment
@@ -653,16 +671,7 @@ fun PlayerScreen(
         kotlinx.coroutines.delay(LYRICS_ALONE_AFTER_MS)
         lyricsAlone = true
     }
-    // The screen stays on while the words are being sung along to. Left to
-    // the phone's own timeout it dimmed and locked halfway through a verse,
-    // which on a page meant to be read from across the room is the page going
-    // away. Only while it plays: paused, the phone sleeps as it would anyway.
-    val hostView = androidx.compose.ui.platform.LocalView.current
-    val keepAwake = lyricsReading && state.wantsPlay
-    DisposableEffect(hostView, keepAwake) {
-        if (keepAwake) hostView.keepScreenOn = true
-        onDispose { if (keepAwake) hostView.keepScreenOn = false }
-    }
+    val haptic = rememberPlayerHaptic()
     val chrome by animateFloatAsState(
         targetValue = if (lyricsAlone) 0f else 1f,
         animationSpec = tween(if (lyricsAlone) LYRICS_ALONE_LEAVE_MS else LYRICS_ALONE_RETURN_MS),
@@ -718,7 +727,7 @@ fun PlayerScreen(
 
     // The tone the cover fades into, worked out the same way the pages do it.
     val coverAccent by app.sonar.ui.theme.rememberArtworkColor(state.artworkUrl)
-    val coverTone = app.sonar.ui.theme.pageColorFor(coverAccent)
+    val coverTone = app.sonar.ui.theme.pageColorFor(coverAccent.takeIf { LooksOption.CoverColors in looks })
 
     // The glass keeps its frost under a panel too. It used to give way as
     // the room behind blurred, and the transport, the title and the tab bar
@@ -802,7 +811,7 @@ fun PlayerScreen(
                 // Never on its side, where the room is the sleeve, blurred: the
                 // stand-in is the record's extended artwork, often another
                 // picture, and it was what showed behind the sleeve.
-                targetValue = if (!sideways && !videoOn && (canvas == null || !canvasReady)) 1f else 0f,
+                targetValue = if (!sideways && showCover) 1f else 0f,
                 animationSpec = tween(CANVAS_HANDOVER),
                 label = "coverFade",
             )
@@ -832,22 +841,21 @@ fun PlayerScreen(
                 // and nothing of the picture itself — which was a stand-in for
                 // an image the app had all along.
                 app.sonar.ui.components.HeroBackdrop(
-                    artworkUrl = coverHeroUrl
-                        ?: coverSquareUrl
-                        ?: state.artworkUrl.takeIf { !coverPending },
+                    artworkUrl = (coverHeroUrl ?: coverSquareUrl ?: state.artworkUrl.takeIf { !coverPending })
+                        .takeUnless { spinCoverUrl != null && panel == PlayerPanel.NONE },
                     // The moving cover only while the player is standing
                     // still. Otherwise its TextureView goes black for the
                     // length of the closing animation and is the last thing
                     // left on screen — see LocalPlayerSettled. The still
                     // picture underneath is what the travel shows instead, and
                     // at that size and speed the swap is invisible.
-                    motionUrl = coverMotionUrl.takeIf { LocalPlayerSettled.current },
+                    motionUrl = motionUrl,
                     // And still behind a panel, as a Canvas is, where it stands
                     // rather than taken away; see MotionCover's playing.
                     motionPlaying = !panelOpen,
                     title = state.title,
                     pageColor = coverTone,
-                    pending = coverPending,
+                    pending = coverPending || (spinCoverUrl != null && panel == PlayerPanel.NONE),
                     // Where the picture stops being a picture. It runs longer
                     // when it is the only one on the screen — there is no sleeve
                     // over it to look at, so it has to hold the top of the
@@ -1043,6 +1051,7 @@ fun PlayerScreen(
                     // A handful of canvases are stills rather than clips.
                     else -> AsyncImage(
                         model = clip.url,
+                        onSuccess = { if (clip.url == canvas?.url) canvasReady = true },
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
@@ -1150,7 +1159,7 @@ fun PlayerScreen(
                     TopBar(
                         backdrop = upperBackdrop,
                         panel = panel,
-                        source = state.source,
+                        source = state.source.takeIf { showSource }.orEmpty(),
                         onOpenSource = state.contextUri?.let { uri ->
                             {
                                 onCollapse()
@@ -1171,7 +1180,7 @@ fun PlayerScreen(
                         onWatchVideo = onWatchVideo,
                         videoOn = videoOn,
                         modifier = barModifier,
-                        dj = isDjQueue(state.contextUri),
+                        dj = showSource && isDjQueue(state.contextUri),
                     )
                     }
                     if (!sideways) topBar(Modifier.retreat(chrome))
@@ -1227,6 +1236,7 @@ fun PlayerScreen(
                             backdrop = lowerBackdrop,
                             modifier = Modifier.retreat(chrome),
                             showCover = !sideways,
+                            showLyrics = showLyrics,
                         )
                     }
                     val stageBlock: @Composable ColumnScope.() -> Unit = {
@@ -1266,9 +1276,7 @@ fun PlayerScreen(
                         // twice — which is what the reference stopped doing.
                         // Never on its side, where the cover is the stage's own
                         // to draw: see Stage.COVER.
-                        val coverShowing = !sideways && panel == PlayerPanel.NONE &&
-                            !(videoOn && videoPlayer != null && LocalGlassEnabled.current) &&
-                            (canvas == null || !canvasReady)
+                        val coverShowing = !sideways && panel == PlayerPanel.NONE && showCover
                         // One at a time, from one clock.
                         //
                         // Faded together, the cover and the panel are both half
@@ -1331,7 +1339,7 @@ fun PlayerScreen(
                             // takes this same line: the two were drawn on top
                             // of each other (#79).
                             androidx.compose.animation.AnimatedVisibility(
-                                visible = karaokeAmount > 0f && !sdkPlayback && panel != PlayerPanel.LYRICS,
+                                visible = showLyrics && karaokeAmount > 0f && !sdkPlayback && panel != PlayerPanel.LYRICS,
                                 enter = fadeIn(tween(220)),
                                 exit = fadeOut(tween(180)),
                                 modifier = Modifier
@@ -1367,7 +1375,7 @@ fun PlayerScreen(
                             // left, so the right half opens on the words, or
                             // on what is coming up for a song without any.
                             PlayerPanel.NONE -> if (sideways) {
-                                if (lyrics != null || lyricsLoading) Stage.LYRICS else Stage.QUEUE
+                                if (showLyrics && (lyrics != null || lyricsLoading)) Stage.LYRICS else Stage.QUEUE
                             } else when {
                                 // Not while the player is travelling: a
                                 // TextureView inside a layer being scaled
@@ -1377,10 +1385,20 @@ fun PlayerScreen(
                                 // cover stands in for those few hundred
                                 // milliseconds — the same trick the Canvas
                                 // above uses, and for the same reason.
-                                videoOn && videoPlayer != null &&
-                                    LocalGlassEnabled.current -> Stage.VIDEO
-                                canvas == null || !canvasReady -> Stage.COVER
+                                showingVideo -> Stage.VIDEO
+                                showCover -> Stage.COVER
                                 else -> Stage.CANVAS
+                            }
+                        }
+                        if (!sideways && spinCoverUrl != null && coverAlpha > 0f) {
+                            Box(
+                                Modifier.fillMaxSize().graphicsLayer {
+                                    val drag = (abs(coverSwipe.floatValue) / size.width.coerceAtLeast(1f)).coerceIn(0f, 1f)
+                                    alpha = coverAlpha * (1f - drag * COVER_SWIPE_DIM)
+                                },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                SpinningCover(spinCoverUrl, state.title, state.isPlaying && panel == PlayerPanel.NONE)
                             }
                         }
                         AnimatedContent(
@@ -1706,13 +1724,24 @@ fun PlayerScreen(
                                 }
                             }
                         }
+                        val isYouTube = state.mediaId?.startsWith(
+                            app.sonar.backend.youtube.YouTubeBackend.URI_SCHEME,
+                        ) == true
+                        val youtubeAudio by app.sonar.backend.youtube.YouTubePlayerFactory.playingAudio
+                            .collectAsStateWithLifecycle()
+                        youtubeAudio?.takeIf { it.mediaId == state.mediaId && !panelOpen && !sideways }?.let {
+                            Text(
+                                stringResource(R.string.quality_playing_audio, it.codec, it.kbps),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
                         // What Soloist streams the song as, and the button that
                         // picks it. In the video button's place, the row being
                         // centred, and beside it when the song has a video too.
                         val streamLabel by app.sonar.playback.StreamQuality.label
                             .collectAsStateWithLifecycle()
                         androidx.compose.animation.AnimatedVisibility(
-                            visible = streamLabel != null && !panelOpen && !sideways,
+                            visible = !isYouTube && streamLabel != null && !panelOpen && !sideways,
                             enter = fadeIn(tween(260)) + scaleIn(tween(260), initialScale = 0.9f),
                             exit = fadeOut(tween(180)) + scaleOut(tween(180), targetScale = 0.92f),
                         ) {
@@ -1726,7 +1755,7 @@ fun PlayerScreen(
                                 onAnchor = { qualityAnchor = it },
                                 backdrop = upperBackdrop,
                                 trigger = qualityTrigger,
-                                buttonSize = 40.dp,
+                                buttonSize = 44.dp,
                                 // The video button's type and icon beside it.
                                 labelStyle = MaterialTheme.typography.labelLarge,
                                 iconSize = 18.dp,
@@ -1803,6 +1832,7 @@ fun PlayerScreen(
                                         // be taken back; a heart, filled or
                                         // not, is the like itself.
                                         if (onToggleLike != null && (inLikedSongs || !alreadySaved)) {
+                                            haptic(likeHaptic(!inLikedSongs))
                                             onToggleLike()
                                         } else {
                                             panel = if (panel == PlayerPanel.ADD_TO_PLAYLIST) {
@@ -1897,6 +1927,8 @@ fun PlayerScreen(
                             onToggleShuffle = onToggleShuffle,
                             onCycleRepeat = onCycleRepeat,
                             toggles = chrome,
+                            showShuffle = LooksOption.Shuffle in looks,
+                            showRepeat = LooksOption.Repeat in looks,
                         )
 
                         // Under the transport upright; under the sleeve on
@@ -1923,7 +1955,8 @@ fun PlayerScreen(
                                     onTogglePlay = onTogglePlay,
                                     onNext = onNext,
                                     onPrevious = onPrevious,
-                                    onCover = { panel = PlayerPanel.LYRICS },
+                                    onCover = ({ panel = PlayerPanel.LYRICS }).takeIf { showLyrics },
+                                    spinningUrl = spinCoverUrl,
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxWidth(),
@@ -2681,7 +2714,10 @@ internal fun Controls(
      * the rest while the lyrics are read alone, and the three discs stay put.
      */
     toggles: Float = 1f,
+    showShuffle: Boolean = true,
+    showRepeat: Boolean = true,
 ) {
+    val haptic = rememberPlayerHaptic()
     // One blend group, as upstream draws a row of glass buttons: a pressed
     // disc swells towards its neighbour and melts into it as they meet.
     GlassBlendGroup(backdrop = backdrop, modifier = Modifier.fillMaxWidth()) {
@@ -2693,7 +2729,7 @@ internal fun Controls(
             // Their place is kept, so the discs do not slide; a press on the empty
             // place does nothing but bring them back.
             val togglesOn = toggles > 0.5f
-            Box(Modifier.graphicsLayer { alpha = toggles }) {
+            if (showShuffle) Box(Modifier.graphicsLayer { alpha = toggles }) {
                 ToggleIcon(
                     icon = Lucide.Shuffle,
                     description = stringResource(if (state.smartShuffle) R.string.smart_shuffle else R.string.shuffle_play),
@@ -2719,7 +2755,10 @@ internal fun Controls(
                 // start (#173): greyed out, a listener on the first track had
                 // to drag the bar back by hand.
                 enabled = state.hasPrevious || state.hasItem,
-                onClick = onPrevious,
+                onClick = {
+                    haptic(CONTEXT_CLICK)
+                    onPrevious()
+                },
             ) {
                 Icon(
                     Lucide.SkipBack,
@@ -2732,7 +2771,14 @@ internal fun Controls(
             // player's button is; see Mixes.playing.
             val mixPlaying by app.sonar.playback.Mixes.playing.collectAsStateWithLifecycle()
             Box {
-            RoundGlassButton(backdrop = backdrop, size = 76.dp, onClick = onTogglePlay) {
+            RoundGlassButton(
+                backdrop = backdrop,
+                size = 76.dp,
+                onClick = {
+                    haptic(CONTEXT_CLICK)
+                    onTogglePlay()
+                },
+            ) {
                 // A ring around the icon while the track is still being fetched.
                 //
                 // Worth its place here and nowhere else: a YouTube track has to have
@@ -2771,7 +2817,10 @@ internal fun Controls(
                 backdrop = backdrop,
                 size = 62.dp,
                 enabled = state.hasNext,
-                onClick = onNext,
+                onClick = {
+                    haptic(CONTEXT_CLICK)
+                    onNext()
+                },
             ) {
                 Icon(
                     Lucide.SkipForward,
@@ -2780,7 +2829,7 @@ internal fun Controls(
                 )
             }
 
-            Box(Modifier.graphicsLayer { alpha = toggles }) {
+            if (showRepeat) Box(Modifier.graphicsLayer { alpha = toggles }) {
                 ToggleIcon(
                     icon = if (state.repeatMode == Player.REPEAT_MODE_ONE) {
                         Lucide.Repeat1
@@ -3034,10 +3083,14 @@ private fun LyricsStage(
         (context.applicationContext as app.sonar.SonarApplication).preferences
     }
     val style by preferences.lyricsStyle.collectAsStateWithLifecycle()
+    val keepAwake by preferences.lyricsKeepAwake.collectAsStateWithLifecycle()
     val lookStore = rememberLookStore()
     val look by lookStore.state.collectAsStateWithLifecycle()
     val reducedMotion = look != Look.CLASSIC && rememberLookReducedMotion()
     var optionsOpen by remember(query?.uri) { androidx.compose.runtime.mutableStateOf(false) }
+    KeepScreenAwakeForLyrics(
+        keepAwake && stageVisible && lyrics != null && !loading && !(optionsOpen && query != null),
+    )
 
     // The words shown as late as the listener set for these headphones (#143):
     // the position they follow is the player's, less the delay, and a line
@@ -3377,9 +3430,11 @@ private fun SongCard(
     onTogglePlay: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
-    onCover: () -> Unit,
+    onCover: (() -> Unit)?,
+    spinningUrl: String?,
     modifier: Modifier = Modifier,
 ) {
+    val haptic = rememberPlayerHaptic()
     Column(
         modifier.padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -3391,14 +3446,18 @@ private fun SongCard(
                 .aspectRatio(1f)
                 .softShadow(RoundedCornerShape(18.dp), elevation = 20.dp)
                 .clip(RoundedCornerShape(18.dp))
-                .clickable(onClick = onCover),
+                .then(if (onCover != null) Modifier.clickable(onClick = onCover) else Modifier),
         ) {
-            app.sonar.ui.components.Artwork(
-                url = state.artworkUrl,
-                title = state.title,
-                modifier = Modifier.fillMaxSize(),
-                corner = 18.dp,
-            )
+            if (spinningUrl != null) {
+                SpinningCover(spinningUrl, state.title, state.isPlaying, Modifier.fillMaxSize())
+            } else {
+                app.sonar.ui.components.Artwork(
+                    url = state.artworkUrl,
+                    title = state.title,
+                    modifier = Modifier.fillMaxSize(),
+                    corner = 18.dp,
+                )
+            }
             // A shade at the foot, so the transport reads over any sleeve.
             Box(
                 Modifier
@@ -3414,15 +3473,23 @@ private fun SongCard(
                 horizontalArrangement = Arrangement.spacedBy(18.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                CardButton(Lucide.SkipBack, stringResource(R.string.previous), 40.dp, state.hasPrevious || state.hasItem, onPrevious)
+                CardButton(Lucide.SkipBack, stringResource(R.string.previous), 40.dp, state.hasPrevious || state.hasItem) {
+                    haptic(CONTEXT_CLICK)
+                    onPrevious()
+                }
                 CardButton(
                     if (state.wantsPlay) Lucide.Pause else Lucide.Play,
                     stringResource(if (state.wantsPlay) R.string.pause else R.string.play),
                     52.dp,
                     true,
-                    onTogglePlay,
-                )
-                CardButton(Lucide.SkipForward, stringResource(R.string.next), 40.dp, state.hasNext, onNext)
+                ) {
+                    haptic(CONTEXT_CLICK)
+                    onTogglePlay()
+                }
+                CardButton(Lucide.SkipForward, stringResource(R.string.next), 40.dp, state.hasNext) {
+                    haptic(CONTEXT_CLICK)
+                    onNext()
+                }
             }
         }
         Column(Modifier.widthIn(max = 420.dp).padding(top = 12.dp)) {
@@ -3453,6 +3520,15 @@ private fun SongCard(
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
         )
+        val youtubeAudio by app.sonar.backend.youtube.YouTubePlayerFactory.playingAudio
+            .collectAsStateWithLifecycle()
+        youtubeAudio?.takeIf { it.mediaId == state.mediaId }?.let {
+            Text(
+                stringResource(R.string.quality_playing_audio, it.codec, it.kbps),
+                style = MaterialTheme.typography.labelSmall,
+                color = GlassInkDim,
+            )
+        }
     }
 }
 

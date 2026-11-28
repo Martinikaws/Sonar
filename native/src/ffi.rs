@@ -1007,6 +1007,15 @@ pub extern "system" fn Java_app_sonar_nativecore_NativeBridge_nativeSetNetworkGo
     engine::set_network_gone(gone == JNI_TRUE);
 }
 
+#[no_mangle]
+pub extern "system" fn Java_app_sonar_nativecore_NativeBridge_nativeSetAudioPreloading(
+    _env: JNIEnv,
+    _class: JClass,
+    enabled: jboolean,
+) {
+    librespot_playback::player::set_audio_preloading(enabled == JNI_TRUE);
+}
+
 // --------------------------------------------------------------- downloads
 
 /// Where downloads are kept. Called before anything is downloaded, and again

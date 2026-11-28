@@ -1,6 +1,8 @@
 package app.sonar.library
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,16 +16,24 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
@@ -64,6 +74,7 @@ fun PlaylistReorderDialog(
     playlists: List<CatalogPlaylist>,
     onMove: (fromUri: String, toUri: String) -> Unit,
     onDismiss: () -> Unit,
+    @androidx.annotation.StringRes title: Int = R.string.fix2_library_reorder,
 ) {
     val listState = rememberLazyListState()
     val moveUp = stringResource(R.string.fix2_library_move_up)
@@ -73,10 +84,16 @@ fun PlaylistReorderDialog(
         val toUri = to.key as? String ?: return@rememberReorderableLazyListState
         onMove(fromUri, toUri)
     }
-    LibraryListDialog(stringResource(R.string.fix2_library_reorder), onDismiss) {
+    LibraryListDialog(stringResource(title), onDismiss) {
         LazyColumn(state = listState, modifier = Modifier.heightIn(max = 360.dp)) {
             items(playlists, key = { it.uri }) { playlist ->
                 ReorderableItem(reorderState, key = playlist.uri) { _ ->
+                    var handleFocused by remember { mutableStateOf(false) }
+                    val focusBorder = if (handleFocused) {
+                        Modifier.border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.small)
+                    } else {
+                        Modifier
+                    }
                     val index = playlists.indexOfFirst { it.uri == playlist.uri }
                     val previous = playlists.getOrNull(index - 1)
                     val next = playlists.getOrNull(index + 1)
@@ -87,7 +104,16 @@ fun PlaylistReorderDialog(
                     ) {
                         Text(playlist.name, Modifier.weight(1f))
                         Box(
-                            Modifier.size(44.dp).draggableHandle().semantics {
+                            Modifier.size(44.dp).then(focusBorder).draggableHandle().onKeyEvent { event ->
+                                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                                val target = when (event.key) {
+                                    Key.DirectionUp -> previous
+                                    Key.DirectionDown -> next
+                                    else -> null
+                                } ?: return@onKeyEvent false
+                                onMove(playlist.uri, target.uri)
+                                true
+                            }.onFocusChanged { handleFocused = it.isFocused }.focusable().semantics {
                                 customActions = buildList {
                                     if (previous != null) add(CustomAccessibilityAction(moveUp) {
                                         onMove(playlist.uri, previous.uri)

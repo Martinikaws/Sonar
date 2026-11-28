@@ -1067,12 +1067,41 @@ object YouTube {
                 ?.avatarViewModel?.image?.sources?.firstOrNull()
                 ?.url
 
+            val twoColShelf =
+                response.contents
+                    ?.twoColumnBrowseResultsRenderer
+                    ?.secondaryContents
+                    ?.sectionListRenderer
+                    ?.contents
+                    ?.firstOrNull()
+            val twoColContents =
+                twoColShelf?.musicPlaylistShelfRenderer?.contents
+                    ?: twoColShelf?.musicShelfRenderer?.contents
+            val singleColShelf =
+                response.contents
+                    ?.singleColumnBrowseResultsRenderer
+                    ?.tabs
+                    ?.firstOrNull()
+                    ?.tabRenderer
+                    ?.content
+                    ?.sectionListRenderer
+                    ?.contents
+                    ?.firstOrNull()
+            val singleColContents =
+                singleColShelf?.musicPlaylistShelfRenderer?.contents
+                    ?: singleColShelf?.musicShelfRenderer?.contents
+            val renderers = (twoColContents ?: singleColContents).orEmpty().getItems()
+            val songs = renderers.mapNotNull { PlaylistPage.fromMusicResponsiveListItemRenderer(it) }
+
             PlaylistPage(
                 playlist =
                     PlaylistItem(
                         id = playlistId,
                         title =
                             header?.title?.runs?.firstOrNull()?.text
+                                ?: base?.musicEditablePlaylistDetailHeaderRenderer
+                                    ?.header?.musicDetailHeaderRenderer?.title?.runs?.firstOrNull()?.text
+                                ?: response.header?.musicDetailHeaderRenderer?.title?.runs?.firstOrNull()?.text
                                 ?: response.header?.musicHeaderRenderer?.title?.runs?.firstOrNull()?.text
                                 ?: "",
                         author = author,
@@ -1122,62 +1151,12 @@ object YouTube {
                         description = description,
                         authorAvatarUrl = authorAvatarUrl,
                     ),
-                songs = run {
-                    val twoColShelf =
-                        response.contents
-                            ?.twoColumnBrowseResultsRenderer
-                            ?.secondaryContents
-                            ?.sectionListRenderer
-                            ?.contents
-                            ?.firstOrNull()
-                    val twoColContents =
-                        twoColShelf?.musicPlaylistShelfRenderer?.contents
-                            ?: twoColShelf?.musicShelfRenderer?.contents
-                    val singleColShelf =
-                        response.contents
-                            ?.singleColumnBrowseResultsRenderer
-                            ?.tabs
-                            ?.firstOrNull()
-                            ?.tabRenderer
-                            ?.content
-                            ?.sectionListRenderer
-                            ?.contents
-                            ?.firstOrNull()
-                    val singleColContents =
-                        singleColShelf?.musicPlaylistShelfRenderer?.contents
-                            ?: singleColShelf?.musicShelfRenderer?.contents
-                    (twoColContents ?: singleColContents)
-                        ?.getItems()
-                        ?.mapNotNull { PlaylistPage.fromMusicResponsiveListItemRenderer(it) }
-                        ?: emptyList()
-                },
+                songs = songs,
+                unavailableCount = renderers.size - songs.size,
                 songsContinuation = run {
-                    val twoColShelf =
-                        response.contents
-                            ?.twoColumnBrowseResultsRenderer
-                            ?.secondaryContents
-                            ?.sectionListRenderer
-                            ?.contents
-                            ?.firstOrNull()
-                    val twoColContents =
-                        twoColShelf?.musicPlaylistShelfRenderer?.contents
-                            ?: twoColShelf?.musicShelfRenderer?.contents
                     val twoColContinuations =
                         twoColShelf?.musicPlaylistShelfRenderer?.continuations
                             ?: twoColShelf?.musicShelfRenderer?.continuations
-                    val singleColShelf =
-                        response.contents
-                            ?.singleColumnBrowseResultsRenderer
-                            ?.tabs
-                            ?.firstOrNull()
-                            ?.tabRenderer
-                            ?.content
-                            ?.sectionListRenderer
-                            ?.contents
-                            ?.firstOrNull()
-                    val singleColContents =
-                        singleColShelf?.musicPlaylistShelfRenderer?.contents
-                            ?: singleColShelf?.musicShelfRenderer?.contents
                     val singleColContinuations =
                         singleColShelf?.musicPlaylistShelfRenderer?.continuations
                             ?: singleColShelf?.musicShelfRenderer?.continuations
@@ -1231,37 +1210,28 @@ object YouTube {
 
             val allContents = mainContents + shelfContents + musicShelfContinuationContents + appendedContents
 
-            val songs =
-                allContents
-                    .mapNotNull { content: MusicShelfRenderer.Content -> content.musicResponsiveListItemRenderer }
-                    .mapNotNull { renderer -> PlaylistPage.fromMusicResponsiveListItemRenderer(renderer) }
+            val renderers = allContents.getItems()
+            val songs = renderers.mapNotNull { PlaylistPage.fromMusicResponsiveListItemRenderer(it) }
 
             val nextContinuation =
-                if (songs.isEmpty()) {
-                    null
-                } else {
-                    response.continuationContents
-                        ?.sectionListContinuation
+                response.continuationContents
+                    ?.sectionListContinuation
+                    ?.continuations
+                    ?.getContinuation()
+                    ?: response.continuationContents
+                        ?.musicPlaylistShelfContinuation
                         ?.continuations
                         ?.getContinuation()
-                        ?: response.continuationContents
-                            ?.musicPlaylistShelfContinuation
-                            ?.continuations
-                            ?.getContinuation()
-                        ?: response.continuationContents
-                            ?.musicShelfContinuation
-                            ?.continuations
-                            ?.getContinuation()
-                        ?: response.onResponseReceivedActions
-                            ?.firstOrNull()
-                            ?.appendContinuationItemsAction
-                            ?.continuationItems
-                            ?.getContinuation()
-                }
+                    ?: response.continuationContents
+                        ?.musicShelfContinuation
+                        ?.continuations
+                        ?.getContinuation()
+                    ?: allContents.getContinuation()
 
             PlaylistContinuationPage(
                 songs = songs,
                 continuation = nextContinuation,
+                unavailableCount = renderers.size - songs.size,
             )
         }
 
